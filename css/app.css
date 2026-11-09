@@ -242,3 +242,14 @@ table.sheet td.M { color: var(--manual); font-weight: 700; }
 .where span { font-size: .9rem; opacity: .85; }
 .where.present { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
 .where.zoom { background: color-mix(in srgb, var(--zoom) 15%, transparent); color: var(--zoom); }
+
+/* Zoom: the 4 digits under the lecturer's QR, and the students' form */
+.zoom-code { font-size: 1.15rem; }
+.zoom-code b { font-size: 2.4rem; letter-spacing: .25em; font-variant-numeric: tabular-nums; }
+.qr-wrap.full .zoom-code b { font-size: 4rem; }
+.zoom-form { margin-block-start: 18px; padding-block-start: 14px; border-top: 1px solid var(--line, #dde3ea); }
+.zoom-form input { font-size: 1.4rem; letter-spacing: .3em; text-align: center; }
+/* camera zoom slider while scanning */
+.zoom-bar { display: flex; align-items: center; gap: 10px; margin-block-start: 8px; }
+.zoom-bar input { flex: 1; min-width: 0; }
+.zoom-bar output { font-variant-numeric: tabular-nums; min-width: 3ch; }

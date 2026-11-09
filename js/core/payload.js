@@ -3,10 +3,11 @@
 // =====================================================================
 // Format: "SC1|<sessionId>|<token>". SC1 = SmartClass format version 1,
 // so the scanner ignores every other QR in the room.
-// Demo mode only adds "|<lat>|<lng>" (the lecturer's place, 3 decimals ~ 100 m):
-// there each device keeps its own data, so the phone needs the place from the
-// code itself to say "in class" or "Zoom". The real modes leave it out (a
-// shorter text = bigger squares = easier to read from the back).
+//
+// Decision: scanning the flicker QR = IN CLASS (only someone in the room can
+// film it live; Zoom's video loses the flicker). Students on Zoom type the
+// 4-digit ZOOM CODE shown under the QR instead = ZOOM. No location needed.
+// The digits come from the token, so they change with it every 30 s.
 // The token changes every 30 s (decision: 15 s was too fast when the
 // phone asks to sign in again). The current AND the previous token are
 // accepted, which gives up to 60 s.
@@ -22,43 +23,43 @@ export const CODE = Object.freeze({
  * Builds the QR text.
  * @param {string} sessionId - the lecture
  * @param {string} token - the current random token
- * @param {{lat:number, lng:number}} [where] - demo mode only: the lecturer's place
  * @returns {string} the payload
  */
-export function encodePayload(sessionId, token, where)
+export function encodePayload(sessionId, token)
 {
-    const base = CODE.PREFIX + '|' + sessionId + '|' + token;
-    if (!where)
+    return CODE.PREFIX + '|' + sessionId + '|' + token;
+}
+
+/**
+ * The 4-digit Zoom code that belongs to a token (FNV-1a hash of the token).
+ * Readable through Zoom; it only ever gives "Zoom" attendance.
+ * @param {string} token - the current random token
+ * @returns {string} 4 digits, e.g. "0427"
+ */
+export function zoomDigits(token)
+{
+    let h = 0x811c9dc5;
+    for (let i = 0; i < token.length; i++)
     {
-        return base;
+        h ^= token.charCodeAt(i);
+        h = Math.imul(h, 0x01000193) >>> 0;
     }
-    return base + '|' + where.lat.toFixed(3) + '|' + where.lng.toFixed(3);
+    return String(h % 10000).padStart(4, '0');
 }
 
 /**
  * Reads a QR text; returns null for anything that is not ours.
  * @param {string} text - scanned text
- * @returns {{sessionId:string, token:string, where:({lat:number, lng:number}|null)}|null} parts
+ * @returns {{sessionId:string, token:string}|null} parts
  */
 export function decodePayload(text)
 {
     const parts = String(text).split('|');
-    if ((parts.length !== 3 && parts.length !== 5) || parts[0] !== CODE.PREFIX || parts[1] === '' || parts[2] === '')
+    if (parts.length !== 3 || parts[0] !== CODE.PREFIX || parts[1] === '' || parts[2] === '')
     {
         return null;
     }
-    let where = null;
-    if (parts.length === 5)
-    {
-        const lat = Number(parts[3]);
-        const lng = Number(parts[4]);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
-        {
-            return null;
-        }
-        where = { lat: lat, lng: lng };
-    }
-    return { sessionId: parts[1], token: parts[2], where: where };
+    return { sessionId: parts[1], token: parts[2] };
 }
 
 /**

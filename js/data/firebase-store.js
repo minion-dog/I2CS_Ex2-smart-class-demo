@@ -8,6 +8,8 @@
 // The security rules (firestore.rules) are what really protect the data;
 // this file only calls Firestore the way the rules allow.
 
+import { zoomDigits } from '../core/payload.js';
+
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
 /** A Store backed by Firebase. */
@@ -245,15 +247,42 @@ export class FirebaseStore
         await this.ready;
         const f = this.fs;
         await f.setDoc(f.doc(this.db, 'sessions', sid, 'codes', token), { createdAt: Date.now() });
+        await f.setDoc(f.doc(this.db, 'sessions', sid, 'zoom', zoomDigits(token)), { createdAt: Date.now() });
     }
 
     /**
-     * Marks the signed-in student. Works offline: the write waits on the
-     * device and the rules check it when it arrives.
+     * Marks the signed-in student as on Zoom with the 4 digits under the QR
+     * (the rules check that sessions/{sid}/zoom/{digits} exists).
      * @param {string} sid - session
-     * @param {{token:string, lat:number, lng:number, status:string}} rec - scan
+     * @param {string} digits - what the student typed
+     * @returns {Promise<string>} 'zoom'
+     */
+    async markZoom(sid, digits)
+    {
+        await this.writeMark(sid, 'zoom', String(digits).trim());
+        return 'zoom';
+    }
+
+    /**
+     * Marks the signed-in student as in class (scanned the flicker QR). Works
+     * offline: the write waits on the device and the rules check it when it arrives.
+     * @param {string} sid - session
+     * @param {{token:string}} rec - scan
+     * @returns {Promise<string>} 'present'
      */
     async markMe(sid, rec)
+    {
+        await this.writeMark(sid, 'present', rec.token);
+        return 'present';
+    }
+
+    /**
+     * Writes the student's own attendance record (create once; the rules check the code).
+     * @param {string} sid - session
+     * @param {string} status - 'present' | 'zoom'
+     * @param {string} token - the QR token or the Zoom digits
+     */
+    async writeMark(sid, status, token)
     {
         await this.ready;
         const f = this.fs;
@@ -261,8 +290,8 @@ export class FirebaseStore
         // Not awaited on purpose: offline, the promise resolves only when the
         // server answers. The watch on our own record shows "waiting to send".
         f.setDoc(ref, {
-            email: this.user.email, uid: this.user.uid, name: this.user.name, status: rec.status,
-            token: rec.token, lat: rec.lat, lng: rec.lng, scannedAt: Date.now()
+            email: this.user.email, uid: this.user.uid, name: this.user.name, status: status,
+            token: token, scannedAt: Date.now()
         }).catch((e) => console.warn('attendance rejected:', e.code || e.message));
     }
 

@@ -44,6 +44,37 @@ export class AveragingScanner
         this.running = false;
         this.crop = null;          // part of the camera picture being analysed (null = the middle square)
         this.zoomedAt = 0;
+        this.digitalZoom = 1;      // the user's zoom slider when the camera has no zoom of its own
+    }
+
+    /**
+     * The user's zoom slider (students at the back of the class). Uses the camera's
+     * own zoom when it has one (sharper: it zooms on the sensor), otherwise zooms
+     * into the picture.
+     * @param {number} factor - 1 = no zoom
+     * @returns {Promise<void>}
+     */
+    async setZoom(factor)
+    {
+        const track = this.stream ? this.stream.getVideoTracks()[0] : null;
+        const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+        if (caps.zoom)
+        {
+            const z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, factor));
+            try
+            {
+                await track.applyConstraints({ advanced: [{ zoom: z }] });
+                this.digitalZoom = 1;
+                this.unzoom();
+                return;
+            }
+            catch (e)
+            {
+                // fall through to the picture zoom
+            }
+        }
+        this.digitalZoom = Math.max(1, factor);
+        this.unzoom();
     }
 
     /**
@@ -140,13 +171,13 @@ export class AveragingScanner
     }
 
     /**
-     * The middle square of the camera picture (no zoom).
+     * The middle square of the camera picture (with the user's zoom slider).
      * @returns {{x:number, y:number, s:number}} crop in camera pixels
      */
     fullCrop()
     {
         const v = this.video;
-        const side = Math.min(v.videoWidth, v.videoHeight);
+        const side = Math.min(v.videoWidth, v.videoHeight) / this.digitalZoom;
         return { x: (v.videoWidth - side) / 2, y: (v.videoHeight - side) / 2, s: side };
     }
 

@@ -9,23 +9,19 @@
 // the grade and the feedback.
 
 import { startPage } from './page.js';
-import { el, fill, toast, when, setupTabs, locate } from './dom.js';
+import { el, fill, toast, when, setupTabs } from './dom.js';
 import { t } from './i18n.js';
 import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
 import { bindPolls } from './polls.js';
 import { decodePayload } from '../core/payload.js';
-import { flatMeters, cosLatOf, classifyDistance } from '../core/geo.js';
 import { STATUS } from '../core/sheet.js';
 
 // ---------------------------------------------------------------------
 //  CONSTANTS & FIELDS
 // ---------------------------------------------------------------------
 
-const LOCATE_TIMEOUT_MS = 10000;
-const PENDING_KEY = 'smartclass-pending-scans';
 const MAX_UPLOAD_BYTES = 500 * 1024;
-const FAR_AWAY = Object.freeze({ lat: 0, lng: 0 });   // no location = treated as Zoom
 
 const $ = (id) => document.getElementById(id);
 
@@ -53,9 +49,7 @@ store.watchSessions((list) =>
     sessions = list;
     fillSessionPicker();
     watchMyAttendance();
-    flushPendingScans();
 });
-window.addEventListener('online', flushPendingScans);
 
 // ---------------------------------------------------------------------
 //  SCAN
@@ -68,6 +62,9 @@ $('scan-start').onclick = async () =>
     scanner = new AveragingScanner($('video'), onScanned, $('sees'));
     $('scan-stop').hidden = false;
     $('scan-where').hidden = true;
+    $('zoom-bar').hidden = false;
+    $('cam-zoom').value = '1';
+    $('cam-zoom-value').textContent = '1×';
     try
     {
         await scanner.start();
@@ -79,8 +76,19 @@ $('scan-start').onclick = async () =>
     }
 };
 
+$('cam-zoom').addEventListener('input', () =>
+{
+    const f = Number($('cam-zoom').value);
+    $('cam-zoom-value').textContent = f.toFixed(1).replace('.0', '') + '×';
+    if (scanner)
+    {
+        scanner.setZoom(f);
+    }
+});
+
 $('scan-stop').onclick = () =>
 {
+    $('zoom-bar').hidden = true;
     if (scanner)
     {
         scanner.stop();
@@ -91,13 +99,15 @@ $('scan-stop').onclick = () =>
 };
 
 /**
- * Handles a decoded QR text.
+ * Handles a decoded QR text: the flicker QR can only be filmed live in the room,
+ * so a scan = IN CLASS (decision: no location needed).
  * @param {string} text - QR content
  */
 async function onScanned(text)
 {
     $('scanner').hidden = true;
     $('scan-stop').hidden = true;
+    $('zoom-bar').hidden = true;
     const p = decodePayload(text);
     if (p === null)
     {
@@ -108,134 +118,70 @@ async function onScanned(text)
     {
         navigator.vibrate(80);
     }
-    setResult(t('locating'), '');
-    const pos = (await locate(LOCATE_TIMEOUT_MS)) || FAR_AWAY;
-    const scan = { sid: p.sessionId, token: p.token, lat: pos.lat, lng: pos.lng, at: Date.now() };
-    const done = await sendScan(scan);
-    if (!done && store.kind === 'demo')
+    if (store.kind === 'demo' && !sessions.some((x) => x.id === p.sessionId))
     {
-        // demo mode keeps data in each browser: the lecture is on another device, so the
-        // code itself carries the lecturer's place and the phone shows the decision
+        // demo mode keeps data in each browser: the lecture is open on another device
         setResult(t('scanReadDemo'), 'warn');
-        if (p.where)
-        {
-            showWhere(flatMeters(p.where.lat, p.where.lng, cosLatOf(p.where.lat), pos.lat, pos.lng), pos === FAR_AWAY);
-        }
+        showWhere(STATUS.PRESENT);
         return;
     }
-    if (!done)
-    {
-        queueScan(scan);
-        setResult(t('scanPending'), 'warn');
-    }
+    await mark(STATUS.PRESENT, () => store.markMe(p.sessionId, { token: p.token }));
 }
 
-/**
- * Classifies and sends one scan. Needs the session (its location); when the
- * phone has never seen the session (offline), returns false so it is queued.
- * @param {{sid:string, token:string, lat:number, lng:number}} scan - the scan
- * @returns {Promise<boolean>} true when handed to the store
- */
-async function sendScan(scan)
+// Students on Zoom type the 4 digits shown under the QR (Zoom's video loses the flicker).
+$('zoom-form').addEventListener('submit', async (ev) =>
 {
-    const s = sessions.find((x) => x.id === scan.sid);
-    if (!s)
+    ev.preventDefault();
+    const digits = $('zoom-digits').value.trim();
+    if (!/^[0-9]{4}$/.test(digits))
     {
-        return false;
+        setResult(t('zoomFourDigits'), 'error');
+        return;
     }
-    const meters = flatMeters(s.lat, s.lng, s.cosLat, scan.lat, scan.lng);
-    const status = classifyDistance(meters) === 'inPerson' ? STATUS.PRESENT : STATUS.ZOOM;
+    const open = sessions.find((x) => x.endedAt === null);
+    if (!open)
+    {
+        setResult(t('noOpenLecture'), 'error');
+        return;
+    }
+    await mark(STATUS.ZOOM, () => store.markZoom(open.id, digits));
+    $('zoom-digits').value = '';
+});
+
+/**
+ * Sends one attendance mark and shows the answer.
+ * @param {string} status - what this mark means: STATUS.PRESENT or STATUS.ZOOM
+ * @param {function():Promise<string>} send - calls the store; resolves 'present' | 'zoom' | 'pending'
+ */
+async function mark(status, send)
+{
     try
     {
-        // the local server answers with its own decision ('present' / 'zoom'), or 'pending' when offline
-        const answer = await store.markMe(scan.sid, { token: scan.token, lat: scan.lat, lng: scan.lng, status: status });
-        const final = typeof answer === 'string' ? answer : status;
-        const waiting = final === 'pending' || !navigator.onLine;
-        const where = (final === 'pending' ? status : final) === STATUS.PRESENT ? t('inClass') : t('onZoom');
-        setResult(t('scanOk') + ' · ' + where + (waiting ? ' · ' + t('scanPending') : ''), waiting ? 'warn' : 'ok');
-        showWhere(meters, scan.lat === FAR_AWAY.lat && scan.lng === FAR_AWAY.lng, final === 'pending' ? status : final);
+        const answer = await send();
+        const waiting = answer === 'pending' || !navigator.onLine;
+        setResult(t('scanOk') + (waiting ? ' · ' + t('scanPending') : ''), waiting ? 'warn' : 'ok');
+        showWhere(status);
     }
     catch (e)
     {
-        setResult(e.message === 'already' ? t('scanAlready') : t('scanBad'), 'error');
+        const known = { already: t('scanAlready'), 'bad-code': status === STATUS.ZOOM ? t('zoomBad') : t('scanBad') };
+        setResult(known[e.message] || t('scanBad'), 'error');
     }
-    return true;
 }
 
 /**
- * Shows the big "physical / Zoom" badge under the result, with the distance.
- * @param {number} meters - distance from the lecturer
- * @param {boolean} noLocation - true when the phone gave no location (counted as Zoom)
- * @param {string} [status] - the store's decision; otherwise decided here from the distance
+ * Shows the big "physical / Zoom" answer under the result.
+ * @param {string} status - STATUS.PRESENT or STATUS.ZOOM
  */
-function showWhere(meters, noLocation, status)
+function showWhere(status)
 {
-    const present = status ? status === STATUS.PRESENT : classifyDistance(meters) === 'inPerson';
+    const present = status === STATUS.PRESENT;
     const box = $('scan-where');
     box.className = 'where ' + (present ? 'present' : 'zoom');
-    const distance = noLocation ? t('noLocation') : formatDistance(meters);
     fill(box,
         el('b', { text: present ? t('whereClass') : t('whereZoom') }),
-        el('span', { text: distance + ' · ' + t('radiusRule') }));
+        el('span', { text: present ? t('whyClass') : t('whyZoom') }));
     box.hidden = false;
-}
-
-/**
- * Writes a distance for people: "120 m" or "37.4 km".
- * @param {number} meters - distance
- * @returns {string} text
- */
-function formatDistance(meters)
-{
-    const d = meters < 1000 ? Math.round(meters) + ' ' + t('meters') : (meters / 1000).toFixed(1) + ' ' + t('km');
-    return t('fromLecturer').replace('{d}', d);
-}
-
-/**
- * Remembers a scan whose lecture is not known yet (offline, first time).
- * @param {object} scan - the scan
- */
-function queueScan(scan)
-{
-    const list = readPending();
-    list.push(scan);
-    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
-}
-
-/** Sends queued scans whose lecture is now known. */
-async function flushPendingScans()
-{
-    const list = readPending();
-    if (list.length === 0)
-    {
-        return;
-    }
-    const left = [];
-    for (const scan of list)
-    {
-        const sent = await sendScan(scan);
-        if (!sent)
-        {
-            left.push(scan);
-        }
-    }
-    localStorage.setItem(PENDING_KEY, JSON.stringify(left));
-}
-
-/**
- * Reads the queue of unsent scans.
- * @returns {object[]} scans
- */
-function readPending()
-{
-    try
-    {
-        return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
-    }
-    catch (e)
-    {
-        return [];
-    }
 }
 
 /** Shows my attendance in the recent lectures (with "waiting to send"). */
