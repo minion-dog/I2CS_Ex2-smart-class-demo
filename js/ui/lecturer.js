@@ -230,7 +230,7 @@ function startQr()
             setTimeout(rotate, 3000);        // the server is not reachable: keep the old code, try again soon
             return;
         }
-        qr.setText(encodePayload(current.id, token));
+        qr.setText(encodePayload(current.id, token, store.kind === 'demo' ? current : null));
         rotate.at = Date.now();
     };
     rotate();

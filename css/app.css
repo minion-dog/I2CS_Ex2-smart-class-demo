@@ -235,3 +235,10 @@ table.sheet td.M { color: var(--manual); font-weight: 700; }
 .join canvas { width: 160px; height: 160px; image-rendering: pixelated; background: #fff; border-radius: 8px; }
 .join-url { font-family: ui-monospace, monospace; font-size: 1.05rem; word-break: break-all; margin: 0 0 6px; }
 .login .join canvas { width: 200px; height: 200px; }
+
+/* the big "physical / Zoom" answer after a scan */
+.where { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 10px auto 0; padding: 14px 16px; border-radius: 12px; text-align: center; max-width: 420px; }
+.where b { font-size: 1.5rem; }
+.where span { font-size: .9rem; opacity: .85; }
+.where.present { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.where.zoom { background: color-mix(in srgb, var(--zoom) 15%, transparent); color: var(--zoom); }

@@ -15,7 +15,7 @@ import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
 import { bindPolls } from './polls.js';
 import { decodePayload } from '../core/payload.js';
-import { flatMeters, classifyDistance } from '../core/geo.js';
+import { flatMeters, cosLatOf, classifyDistance } from '../core/geo.js';
 import { STATUS } from '../core/sheet.js';
 
 // ---------------------------------------------------------------------
@@ -67,6 +67,7 @@ $('scan-start').onclick = async () =>
     $('scanner').hidden = false;
     scanner = new AveragingScanner($('video'), onScanned, $('sees'));
     $('scan-stop').hidden = false;
+    $('scan-where').hidden = true;
     try
     {
         await scanner.start();
@@ -113,8 +114,13 @@ async function onScanned(text)
     const done = await sendScan(scan);
     if (!done && store.kind === 'demo')
     {
-        // demo mode keeps data in each browser: a lecture opened on another device is not here
+        // demo mode keeps data in each browser: the lecture is on another device, so the
+        // code itself carries the lecturer's place and the phone shows the decision
         setResult(t('scanReadDemo'), 'warn');
+        if (p.where)
+        {
+            showWhere(flatMeters(p.where.lat, p.where.lng, cosLatOf(p.where.lat), pos.lat, pos.lng), pos === FAR_AWAY);
+        }
         return;
     }
     if (!done)
@@ -147,12 +153,42 @@ async function sendScan(scan)
         const waiting = final === 'pending' || !navigator.onLine;
         const where = (final === 'pending' ? status : final) === STATUS.PRESENT ? t('inClass') : t('onZoom');
         setResult(t('scanOk') + ' · ' + where + (waiting ? ' · ' + t('scanPending') : ''), waiting ? 'warn' : 'ok');
+        showWhere(meters, scan.lat === FAR_AWAY.lat && scan.lng === FAR_AWAY.lng, final === 'pending' ? status : final);
     }
     catch (e)
     {
         setResult(e.message === 'already' ? t('scanAlready') : t('scanBad'), 'error');
     }
     return true;
+}
+
+/**
+ * Shows the big "physical / Zoom" badge under the result, with the distance.
+ * @param {number} meters - distance from the lecturer
+ * @param {boolean} noLocation - true when the phone gave no location (counted as Zoom)
+ * @param {string} [status] - the store's decision; otherwise decided here from the distance
+ */
+function showWhere(meters, noLocation, status)
+{
+    const present = status ? status === STATUS.PRESENT : classifyDistance(meters) === 'inPerson';
+    const box = $('scan-where');
+    box.className = 'where ' + (present ? 'present' : 'zoom');
+    const distance = noLocation ? t('noLocation') : formatDistance(meters);
+    fill(box,
+        el('b', { text: present ? t('whereClass') : t('whereZoom') }),
+        el('span', { text: distance + ' · ' + t('radiusRule') }));
+    box.hidden = false;
+}
+
+/**
+ * Writes a distance for people: "120 m" or "37.4 km".
+ * @param {number} meters - distance
+ * @returns {string} text
+ */
+function formatDistance(meters)
+{
+    const d = meters < 1000 ? Math.round(meters) + ' ' + t('meters') : (meters / 1000).toFixed(1) + ' ' + t('km');
+    return t('fromLecturer').replace('{d}', d);
 }
 
 /**
