@@ -279,8 +279,49 @@ export class ChangeMap
     }
 
     /**
+     * Finds where the code is: the box around the pixels that change a lot.
+     * WHY: when the code is small in the picture (a PC screen seen from 1 m),
+     * the still background around it is most of the picture; the scanner uses
+     * this box to zoom in, and image() to judge "a lot / a little" only inside it.
+     * @returns {{x0:number, y0:number, x1:number, y1:number, cx:number, cy:number, size:number}|null}
+     *          the box in pixels, or null when nothing changes
+     */
+    activeBox()
+    {
+        const n = Math.max(1, this.diffs.length);
+        const side = this.side;
+        const mean = new Float32Array(this.length);
+        for (let i = 0; i < this.length; i++)
+        {
+            mean[i] = this.sum[i] / n;
+        }
+        const t = Math.max(MIN_SIGNAL, ACTIVE_LEVEL * percentile(mean, 0.99));
+        const xs = [];
+        const ys = [];
+        for (let i = 0; i < this.length; i++)
+        {
+            if (mean[i] > t)
+            {
+                xs.push(i % side);
+                ys.push(Math.floor(i / side));
+            }
+        }
+        if (xs.length < ACTIVE_MIN_PART * this.length)
+        {
+            return null;
+        }
+        // 1st..99th percentile of the positions: a few noisy pixels far away do not stretch the box
+        const x0 = positionPercentile(xs, 0.01, side);
+        const x1 = positionPercentile(xs, 0.99, side);
+        const y0 = positionPercentile(ys, 0.01, side);
+        const y1 = positionPercentile(ys, 0.99, side);
+        return { x0: x0, y0: y0, x1: x1, y1: y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) };
+    }
+
+    /**
      * Builds the black-and-white image a QR reader can read: little change = black,
-     * much change = white. Steps: stretch (2nd..98th percentile), blur, Otsu threshold.
+     * much change = white. Steps: find the code's box, stretch (2nd..98th percentile
+     * inside the box), blur, Otsu threshold inside the box. Outside the box = black.
      * @param {number} side - width = height in pixels
      * @returns {Uint8ClampedArray} 0 or 255 per pixel
      */
@@ -292,23 +333,57 @@ export class ChangeMap
         {
             mean[i] = this.sum[i] / n;
         }
-        const lo = percentile(mean, 0.02);
-        const hi = percentile(mean, 0.98);
+        const inside = this.boxMask(side);
+        const values = [];
+        for (let i = 0; i < this.length; i++)
+        {
+            if (inside[i])
+            {
+                values.push(mean[i]);
+            }
+        }
+        const lo = percentile(values, 0.02);
+        const hi = percentile(values, 0.98);
         const span = Math.max(hi - lo, 1e-6);
         const img = new Float32Array(this.length);
         for (let i = 0; i < this.length; i++)
         {
             const a = Math.min(1, Math.max(0, (mean[i] - lo) / span));
-            img[i] = 255 * a;            // much change -> white, still -> black
+            img[i] = inside[i] ? 255 * a : 0;   // much change -> white, still -> black
         }
         const blurred = gaussianBlur(img, side, side, NOISE.BLUR_SIGMA);
-        const t = otsu(blurred);
+        const t = otsu(blurred.filter((v, i) => inside[i]));
         const out = new Uint8ClampedArray(this.length);
         for (let i = 0; i < this.length; i++)
         {
-            out[i] = blurred[i] > t ? 255 : 0;
+            out[i] = inside[i] && blurred[i] > t ? 255 : 0;
         }
         return out;
+    }
+
+    /**
+     * Marks the pixels inside the code's box (a little larger, for the white border).
+     * @param {number} side - width = height in pixels
+     * @returns {Uint8Array} 1 inside, 0 outside (all 1 when no box is found)
+     */
+    boxMask(side)
+    {
+        const mask = new Uint8Array(this.length);
+        const b = this.activeBox();
+        if (b === null)
+        {
+            return mask.fill(1);
+        }
+        const m = BOX_MARGIN * b.size;
+        const x0 = Math.max(0, Math.floor(b.x0 - m));
+        const x1 = Math.min(side - 1, Math.ceil(b.x1 + m));
+        const y0 = Math.max(0, Math.floor(b.y0 - m));
+        const y1 = Math.min(side - 1, Math.ceil(b.y1 + m));
+        for (let y = y0; y <= y1; y++)
+        {
+            mask.fill(1, y * side + x0, y * side + x1 + 1);
+        }
+        return mask;
     }
 }
 
@@ -320,6 +395,9 @@ const MAX_SHIFT = 3;           // largest hand movement between two frames, in p
 const MAX_DRIFT = 12;          // larger total drift = start the map over
 const SHIFT_STEP = 7;          // compare every 7th pixel when lining frames up (fast)
 const MIN_SIGNAL = 4;          // below this mean change (grey levels) the picture is frozen
+const ACTIVE_LEVEL = 0.35;     // "changes a lot" = above 35% of the strongest change
+const ACTIVE_MIN_PART = 0.003; // fewer active pixels than this part of the picture = no code found
+const BOX_MARGIN = 0.08;       // the box grows by 8% on each side (the code's white border)
 
 /**
  * Finds the shift that best lines up a frame with the previous one:
@@ -380,6 +458,39 @@ function mix(seed, i, epoch, salt)
  * Returns the value below which a fraction q of the values lie (via a 256-bin histogram).
  * @param {Float32Array} values - values 0..255
  * @param {number} q - fraction 0..1
+ * @returns {number} the percentile
+ */
+/**
+ * Like percentile(), for pixel positions 0..side-1.
+ * @param {number[]} values - positions
+ * @param {number} q - 0..1
+ * @param {number} side - largest position + 1
+ * @returns {number} the position
+ */
+function positionPercentile(values, q, side)
+{
+    const hist = new Uint32Array(side);
+    for (const v of values)
+    {
+        hist[v]++;
+    }
+    const target = q * values.length;
+    let acc = 0;
+    for (let v = 0; v < side; v++)
+    {
+        acc += hist[v];
+        if (acc >= target)
+        {
+            return v;
+        }
+    }
+    return side - 1;
+}
+
+/**
+ * Value below which a part q of the values lies (values 0..255, histogram).
+ * @param {ArrayLike<number>} values - grey levels
+ * @param {number} q - 0..1
  * @returns {number} the percentile
  */
 function percentile(values, q)

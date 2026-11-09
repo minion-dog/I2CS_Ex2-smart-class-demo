@@ -6,11 +6,19 @@
 // squares, pixels that hardly change are its dark squares. Every few frames
 // the map is turned into a black-and-white picture and jsQR reads it.
 // A normal camera app (or a photo) sees only random dots.
+//
+// From the back of the class the code is small in the picture. So the scanner
+// looks for WHERE things change, then zooms in on that part of the camera
+// picture (at the camera's full resolution) and starts the map again there.
 
 import { ChangeMap, NOISE } from '../core/noisyqr.js';
 
 const SIDE = 400;                  // analysed square, in pixels
 const DECODE_EVERY = 3;            // try to read every 3rd frame (saves battery)
+const ZOOM_WHEN = 0.6;             // zoom in when the code covers less than 60% of the square
+const ZOOM_FILL = 1.35;            // after zooming, the square is 1.35 x the code (room for shake)
+const MIN_CROP = 200;              // never zoom closer than 200 camera pixels
+const GIVE_UP_MS = 4000;           // zoomed but nothing read for 4 s: look at the whole picture again
 
 /** Reads our flicker QR codes from the camera. */
 export class AveragingScanner
@@ -34,6 +42,8 @@ export class AveragingScanner
         this.stream = null;
         this.frame = 0;
         this.running = false;
+        this.crop = null;          // part of the camera picture being analysed (null = the middle square)
+        this.zoomedAt = 0;
     }
 
     /**
@@ -44,7 +54,7 @@ export class AveragingScanner
     async start()
     {
         this.stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+            video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
             audio: false
         });
         this.video.srcObject = this.stream;
@@ -93,10 +103,12 @@ export class AveragingScanner
     processFrame()
     {
         const v = this.video;
-        const crop = Math.min(v.videoWidth, v.videoHeight);
-        const sx = (v.videoWidth - crop) / 2;
-        const sy = (v.videoHeight - crop) / 2;
-        this.ctx.drawImage(v, sx, sy, crop, crop, 0, 0, SIDE, SIDE);
+        if (this.crop === null)
+        {
+            this.crop = this.fullCrop();
+        }
+        const c = this.crop;
+        this.ctx.drawImage(v, c.x, c.y, c.s, c.s, 0, 0, SIDE, SIDE);
         const rgba = this.ctx.getImageData(0, 0, SIDE, SIDE).data;
         const grey = new Uint8ClampedArray(SIDE * SIDE);
         for (let i = 0; i < grey.length; i++)
@@ -111,12 +123,70 @@ export class AveragingScanner
             if (this.map.hasSignal())
             {
                 this.tryDecode();
+                if (this.running)
+                {
+                    this.zoomIfSmall();
+                }
             }
             else
             {
                 this.show(null);
             }
+            if (this.zoomedAt > 0 && performance.now() - this.zoomedAt > GIVE_UP_MS)
+            {
+                this.unzoom();
+            }
         }
+    }
+
+    /**
+     * The middle square of the camera picture (no zoom).
+     * @returns {{x:number, y:number, s:number}} crop in camera pixels
+     */
+    fullCrop()
+    {
+        const v = this.video;
+        const side = Math.min(v.videoWidth, v.videoHeight);
+        return { x: (v.videoWidth - side) / 2, y: (v.videoHeight - side) / 2, s: side };
+    }
+
+    /**
+     * When the code is small in the picture, zooms in on it: the next frames are taken
+     * from just that part of the camera picture, so each square of the code gets more pixels.
+     */
+    zoomIfSmall()
+    {
+        const box = this.map.activeBox();
+        if (box === null || box.size >= ZOOM_WHEN * SIDE)
+        {
+            return;
+        }
+        const c = this.crop;
+        const per = c.s / SIDE;                                // camera pixels per analysed pixel
+        const s = Math.max(MIN_CROP, box.size * ZOOM_FILL * per);
+        if (s > 0.8 * c.s)
+        {
+            return;                                            // already as close as it gets
+        }
+        const v = this.video;
+        const cx = c.x + box.cx * per;
+        const cy = c.y + box.cy * per;
+        const side = Math.min(s, v.videoWidth, v.videoHeight);
+        this.crop = {
+            x: Math.min(Math.max(0, cx - side / 2), v.videoWidth - side),
+            y: Math.min(Math.max(0, cy - side / 2), v.videoHeight - side),
+            s: side
+        };
+        this.zoomedAt = performance.now();
+        this.map.reset();
+    }
+
+    /** Goes back to the whole picture (the phone moved, or zooming did not help). */
+    unzoom()
+    {
+        this.crop = null;
+        this.zoomedAt = 0;
+        this.map.reset();
     }
 
     /**

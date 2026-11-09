@@ -181,7 +181,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 
 /* ----------------------------------------------------------- the QR */
 .qr-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.qr-wrap canvas { width: min(70vh, 100%); max-width: 520px; aspect-ratio: 1; image-rendering: pixelated; background: #fff; border-radius: 8px; }
+.qr-wrap canvas { width: min(80vh, 100%); max-width: 760px; aspect-ratio: 1; image-rendering: pixelated; background: #fff; border-radius: 8px; }
 .qr-wrap.full { position: fixed; inset: 0; background: #fff; z-index: 50; justify-content: center; }
 .qr-wrap.full canvas { width: min(92vh, 92vw); max-width: none; }
 .qr-wrap .timer { font-variant-numeric: tabular-nums; color: var(--muted); }
