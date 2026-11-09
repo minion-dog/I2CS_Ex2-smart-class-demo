@@ -111,6 +111,12 @@ async function onScanned(text)
     const pos = (await locate(LOCATE_TIMEOUT_MS)) || FAR_AWAY;
     const scan = { sid: p.sessionId, token: p.token, lat: pos.lat, lng: pos.lng, at: Date.now() };
     const done = await sendScan(scan);
+    if (!done && store.kind === 'demo')
+    {
+        // demo mode keeps data in each browser: a lecture opened on another device is not here
+        setResult(t('scanReadDemo'), 'warn');
+        return;
+    }
     if (!done)
     {
         queueScan(scan);

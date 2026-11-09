@@ -1,6 +1,6 @@
 // Service worker: keeps the site's own files on the phone, so the student
 // page opens even with no internet (the data itself is cached by Firestore).
-const CACHE = 'smartclass-v4';
+const CACHE = 'smartclass-v5';
 const FILES = [
     'index.html', 'student.html', 'lecturer.html', 'css/app.css', 'manifest.webmanifest', 'icon.svg',
     'vendor/jsQR.js', 'vendor/qrcode.js',
