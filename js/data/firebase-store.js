@@ -8,8 +8,6 @@
 // The security rules (firestore.rules) are what really protect the data;
 // this file only calls Firestore the way the rules allow.
 
-import { zoomDigits } from '../core/payload.js';
-
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
 /** A Store backed by Firebase. */
@@ -247,21 +245,8 @@ export class FirebaseStore
         await this.ready;
         const f = this.fs;
         await f.setDoc(f.doc(this.db, 'sessions', sid, 'codes', token), { createdAt: Date.now() });
-        await f.setDoc(f.doc(this.db, 'sessions', sid, 'zoom', zoomDigits(token)), { createdAt: Date.now() });
     }
 
-    /**
-     * Marks the signed-in student as on Zoom with the 4 digits under the QR
-     * (the rules check that sessions/{sid}/zoom/{digits} exists).
-     * @param {string} sid - session
-     * @param {string} digits - what the student typed
-     * @returns {Promise<string>} 'zoom'
-     */
-    async markZoom(sid, digits)
-    {
-        await this.writeMark(sid, 'zoom', String(digits).trim());
-        return 'zoom';
-    }
 
     /**
      * Marks the signed-in student as in class (scanned the flicker QR). Works

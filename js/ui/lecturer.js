@@ -15,7 +15,7 @@ import { bindComments } from './comments.js';
 import { bindPolls, readPollForm } from './polls.js';
 import { LectureRecorder, transcribeUpload } from './recorder.js';
 import { cosLatOf, GEO } from '../core/geo.js';
-import { encodePayload, newToken, zoomDigits, CODE } from '../core/payload.js';
+import { encodePayload, newToken, CODE } from '../core/payload.js';
 import { buildAttendanceSheet, STATUS } from '../core/sheet.js';
 import { parseCsv, rosterFromRows } from '../core/classlist.js';
 import { writeXlsx, readXlsx } from '../core/xlsx.js';
@@ -231,7 +231,6 @@ function startQr()
             return;
         }
         qr.setText(encodePayload(current.id, token));
-        $('zoom-code').textContent = zoomDigits(token);
         rotate.at = Date.now();
     };
     rotate();

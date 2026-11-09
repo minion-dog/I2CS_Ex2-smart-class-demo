@@ -4,10 +4,8 @@
 // Format: "SC1|<sessionId>|<token>". SC1 = SmartClass format version 1,
 // so the scanner ignores every other QR in the room.
 //
-// Decision: scanning the flicker QR = IN CLASS (only someone in the room can
-// film it live; Zoom's video loses the flicker). Students on Zoom type the
-// 4-digit ZOOM CODE shown under the QR instead = ZOOM. No location needed.
-// The digits come from the token, so they change with it every 30 s.
+// Decision: attendance is PHYSICAL only. Scanning the flicker QR = in class
+// (only someone in the room can film it live). No Zoom attendance, no location.
 // The token changes every 30 s (decision: 15 s was too fast when the
 // phone asks to sign in again). The current AND the previous token are
 // accepted, which gives up to 60 s.
@@ -30,22 +28,6 @@ export function encodePayload(sessionId, token)
     return CODE.PREFIX + '|' + sessionId + '|' + token;
 }
 
-/**
- * The 4-digit Zoom code that belongs to a token (FNV-1a hash of the token).
- * Readable through Zoom; it only ever gives "Zoom" attendance.
- * @param {string} token - the current random token
- * @returns {string} 4 digits, e.g. "0427"
- */
-export function zoomDigits(token)
-{
-    let h = 0x811c9dc5;
-    for (let i = 0; i < token.length; i++)
-    {
-        h ^= token.charCodeAt(i);
-        h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return String(h % 10000).padStart(4, '0');
-}
 
 /**
  * Reads a QR text; returns null for anything that is not ours.

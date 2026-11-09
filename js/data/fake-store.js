@@ -9,11 +9,8 @@
 // State lives in localStorage and every change is broadcast to the other
 // tabs, so a scan in the student tab shows up live in the lecturer tab.
 
-import { zoomDigits } from '../core/payload.js';
-
 const KEY = 'smartclass-demo-v1';
 const STATUS_PRESENT = 'present';       // scanned the flicker QR
-const STATUS_ZOOM = 'zoom';             // typed the Zoom code
 const CHANNEL = 'smartclass-demo';
 const LECTURER = Object.freeze({ uid: 'demo-lecturer', email: 'lecturer@demo', name: 'המרצה (הדגמה)' });
 
@@ -173,27 +170,10 @@ export class FakeStore
      */
     async publishCode(sid, token)
     {
-        this.state.sub[sid].codes[token] = { createdAt: Date.now(), zoom: zoomDigits(token) };
+        this.state.sub[sid].codes[token] = { createdAt: Date.now() };
         this.commit();
     }
 
-    /**
-     * Marks the signed-in student as on Zoom with the 4-digit code under the QR.
-     * @param {string} sid - session
-     * @param {string} digits - what the student typed
-     * @returns {Promise<string>} 'zoom'
-     */
-    async markZoom(sid, digits)
-    {
-        const sub = this.state.sub[sid];
-        const code = String(digits).trim();
-        if (!sub || !Object.values(sub.codes).some((c) => c.zoom === code))
-        {
-            throw new Error('bad-code');
-        }
-        this.markWith(sub, STATUS_ZOOM, code);
-        return STATUS_ZOOM;
-    }
 
     /**
      * Marks the signed-in student (the same checks the security rules make).

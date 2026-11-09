@@ -18,7 +18,7 @@ import { FakeStore } from './fake-store.js';
 const POLL_MS = 1000;                       // how often to ask the server for news
 const TOKEN_KEY = 'smartclass-lan-token';
 const QUEUE_KEY = 'smartclass-lan-queue';
-const OFFLINE_OK = new Set(['markMe', 'markZoom', 'addComment', 'vote', 'submit']);
+const OFFLINE_OK = new Set(['markMe', 'addComment', 'vote', 'submit']);
 
 /** A Store backed by the local server. */
 export class LanStore extends FakeStore
@@ -121,18 +121,6 @@ export class LanStore extends FakeStore
         return answer === null ? 'pending' : answer;
     }
 
-    /**
-     * Marks the signed-in student as on Zoom with the 4 digits under the QR.
-     * @param {string} sid - session
-     * @param {string} digits - what the student typed
-     * @returns {Promise<string>} 'zoom' | 'pending'
-     */
-    async markZoom(sid, digits)
-    {
-        this.notMarkedYet(sid);
-        const answer = await this.act({ type: 'markZoom', sid: sid, digits: String(digits).trim(), at: Date.now() });
-        return answer === null ? 'pending' : answer;
-    }
 
     /**
      * Refuses a second mark before even asking the server.
@@ -398,10 +386,10 @@ export class LanStore extends FakeStore
     showPending(a)
     {
         const sub = this.state.sub[a.sid];
-        if ((a.type === 'markMe' || a.type === 'markZoom') && sub && !sub.attendance[this.user.email])
+        if (a.type === 'markMe' && sub && !sub.attendance[this.user.email])
         {
             sub.attendance[this.user.email] = {
-                email: this.user.email, name: this.user.name, status: a.type === 'markMe' ? 'present' : 'zoom',
+                email: this.user.email, name: this.user.name, status: 'present',
                 scannedAt: a.at, pending: true
             };
         }

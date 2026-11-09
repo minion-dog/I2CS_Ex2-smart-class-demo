@@ -15,7 +15,6 @@ import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
 import { bindPolls } from './polls.js';
 import { decodePayload } from '../core/payload.js';
-import { STATUS } from '../core/sheet.js';
 
 // ---------------------------------------------------------------------
 //  CONSTANTS & FIELDS
@@ -167,65 +166,37 @@ async function onScanned(text)
     {
         // demo mode keeps data in each browser: the lecture is open on another device
         setResult(t('scanReadDemo'), 'warn');
-        showWhere(STATUS.PRESENT);
+        showWhere();
         return;
     }
-    await mark(STATUS.PRESENT, () => store.markMe(p.sessionId, { token: p.token }));
+    await mark(() => store.markMe(p.sessionId, { token: p.token }));
 }
 
-// Students on Zoom type the 4 digits shown under the QR (Zoom's video loses the flicker).
-$('zoom-form').addEventListener('submit', async (ev) =>
-{
-    ev.preventDefault();
-    const digits = $('zoom-digits').value.trim();
-    if (!/^[0-9]{4}$/.test(digits))
-    {
-        setResult(t('zoomFourDigits'), 'error');
-        return;
-    }
-    const open = sessions.find((x) => x.endedAt === null);
-    if (!open)
-    {
-        setResult(t('noOpenLecture'), 'error');
-        return;
-    }
-    await mark(STATUS.ZOOM, () => store.markZoom(open.id, digits));
-    $('zoom-digits').value = '';
-});
-
 /**
- * Sends one attendance mark and shows the answer.
- * @param {string} status - what this mark means: STATUS.PRESENT or STATUS.ZOOM
- * @param {function():Promise<string>} send - calls the store; resolves 'present' | 'zoom' | 'pending'
+ * Sends the scan and shows the answer.
+ * @param {function():Promise<string>} send - calls the store; resolves 'present' | 'pending'
  */
-async function mark(status, send)
+async function mark(send)
 {
     try
     {
         const answer = await send();
         const waiting = answer === 'pending' || !navigator.onLine;
         setResult(t('scanOk') + (waiting ? ' · ' + t('scanPending') : ''), waiting ? 'warn' : 'ok');
-        showWhere(status);
+        showWhere();
     }
     catch (e)
     {
-        const known = { already: t('scanAlready'), 'bad-code': status === STATUS.ZOOM ? t('zoomBad') : t('scanBad') };
-        setResult(known[e.message] || t('scanBad'), 'error');
+        setResult(e.message === 'already' ? t('scanAlready') : t('scanBad'), 'error');
     }
 }
 
-/**
- * Shows the big "physical / Zoom" answer under the result.
- * @param {string} status - STATUS.PRESENT or STATUS.ZOOM
- */
-function showWhere(status)
+/** Shows the big "physical attendance" answer under the result. */
+function showWhere()
 {
-    const present = status === STATUS.PRESENT;
     const box = $('scan-where');
-    box.className = 'where ' + (present ? 'present' : 'zoom');
-    fill(box,
-        el('b', { text: present ? t('whereClass') : t('whereZoom') }),
-        el('span', { text: present ? t('whyClass') : t('whyZoom') }));
+    box.className = 'where present';
+    fill(box, el('b', { text: t('whereClass') }), el('span', { text: t('whyClass') }));
     box.hidden = false;
 }
 
