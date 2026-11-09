@@ -18,7 +18,9 @@ const DECODE_EVERY = 3;            // try to read every 3rd frame (saves battery
 const ZOOM_WHEN = 0.6;             // zoom in when the code covers less than 60% of the square
 const ZOOM_FILL = 1.35;            // after zooming, the square is 1.35 x the code (room for shake)
 const MIN_CROP = 200;              // never zoom closer than 200 camera pixels
-const GIVE_UP_MS = 4000;           // zoomed but nothing read for 4 s: look at the whole picture again
+const GIVE_UP_MS = 4000;
+const DIGITAL_MAX = 4;             // picture zoom (phones whose browser gives no camera zoom)
+const HARDWARE_MAX = 10;           // the camera's own zoom, at most 10x           // zoomed but nothing read for 4 s: look at the whole picture again
 
 /** Reads our flicker QR codes from the camera. */
 export class AveragingScanner
@@ -65,6 +67,7 @@ export class AveragingScanner
             {
                 await track.applyConstraints({ advanced: [{ zoom: z }] });
                 this.digitalZoom = 1;
+                this.video.style.transform = '';      // the camera itself zoomed: the preview shows it
                 this.unzoom();
                 return;
             }
@@ -73,8 +76,21 @@ export class AveragingScanner
                 // fall through to the picture zoom
             }
         }
-        this.digitalZoom = Math.max(1, factor);
+        this.digitalZoom = Math.min(DIGITAL_MAX, Math.max(1, factor));
+        // show the same zoom in the preview, so the student sees what is analysed
+        this.video.style.transform = this.digitalZoom > 1 ? 'scale(' + this.digitalZoom + ')' : '';
         this.unzoom();
+    }
+
+    /**
+     * How far the zoom can go: the camera's own range, or the picture zoom.
+     * @returns {number} the largest zoom factor
+     */
+    maxZoom()
+    {
+        const track = this.stream ? this.stream.getVideoTracks()[0] : null;
+        const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+        return caps.zoom ? Math.min(caps.zoom.max, HARDWARE_MAX) : DIGITAL_MAX;
     }
 
     /**
@@ -99,6 +115,7 @@ export class AveragingScanner
     stop()
     {
         this.running = false;
+        this.video.style.transform = '';
         if (this.stream)
         {
             for (const track of this.stream.getTracks())

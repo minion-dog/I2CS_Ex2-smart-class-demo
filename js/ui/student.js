@@ -62,9 +62,8 @@ $('scan-start').onclick = async () =>
     scanner = new AveragingScanner($('video'), onScanned, $('sees'));
     $('scan-stop').hidden = false;
     $('scan-where').hidden = true;
-    $('zoom-bar').hidden = false;
-    $('cam-zoom').value = '1';
-    $('cam-zoom-value').textContent = '1×';
+    zoom = 1;
+    $('zoom-now').textContent = '1×';
     try
     {
         await scanner.start();
@@ -76,19 +75,66 @@ $('scan-start').onclick = async () =>
     }
 };
 
-$('cam-zoom').addEventListener('input', () =>
+// Zoom for students at the back: the + / - buttons, or pinch with two fingers.
+let zoom = 1;
+const ZOOM_STEP = 0.5;
+
+/**
+ * Sets the camera zoom and shows it.
+ * @param {number} f - wanted zoom factor
+ */
+function applyZoom(f)
 {
-    const f = Number($('cam-zoom').value);
-    $('cam-zoom-value').textContent = f.toFixed(1).replace('.0', '') + '×';
-    if (scanner)
+    if (!scanner)
     {
-        scanner.setZoom(f);
+        return;
+    }
+    zoom = Math.min(scanner.maxZoom(), Math.max(1, f));
+    $('zoom-now').textContent = (Math.round(zoom * 10) / 10) + '×';
+    scanner.setZoom(zoom);
+}
+$('zoom-in').onclick = () => applyZoom(zoom + ZOOM_STEP);
+$('zoom-out').onclick = () => applyZoom(zoom - ZOOM_STEP);
+
+const fingers = new Map();
+let pinchStart = null;
+$('scanner').addEventListener('pointerdown', (ev) =>
+{
+    fingers.set(ev.pointerId, ev);
+    if (fingers.size === 2)
+    {
+        const [p1, p2] = [...fingers.values()];
+        pinchStart = { d: Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY), zoom: zoom };
     }
 });
+$('scanner').addEventListener('pointermove', (ev) =>
+{
+    if (!fingers.has(ev.pointerId))
+    {
+        return;
+    }
+    fingers.set(ev.pointerId, ev);
+    if (fingers.size === 2 && pinchStart && pinchStart.d > 0)
+    {
+        const [p1, p2] = [...fingers.values()];
+        const f = pinchStart.zoom * Math.hypot(p1.clientX - p2.clientX, p1.clientY - p2.clientY) / pinchStart.d;
+        if (Math.abs(f - zoom) >= 0.1)
+        {
+            applyZoom(f);
+        }
+    }
+});
+for (const name of ['pointerup', 'pointercancel', 'pointerleave'])
+{
+    $('scanner').addEventListener(name, (ev) =>
+    {
+        fingers.delete(ev.pointerId);
+        pinchStart = null;
+    });
+}
 
 $('scan-stop').onclick = () =>
 {
-    $('zoom-bar').hidden = true;
     if (scanner)
     {
         scanner.stop();
@@ -107,7 +153,6 @@ async function onScanned(text)
 {
     $('scanner').hidden = true;
     $('scan-stop').hidden = true;
-    $('zoom-bar').hidden = true;
     const p = decodePayload(text);
     if (p === null)
     {
