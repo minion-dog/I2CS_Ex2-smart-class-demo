@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartClass</title>
+    <meta name="theme-color" content="#1f5fbf">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <header class="topbar">
+        <span class="brand" data-i18n="appName">SmartClass</span>
+        <span class="who"></span>
+        <button class="secondary small" id="lang" data-i18n="langSwitch">English</button>
+    </header>
+    <main>
+        <section class="card login">
+            <h1 data-i18n="loginTitle">כניסה לשיעור</h1>
+            <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
+            <div id="error" class="banner error" hidden></div>
+
+            <div id="real-login">
+                <p class="hint" data-i18n="loginStudent"></p>
+                <button id="google" class="big" data-i18n="loginGoogle">כניסה עם Google</button>
+                <div class="or">· · ·</div>
+                <details>
+                    <summary data-i18n="loginLecturer">כניסת מרצה</summary>
+                    <form id="lecturer-form">
+                        <label for="lec-email" data-i18n="email"></label>
+                        <input id="lec-email" type="email" autocomplete="username" required>
+                        <label for="lec-pass" data-i18n="password"></label>
+                        <input id="lec-pass" type="password" autocomplete="current-password" required>
+                        <p><button type="submit" data-i18n="enter">כניסה</button></p>
+                    </form>
+                </details>
+            </div>
+
+            <div id="lan-login" hidden>
+                <form id="lan-student-form">
+                    <label for="lan-email" data-i18n="lanStudentEmail"></label>
+                    <div class="row">
+                        <input id="lan-email" class="grow" type="email" autocomplete="email" required dir="ltr">
+                        <button type="submit" data-i18n="enter"></button>
+                    </div>
+                </form>
+                <div class="or">· · ·</div>
+                <details>
+                    <summary data-i18n="loginLecturer">כניסת מרצה</summary>
+                    <form id="lan-lecturer-form">
+                        <label for="lan-pass" data-i18n="lanPassword"></label>
+                        <input id="lan-pass" type="password" inputmode="numeric" autocomplete="current-password" required>
+                        <p class="row">
+                            <button type="submit" data-i18n="enter"></button>
+                            <button type="button" id="lan-load" class="secondary small" data-i18n="lanLoadSample"></button>
+                        </p>
+                    </form>
+                </details>
+            </div>
+
+            <div id="demo-login" hidden>
+                <p><button id="demo-lecturer" class="big" data-i18n="demoAsLecturer"></button></p>
+                <label for="demo-student" data-i18n="demoAsStudent"></label>
+                <div class="row">
+                    <select id="demo-student" class="grow"></select>
+                    <button id="demo-student-go" data-i18n="enter"></button>
+                </div>
+                <p class="row">
+                    <button id="demo-load" class="secondary small" data-i18n="demoLoadClass"></button>
+                    <button id="demo-reset" class="secondary small" data-i18n="demoReset"></button>
+                </p>
+            </div>
+        </section>
+
+        <!-- The PC shows how to open the site on a phone. -->
+        <section id="phone-join" class="card login" hidden>
+            <h2 data-i18n="lanJoinTitle"></h2>
+            <div class="join">
+                <canvas id="join-qr" width="232" height="232"></canvas>
+                <div>
+                    <p class="join-url" dir="ltr" id="join-url"></p>
+                    <p class="hint" data-i18n="lanJoinHint"></p>
+                </div>
+            </div>
+        </section>
+        <section id="phone-need-server" class="card login" hidden>
+            <h2 data-i18n="lanJoinTitle"></h2>
+            <p data-i18n="demoNoPhone"></p>
+        </section>
+    </main>
+    <script src="vendor/qrcode.js"></script>
+    <script type="module" src="js/ui/login.js"></script>
+</body>
+</html>

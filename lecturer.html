@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartClass · מרצה</title>
+    <meta name="theme-color" content="#1f5fbf">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <header class="topbar">
+        <span class="brand" data-i18n="appName">SmartClass</span>
+        <span class="who"></span>
+        <button class="secondary small" id="lang" data-i18n="langSwitch">English</button>
+        <button class="secondary small" id="signout" data-i18n="signOut">יציאה</button>
+    </header>
+    <nav class="tabs" id="tabs" role="tablist">
+        <button data-tab="live" role="tab" data-i18n="tabLive"></button>
+        <button data-tab="sheet" role="tab" data-i18n="tabSheet"></button>
+        <button data-tab="roster" role="tab" data-i18n="tabRoster"></button>
+        <button data-tab="assignments" role="tab" data-i18n="tabAssignments"></button>
+        <button data-tab="settings" role="tab" data-i18n="tabSettings"></button>
+    </nav>
+    <main>
+        <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
+        <details id="lan-join" class="card" hidden>
+            <summary data-i18n="lanJoinTitle"></summary>
+            <div class="join">
+                <canvas id="join-qr" width="232" height="232"></canvas>
+                <div>
+                    <p class="join-url" dir="ltr" id="join-url"></p>
+                    <p class="hint" data-i18n="lanJoinHint"></p>
+                </div>
+            </div>
+        </details>
+
+        <!-- ============================ LIVE LECTURE ============================ -->
+        <section id="tab-live">
+            <div id="no-session" class="card">
+                <label for="session-title" data-i18n="sessionTitle"></label>
+                <div class="row">
+                    <input id="session-title" type="text" class="grow">
+                    <button id="start-session" data-i18n="startSession"></button>
+                </div>
+                <p class="hint" id="locate-status"></p>
+                <h3 data-i18n="chooseSession"></h3>
+                <ul class="list" id="past-sessions"></ul>
+            </div>
+
+            <div id="live" hidden>
+                <div class="grid live">
+                    <div class="card">
+                        <div class="row">
+                            <h2 class="grow" id="live-title"></h2>
+                            <button class="secondary small" id="fullscreen" data-i18n="fullscreen"></button>
+                            <button class="danger small" id="end-session" data-i18n="endSession"></button>
+                            <button class="secondary small" id="close-view">✕</button>
+                        </div>
+                        <div class="qr-wrap" id="qr-wrap">
+                            <canvas id="qr" aria-label="QR"></canvas>
+                            <div class="timer" id="qr-timer"></div>
+                        </div>
+                        <div class="stats" style="margin-top:12px">
+                            <div class="stat present"><b id="n-present">0</b><span data-i18n="inClass"></span></div>
+                            <div class="stat zoom"><b id="n-zoom">0</b><span data-i18n="onZoom"></span></div>
+                            <div class="stat manual"><b id="n-manual">0</b><span data-i18n="manual"></span></div>
+                            <div class="stat"><b id="n-head">–</b><span data-i18n="peopleInPhoto"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 data-i18n="tabSheet"></h2>
+                        <div class="row">
+                            <input id="manual-search" type="search" class="grow" list="roster-options" data-i18n-placeholder="searchStudent">
+                            <datalist id="roster-options"></datalist>
+                            <button id="manual-add" class="small" data-i18n="markByHand"></button>
+                        </div>
+                        <ul class="list feed" id="attendance-list"></ul>
+                    </div>
+
+                    <div class="card">
+                        <h2 data-i18n="comments"></h2>
+                        <div class="feed" id="comment-feed"></div>
+                        <div class="row">
+                            <input id="comment-text" type="text" class="grow" data-i18n-placeholder="writeComment">
+                            <button id="comment-send" data-i18n="send"></button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 data-i18n="polls"></h2>
+                        <label for="poll-q" data-i18n="pollQuestion"></label>
+                        <input id="poll-q" type="text">
+                        <label for="poll-opts" data-i18n="pollOptions"></label>
+                        <textarea id="poll-opts" rows="3"></textarea>
+                        <p><button id="poll-create" data-i18n="createPoll"></button></p>
+                        <div id="poll-list"></div>
+                    </div>
+
+                    <div class="card">
+                        <h2 data-i18n="transcript"></h2>
+                        <div class="row">
+                            <button id="rec-start" data-i18n="recordStart"></button>
+                            <button id="rec-stop" class="secondary" data-i18n="recordStop" hidden></button>
+                            <label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">
+                                <span data-i18n="uploadRecording"></span>
+                                <input id="rec-upload" type="file" accept="audio/*,video/*" hidden>
+                            </label>
+                            <button id="make-summary" class="secondary" data-i18n="makeSummary"></button>
+                        </div>
+                        <p class="hint" id="rec-status"></p>
+                        <h3 data-i18n="summary"></h3>
+                        <div id="summary-box" class="comment"><p class="muted" data-i18n="noSummary"></p></div>
+                        <details><summary data-i18n="transcript"></summary><div id="transcript-box" class="comment"></div></details>
+                    </div>
+
+                    <div class="card">
+                        <h2 data-i18n="headcount"></h2>
+                        <label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">
+                            <span data-i18n="uploadPhoto"></span>
+                            <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+                        </label>
+                        <p class="hint" id="head-status"></p>
+                        <div class="photo-box" id="photo-box"></div>
+                        <div id="head-result" hidden>
+                            <div class="stats">
+                                <div class="stat"><b id="head-count">0</b><span data-i18n="peopleInPhoto"></span></div>
+                                <div class="stat present"><b id="head-scans">0</b><span data-i18n="scannedInClass"></span></div>
+                            </div>
+                            <p id="head-warning" class="banner error" hidden data-i18n="moreScansThanPeople"></p>
+                            <label for="head-fix" data-i18n="correctCount"></label>
+                            <div class="row">
+                                <input id="head-fix" type="number" min="0" class="grow">
+                                <button id="head-save" data-i18n="save"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================ SHEET ============================ -->
+        <section id="tab-sheet" class="card" hidden>
+            <div class="row">
+                <h2 class="grow" data-i18n="tabSheet"></h2>
+                <button id="sheet-refresh" class="secondary small" data-i18n="refresh"></button>
+                <button id="sheet-xlsx" class="small" data-i18n="downloadXlsx"></button>
+            </div>
+            <p class="hint">V = <span data-i18n="inClass"></span> · Z = <span data-i18n="onZoom"></span> · M = <span data-i18n="manual"></span></p>
+            <div class="table-wrap"><table class="sheet" id="sheet-table"></table></div>
+        </section>
+
+        <!-- ============================ ROSTER ============================ -->
+        <section id="tab-roster" class="card" hidden>
+            <h2 data-i18n="tabRoster"></h2>
+            <label for="roster-file" data-i18n="importRoster"></label>
+            <input id="roster-file" type="file" accept=".csv,.xlsx">
+            <p class="hint" id="roster-status"></p>
+            <ul class="list" id="roster-list"></ul>
+        </section>
+
+        <!-- ============================ ASSIGNMENTS ============================ -->
+        <section id="tab-assignments" hidden>
+            <div class="grid two">
+                <div class="card">
+                    <h2 data-i18n="newAssignment"></h2>
+                    <label for="a-title" data-i18n="assignmentTitle"></label>
+                    <input id="a-title" type="text">
+                    <label for="a-req" data-i18n="requirements"></label>
+                    <textarea id="a-req" rows="6"></textarea>
+                    <label for="a-due" data-i18n="due"></label>
+                    <input id="a-due" type="date">
+                    <p><button id="a-create" data-i18n="create"></button></p>
+                    <ul class="list" id="a-list"></ul>
+                </div>
+                <div class="card">
+                    <div class="row">
+                        <h2 class="grow" id="a-current" data-i18n="submissions"></h2>
+                        <button id="a-review-all" class="small" data-i18n="reviewAll" hidden></button>
+                    </div>
+                    <div id="a-subs"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================ SETTINGS ============================ -->
+        <section id="tab-settings" class="card" hidden>
+            <h2 data-i18n="tabSettings"></h2>
+            <label for="groq-key" data-i18n="groqKey"></label>
+            <div class="row">
+                <input id="groq-key" type="password" class="grow" autocomplete="off">
+                <button id="groq-save" data-i18n="save"></button>
+            </div>
+            <p class="hint">console.groq.com → API Keys</p>
+        </section>
+    </main>
+    <script src="vendor/qrcode.js"></script>
+    <script type="module" src="js/ui/lecturer.js"></script>
+</body>
+</html>

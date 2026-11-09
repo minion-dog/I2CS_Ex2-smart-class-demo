@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SmartClass · סטודנט</title>
+    <meta name="theme-color" content="#1f5fbf">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <header class="topbar">
+        <span class="brand" data-i18n="appName">SmartClass</span>
+        <span class="who"></span>
+        <button class="secondary small" id="lang" data-i18n="langSwitch">English</button>
+        <button class="secondary small" id="signout" data-i18n="signOut">יציאה</button>
+    </header>
+    <nav class="tabs" id="tabs" role="tablist">
+        <button data-tab="scan" role="tab" data-i18n="tabScan"></button>
+        <button data-tab="lecture" role="tab" data-i18n="tabLecture"></button>
+        <button data-tab="assignments" role="tab" data-i18n="tabAssignments"></button>
+    </nav>
+    <main>
+        <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
+
+        <!-- ============================ SCAN ============================ -->
+        <section id="tab-scan" class="card">
+            <h2 data-i18n="scanTitle"></h2>
+            <p class="hint" data-i18n="scanHint"></p>
+            <div class="scanner" id="scanner" hidden>
+                <video id="video" muted playsinline></video>
+                <div class="frame"></div>
+                <figure class="sees">
+                    <canvas id="sees" width="120" height="120"></canvas>
+                    <figcaption data-i18n="scannerSees"></figcaption>
+                </figure>
+            </div>
+            <p class="center"><button id="scan-stop" class="secondary small" hidden data-i18n="cancel"></button></p>
+            <div class="scan-result" id="scan-result" role="status" aria-live="polite"></div>
+            <p><button id="scan-start" class="big" data-i18n="startCamera"></button></p>
+            <ul class="list" id="my-attendance"></ul>
+        </section>
+
+        <!-- ============================ LECTURE ============================ -->
+        <section id="tab-lecture" hidden>
+            <div class="card">
+                <label for="session-pick" data-i18n="chooseSession"></label>
+                <select id="session-pick"></select>
+            </div>
+            <div class="grid two" id="lecture-body" hidden>
+                <div class="card">
+                    <h2 data-i18n="comments"></h2>
+                    <div class="feed" id="comment-feed"></div>
+                    <input id="comment-text" type="text" data-i18n-placeholder="writeComment">
+                    <div class="row">
+                        <select id="comment-visibility" class="grow">
+                            <option value="public" data-i18n="public"></option>
+                            <option value="private" data-i18n="private"></option>
+                        </select>
+                        <label class="check"><input type="checkbox" id="comment-anon"> <span data-i18n="anonymous"></span></label>
+                        <button id="comment-send" data-i18n="send"></button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h2 data-i18n="polls"></h2>
+                    <div id="poll-list"></div>
+                    <h2 data-i18n="summary"></h2>
+                    <div id="summary-box" class="comment"></div>
+                    <details><summary data-i18n="transcript"></summary><div id="transcript-box" class="comment"></div></details>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================ ASSIGNMENTS ============================ -->
+        <section id="tab-assignments" hidden>
+            <div id="assignment-list"></div>
+        </section>
+    </main>
+    <script src="vendor/jsQR.js"></script>
+    <script type="module" src="js/ui/student.js"></script>
+</body>
+</html>
