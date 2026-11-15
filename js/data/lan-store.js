@@ -90,9 +90,9 @@ export class LanStore extends FakeStore
     }
 
     /** @override */
-    async createSession(title, where)
+    async createSession(title)
     {
-        return this.act({ type: 'createSession', title: title, where: where });
+        return this.act({ type: 'createSession', title: title });
     }
 
     /** @override */

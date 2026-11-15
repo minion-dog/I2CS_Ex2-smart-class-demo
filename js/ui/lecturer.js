@@ -7,14 +7,13 @@
 // directly - so the same page runs on real Firebase and in demo mode.
 
 import { startPage } from './page.js';
-import { el, fill, toast, when, setupTabs, download, locate } from './dom.js';
+import { el, fill, toast, when, setupTabs, download } from './dom.js';
 import { t, lang } from './i18n.js';
 import { NoisyQrDisplay } from './qr-display.js';
 import { showJoinCode } from './join.js';
 import { bindComments } from './comments.js';
 import { bindPolls, readPollForm } from './polls.js';
 import { LectureRecorder, transcribeUpload } from './recorder.js';
-import { cosLatOf, GEO } from '../core/geo.js';
 import { encodePayload, newToken, CODE } from '../core/payload.js';
 import { buildAttendanceSheet, STATUS } from '../core/sheet.js';
 import { parseCsv, rosterFromRows } from '../core/classlist.js';
@@ -28,8 +27,6 @@ import { detectPeople, compareWithScans } from '../ai/headcount.js';
 //  CONSTANTS & FIELDS
 // ---------------------------------------------------------------------
 
-const ARIEL_UNIVERSITY = Object.freeze({ lat: 32.1036, lng: 35.2079 });  // fallback when no location
-const LOCATE_TIMEOUT_MS = 8000;
 
 const $ = (id) => document.getElementById(id);
 
@@ -112,18 +109,8 @@ store.watchSessions((list) =>
 $('start-session').onclick = async () =>
 {
     $('start-session').disabled = true;
-    $('locate-status').textContent = t('locating');
-    let pos = await locate(LOCATE_TIMEOUT_MS);
-    if (pos === null)
-    {
-        pos = ARIEL_UNIVERSITY;
-        toast(t('noLocation'), 'warn');
-    }
-    $('locate-status').textContent = '';
     const title = $('session-title').value.trim() || defaultTitle();
-    const id = await store.createSession(title, {
-        lat: pos.lat, lng: pos.lng, cosLat: cosLatOf(pos.lat), radiusM: GEO.RADIUS_METERS
-    });
+    const id = await store.createSession(title);     // no location: attendance is the live scan
     $('start-session').disabled = false;
     openLive({ id: id, title: title, endedAt: null, startedAt: Date.now() });
 };
@@ -259,7 +246,7 @@ function stopQr()
 function renderAttendance(list)
 {
     attendanceNow = list;
-    const counts = { present: 0, zoom: 0, manual: 0 };
+    const counts = { present: 0, manual: 0 };
     const items = [];
     const sorted = list.slice().sort((a, b) => (b.scannedAt || 0) - (a.scannedAt || 0));
     for (const r of sorted)
@@ -278,7 +265,6 @@ function renderAttendance(list)
     }
     fill($('attendance-list'), ...items);
     $('n-present').textContent = counts.present;
-    $('n-zoom').textContent = counts.zoom;
     $('n-manual').textContent = counts.manual;
     $('head-scans').textContent = counts.present;
     updateHeadWarning();

@@ -168,24 +168,3 @@ export function download(data, name, type)
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-/**
- * Asks the browser for the current position.
- * @param {number} timeoutMs - give up after this long
- * @returns {Promise<{lat:number,lng:number}|null>} position or null when unavailable/denied
- */
-export function locate(timeoutMs)
-{
-    return new Promise((resolve) =>
-    {
-        if (!navigator.geolocation)
-        {
-            resolve(null);
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-            () => resolve(null),
-            { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60000 });
-    });
-}

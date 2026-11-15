@@ -9,6 +9,8 @@
 // State lives in localStorage and every change is broadcast to the other
 // tabs, so a scan in the student tab shows up live in the lecturer tab.
 
+import { newSessionId } from '../core/payload.js';
+
 const KEY = 'smartclass-demo-v1';
 const STATUS_PRESENT = 'present';       // scanned the flicker QR
 const CHANNEL = 'smartclass-demo';
@@ -125,15 +127,13 @@ export class FakeStore
     /**
      * Opens a lecture.
      * @param {string} title - shown in lists and in the sheet
-     * @param {{lat:number,lng:number,cosLat:number}} where - lecturer location
      * @returns {Promise<string>} session id
      */
-    async createSession(title, where)
+    async createSession(title)
     {
-        const id = 's' + Date.now().toString(36);
+        const id = newSessionId();
         this.state.sessions[id] = {
             id: id, title: title, startedAt: Date.now(), endedAt: null,
-            lat: where.lat, lng: where.lng, cosLat: where.cosLat, radiusM: where.radiusM,
             summary: null, headcount: null
         };
         this.state.sub[id] = { codes: {}, attendance: {}, comments: [], polls: {}, transcript: {} };
@@ -195,8 +195,8 @@ export class FakeStore
     /**
      * Writes the signed-in student's record, once per lecture.
      * @param {object} sub - the session's data
-     * @param {string} status - 'present' | 'zoom'
-     * @param {string} token - the QR token or the Zoom digits
+     * @param {string} status - 'present'
+     * @param {string} token - the scanned QR token
      */
     markWith(sub, status, token)
     {
@@ -215,7 +215,7 @@ export class FakeStore
      * Sets or clears a student's attendance by hand (lecturer).
      * @param {string} sid - session
      * @param {string} email - student
-     * @param {string|null} status - 'present' | 'zoom' | 'manual' | null to remove
+     * @param {string|null} status - 'present' | 'manual' | null to remove
      */
     async setAttendance(sid, email, status)
     {

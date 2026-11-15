@@ -32,8 +32,8 @@ export const NOISE = Object.freeze({
     HOLD: 8,                   // a dark square keeps its colour for 8 phases (~0.27 s)
     FRAMES: 25,                // camera frames in the change map (~0.8 s at 30 fps)
     BLUR_SIGMA: 1.5,           // smooths square edges in the change map (pixels, at 400 px)
-    ERROR_CORRECTION: 'H',     // highest QR error correction (30 %)
-    QUIET_ZONE: 4,             // white border in modules, required by the QR standard
+    ERROR_CORRECTION: 'Q',     // QR error correction Q (25 %): with the short text the code is 25x25 squares
+    QUIET_ZONE: 2,             // flickering border in squares (2 is enough for our readers; bigger squares)
     DARK: 0,
     LIGHT: 255
 });
@@ -51,7 +51,8 @@ export const NOISE = Object.freeze({
 export function matrixFromText(qrcodeLib, text)
 {
     const qr = qrcodeLib(0, NOISE.ERROR_CORRECTION);
-    qr.addData(text);
+    // capitals/digits fit QR's alphanumeric mode: fewer, bigger squares
+    qr.addData(text, /^[0-9A-Z $%*+\-./:]*$/.test(text) ? 'Alphanumeric' : 'Byte');
     qr.make();
     const size = qr.getModuleCount();
     const dark = new Uint8Array(size * size);
@@ -391,8 +392,8 @@ export class ChangeMap
 //  LOW-LEVEL HELPERS
 // ---------------------------------------------------------------------
 
-const MAX_SHIFT = 3;           // largest hand movement between two frames, in pixels
-const MAX_DRIFT = 12;          // larger total drift = start the map over
+const MAX_SHIFT = 12;          // largest hand movement between two frames, in pixels (zoomed-in phones shake a lot)
+const MAX_DRIFT = 60;          // larger total drift = start the map over
 const SHIFT_STEP = 7;          // compare every 7th pixel when lining frames up (fast)
 const MIN_SIGNAL = 4;          // below this mean change (grey levels) the picture is frozen
 const ACTIVE_LEVEL = 0.35;     // "changes a lot" = above 35% of the strongest change
@@ -410,15 +411,39 @@ const BOX_MARGIN = 0.08;       // the box grows by 8% on each side (the code's w
  */
 function bestShift(frame, last, n)
 {
+    // coarse search every 2nd shift over +-MAX_SHIFT, then the exact shift around the winner
+    const coarse = searchShift(frame, last, n, 0, 0, MAX_SHIFT, 2);
+    return searchShift(frame, last, n, coarse.dx, coarse.dy, 1, 1);
+}
+
+/**
+ * Tries the shifts (cx + dx, cy + dy) for |dx|, |dy| <= radius, in steps of `step`,
+ * and returns the one with the smallest sum of differences on a sparse grid.
+ * @param {Uint8ClampedArray} frame - new frame
+ * @param {Uint8ClampedArray} last - previous frame
+ * @param {number} n - side in pixels
+ * @param {number} cx - centre of the search, x
+ * @param {number} cy - centre of the search, y
+ * @param {number} radius - how far to try around the centre
+ * @param {number} step - try every step-th shift
+ * @returns {{dx:number, dy:number}} the best shift
+ */
+function searchShift(frame, last, n, cx, cy, radius, step)
+{
     let best = Infinity;
-    let bx = 0;
-    let by = 0;
-    const lo = Math.max(Math.floor(n / 4), MAX_SHIFT);
-    const hi = Math.min(n - Math.floor(n / 4), n - MAX_SHIFT);
-    for (let dy = -MAX_SHIFT; dy <= MAX_SHIFT; dy++)
+    let bx = cx;
+    let by = cy;
+    const margin = MAX_SHIFT + 1;
+    const lo = Math.max(Math.floor(n / 4), margin);
+    const hi = Math.min(n - Math.floor(n / 4), n - margin);
+    for (let dy = cy - radius; dy <= cy + radius; dy += step)
     {
-        for (let dx = -MAX_SHIFT; dx <= MAX_SHIFT; dx++)
+        for (let dx = cx - radius; dx <= cx + radius; dx += step)
         {
+            if (Math.abs(dx) > MAX_SHIFT || Math.abs(dy) > MAX_SHIFT)
+            {
+                continue;
+            }
             let sad = 0;
             for (let y = lo; y < hi; y += SHIFT_STEP)
             {

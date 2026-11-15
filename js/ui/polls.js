@@ -18,8 +18,14 @@ export function bindPolls(store, user, sid, box)
 {
     const voteWatchers = new Map();
     const cards = new Map();
+    let firstList = true;                 // polls that exist when the page opens are not "new"
     const unsub = store.watchPolls(sid, (polls) =>
     {
+        if (!firstList && user.role === 'student' && polls.some((p) => p.open && !cards.has(p.id)))
+        {
+            notify(t('newPoll'));         // in-app notification (no push on the free plan)
+        }
+        firstList = false;
         const keep = new Set();
         const nodes = [];
         for (const p of polls)
@@ -139,6 +145,19 @@ function drawPoll(store, user, sid, card)
         parts.push(row);
     }
     fill(card, ...parts);
+}
+
+/**
+ * Shows an in-app notification: a toast and a short vibration (no push on the free plan).
+ * @param {string} text - message
+ */
+export function notify(text)
+{
+    toast('🔔 ' + text);
+    if (navigator.vibrate)
+    {
+        navigator.vibrate([60, 60, 60]);
+    }
 }
 
 /**

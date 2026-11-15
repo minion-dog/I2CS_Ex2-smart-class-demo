@@ -1,7 +1,7 @@
 // =====================================================================
 //  student.js - the student's website (phone first)
 // =====================================================================
-// Scan: camera -> averaged noisy QR -> location -> in class or Zoom ->
+// Scan: camera -> flicker QR change map -> in class (physical only, no location) ->
 // attendance (works offline: saved on the phone, sent later).
 // Lecture: comments (public/private, anonymous or not), polls, summary
 // and transcript, also for past lectures.
@@ -13,7 +13,7 @@ import { el, fill, toast, when, setupTabs } from './dom.js';
 import { t } from './i18n.js';
 import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
-import { bindPolls } from './polls.js';
+import { bindPolls, notify } from './polls.js';
 import { decodePayload } from '../core/payload.js';
 
 // ---------------------------------------------------------------------
@@ -358,9 +358,16 @@ function assignmentCard(a)
         el('p', {}, [el('button', { text: t('submit'), onclick: () => submit(a, repo, files) })]),
         mine
     ]);
+    let lastGrade;                        // undefined until the first answer: the grade at page load is not "new"
     subWatchers.set(a.id, store.watchSubmissions(a.id, (list) =>
     {
         const s = list[0];
+        const grade = s && s.grade !== undefined && s.grade !== null ? String(s.grade) : null;
+        if (lastGrade !== undefined && grade !== null && grade !== lastGrade)
+        {
+            notify(t('newGrade') + ': ' + a.title);           // the lecturer graded while the page is open
+        }
+        lastGrade = grade;
         if (!s)
         {
             fill(mine);

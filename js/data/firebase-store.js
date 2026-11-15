@@ -8,6 +8,8 @@
 // The security rules (firestore.rules) are what really protect the data;
 // this file only calls Firestore the way the rules allow.
 
+import { newSessionId } from '../core/payload.js';
+
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
 /** A Store backed by Firebase. */
@@ -197,17 +199,15 @@ export class FirebaseStore
     /**
      * Opens a lecture (lecturer).
      * @param {string} title - name
-     * @param {{lat:number,lng:number,cosLat:number,radiusM:number}} where - lecturer location
      * @returns {Promise<string>} session id
      */
-    async createSession(title, where)
+    async createSession(title)
     {
         await this.ready;
         const f = this.fs;
-        const ref = f.doc(f.collection(this.db, 'sessions'));
+        const ref = f.doc(this.db, 'sessions', newSessionId());   // short id = short QR
         await f.setDoc(ref, {
             title: title, startedAt: Date.now(), endedAt: null,
-            lat: where.lat, lng: where.lng, cosLat: where.cosLat, radiusM: where.radiusM,
             summary: null, headcount: null
         });
         return ref.id;
@@ -264,8 +264,8 @@ export class FirebaseStore
     /**
      * Writes the student's own attendance record (create once; the rules check the code).
      * @param {string} sid - session
-     * @param {string} status - 'present' | 'zoom'
-     * @param {string} token - the QR token or the Zoom digits
+     * @param {string} status - 'present'
+     * @param {string} token - the scanned QR token
      */
     async writeMark(sid, status, token)
     {
