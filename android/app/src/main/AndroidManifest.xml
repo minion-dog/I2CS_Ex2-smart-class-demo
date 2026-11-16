@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.SmartClass">
+
+        <activity android:name=".ui.MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ui.LoginActivity" android:exported="false" />
+        <activity android:name=".ui.StudentHomeActivity" android:exported="false" />
+        <activity android:name=".ui.ScanActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".ui.LectureActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.LecturerHomeActivity" android:exported="false" />
+        <activity android:name=".ui.LiveSessionActivity" android:exported="false" />
+        <activity android:name=".ui.AssignmentsActivity" android:exported="false" />
+        <activity android:name=".ui.SettingsActivity" android:exported="false" />
+
+        <!-- Shares the exported attendance .xlsx with other apps (mail, Drive, WhatsApp). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Remembers the chosen language on Android 12 and older. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data android:name="autoStoreLocales" android:value="true" />
+        </service>
+    </application>
+</manifest>

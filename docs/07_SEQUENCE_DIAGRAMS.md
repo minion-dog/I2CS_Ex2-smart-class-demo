@@ -1,0 +1,220 @@
+# Sequence diagrams
+
+## SD-1 Open a lecture and show the flicker code (UC-2)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    participant P as lecturer.js
+    participant S as Store (FirebaseStore)
+    participant F as Firestore + rules
+    participant D as NoisyQrDisplay
+    L->>P: Start lecture
+    P->>S: createSession(title)
+    S->>F: set sessions/{newSessionId()}
+    F-->>S: ok
+    S-->>P: sid
+    loop every 30 s
+        P->>P: token = newToken()
+        P->>S: publishCode(sid, token)
+        S->>F: set sessions/{sid}/codes/{token} (lecturer only)
+        P->>D: setText(encodePayload(sid, token))
+    end
+    loop 30 times a second
+        D->>D: draw(phase): FlickerSchedule.frame(phase)
+    end
+```
+
+## SD-2 A student marks attendance by scanning (UC-3, the main flow)
+
+```mermaid
+sequenceDiagram
+    actor St as Student
+    participant U as student.js
+    participant Sc as AveragingScanner
+    participant M as ChangeMap
+    participant J as jsQR
+    participant S as Store (FirebaseStore)
+    participant F as Firestore + rules
+    participant LP as lecturer.js (live)
+    St->>U: Start camera
+    U->>Sc: start()
+    loop every camera frame (~30/s)
+        Sc->>Sc: draw the crop (whole picture, or zoomed box) to 400×400 grey
+        Sc->>M: push(grey)
+        M->>M: bestShift (align with the previous frame), add |difference|
+        alt every 3rd frame, 25 frames in the map, signal present
+            Sc->>M: image(400)
+            M->>M: activeBox, stretch, blur, Otsu inside the box
+            M-->>Sc: black-and-white picture
+            Sc->>J: decode
+            alt read
+                J-->>Sc: "SC2/<sid>/<token>"
+                Sc-->>U: onText(text)
+            else not yet, and the code is small
+                Sc->>M: activeBox()
+                Sc->>Sc: zoomIfSmall(): crop = the box ×1.35, map.reset()
+            end
+        end
+    end
+    U->>U: decodePayload(text)
+    U->>S: markMe(sid, {token})
+    S->>F: create attendance/{myEmail} {status: present, token}
+    F->>F: rules: own email, once, codes/{token} exists
+    alt allowed
+        F-->>S: ok
+        S-->>U: present
+        U-->>St: 🏫 Physical attendance, in class
+        F-->>LP: live update (watchAttendance)
+    else already marked
+        F-->>S: denied
+        U-->>St: You are already marked
+    end
+```
+
+## SD-3 Why a photo fails (NFR-2)
+
+```mermaid
+sequenceDiagram
+    actor A as Friend at home
+    participant Ph as Phone camera app
+    participant Sc as Our scanner
+    A->>Ph: photo of the screen (1 frame, or HDR merge of 3–90 frames)
+    Ph-->>A: random dots / plain grey (every frame random, every average grey)
+    A->>Sc: hold the photo in front of the scanner
+    Sc->>Sc: ChangeMap: nothing changes between frames
+    Sc-->>A: hasSignal() = false → nothing is read
+```
+
+## SD-4 Attendance sheet (UC-4)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    participant P as lecturer.js
+    participant S as Store
+    participant Sh as sheet.js
+    participant X as xlsx.js
+    L->>P: Sheet tab
+    P->>S: listRoster(), sessions, loadAttendance(ids)
+    S-->>P: roster, sessions, records (from the server or the local cache)
+    P->>Sh: buildAttendanceSheet(roster, sessions, attendance)
+    Sh-->>P: rows (V / M per lecture)
+    L->>P: Download XLSX
+    P->>X: writeXlsx("Attendance", rows)
+    X-->>P: bytes
+    P-->>L: attendance.xlsx
+```
+
+## SD-5 An offline comment (UC-6, FR-GEN-2)
+
+```mermaid
+sequenceDiagram
+    actor St as Student
+    participant C as comments.js
+    participant S as FirebaseStore
+    participant Cache as Firestore local cache
+    participant F as Firestore server
+    participant LP as Lecturer page
+    St->>C: write, private, anonymous → Send
+    C->>S: addComment(sid, {text, visibility, anonymous})
+    S->>Cache: write (pending)
+    Cache-->>C: shown with "waiting to send"
+    Note over Cache,F: no connection
+    Cache->>F: sent when the connection returns
+    F->>F: rules: author = me, valid visibility
+    F-->>LP: live update
+```
+
+## SD-6 Quick poll (UC-7)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    actor St as Student
+    participant LP as polls.js (lecturer)
+    participant S as Store
+    participant SP as polls.js (student)
+    L->>LP: question + 2–6 answers → Create
+    LP->>S: createPoll(sid, q, options)
+    S-->>SP: watchPolls: a new open poll
+    SP-->>St: 🔔 A new poll in the lecture
+    St->>SP: tap an answer
+    SP->>S: vote(sid, pid, option)
+    S->>S: rules: open, once per student
+    S-->>LP: watchVotes: live counts
+    L->>LP: Close
+    LP->>S: setPollOpen(sid, pid, false)
+```
+
+## SD-7 Recording and AI summary (UC-8)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    participant P as lecturer.js
+    participant R as LectureRecorder
+    participant G as groq.js
+    participant Groq as Groq API
+    participant S as Store
+    L->>P: Record
+    P->>R: start()
+    loop every 60 s piece
+        R->>G: transcribe(piece, "he")
+        G->>Groq: Whisper large-v3 (key from this browser only)
+        Groq-->>G: text
+        R->>S: addTranscript(sid, index, text)
+    end
+    L->>P: Make summary
+    P->>G: chat(summaryPrompt(title, transcript, lang))
+    G->>Groq: LLM
+    Groq-->>G: summary
+    P->>S: updateSession(sid, {summary})
+```
+
+## SD-8 Homework review compared with the class (UC-10)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    participant P as lecturer.js
+    participant Gh as github.js
+    participant GitHub
+    participant Pr as prompts.js
+    participant G as groq.js
+    participant S as Store
+    L->>P: Review all
+    loop each submission
+        P->>Gh: fetchRepoFiles(repoUrl)
+        Gh->>GitHub: tree + README first + up to 25 code files
+        GitHub-->>Gh: files
+        P->>Pr: submissionText(files)
+        P->>Pr: reviewPrompt(requirements, submission, anonymous peer summaries)
+        P->>G: chat(messages)
+        G-->>P: review (meets / missing / compared with the class)
+        P->>S: updateSubmission(aid, email, {review})
+    end
+    L->>P: edit, grade, feedback
+    P->>S: updateSubmission(aid, email, {grade, feedback})
+    S-->>L: the student sees it (🔔 New grade)
+```
+
+## SD-9 Head count from a class photo (UC-5)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer
+    participant P as lecturer.js
+    participant H as headcount.js
+    participant TF as TF.js COCO-SSD (CDN)
+    L->>P: Upload photo
+    P->>H: detectPeople(img)
+    H->>TF: load once, detect
+    TF-->>H: boxes
+    H->>H: peopleOnly(boxes, MIN_SCORE)
+    P->>H: compareWithScans(people, in-class scans)
+    alt more scans than people
+        P-->>L: warning
+    end
+    L->>P: correct the count → Save
+```

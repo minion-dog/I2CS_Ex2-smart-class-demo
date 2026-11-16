@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SmartClass" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">#1F5FBF</item>
+        <item name="colorPrimaryVariant">#174A96</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#0F8A7E</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+    </style>
+</resources>

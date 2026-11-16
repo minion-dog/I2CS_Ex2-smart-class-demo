@@ -1,0 +1,171 @@
+"""Tests for the local server's rules and privacy (the same checks as firestore.rules).
+
+Run:  python -m unittest server/test_server.py
+"""
+
+import json
+import os
+import threading
+import unittest
+import urllib.error
+import urllib.request
+
+os.environ.setdefault("SMARTCLASS_PASSWORD", "test-password")  # do not write lecturer-password.txt
+
+import server as srv  # noqa: E402
+
+LECTURER = {"uid": "lecturer", "email": "lecturer@local", "name": "L", "role": "lecturer"}
+
+
+def student(email):
+    return {"uid": "u-" + email, "email": email, "name": email, "role": "student"}
+
+
+class RulesTest(unittest.TestCase):
+    """apply_action / view_for / sign_in, without HTTP."""
+
+    def setUp(self):
+        self.s = srv.empty_state()
+        srv.apply_action(self.s, LECTURER, {"type": "saveRoster", "entries": [
+            {"first": "D", "last": "L", "id": "1", "email": "Dana@demo", "group": "3", "staff": False},
+            {"first": "Y", "last": "C", "id": "2", "email": "yossi@demo", "group": "3", "staff": False},
+            {"first": "T", "last": "A", "id": "3", "email": "ta@demo", "group": "", "staff": True}]})
+        self.sid = srv.apply_action(self.s, LECTURER, {"type": "createSession", "title": "L1"})
+        srv.apply_action(self.s, LECTURER, {"type": "publishCode", "sid": self.sid, "token": "tok"})
+        self.dana = student("dana@demo")
+        self.yossi = student("yossi@demo")
+
+    def scan(self, who, token="tok"):
+        return srv.apply_action(self.s, who, {"type": "markMe", "sid": self.sid, "token": token})
+
+    def test_tc_srv_1_a_real_scan_is_in_class(self):
+        """TC-SRV-1: a real code of this lecture = in class (no location); Zoom marks do not exist."""
+        self.assertEqual(self.scan(self.dana), "present")
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.yossi, {"type": "markZoom", "sid": self.sid, "digits": "1234"})
+
+    def test_tc_srv_2_fake_code_and_second_scan_are_rejected(self):
+        """TC-SRV-2: only a real code of this lecture, and only once."""
+        with self.assertRaises(srv.Denied):
+            self.scan(self.dana, token="made-up")
+        self.scan(self.dana)
+        with self.assertRaises(srv.Denied):
+            self.scan(self.dana)
+
+    def test_tc_srv_3_student_cannot_do_lecturer_things(self):
+        """TC-SRV-3: deny by default for lecturer actions."""
+        for a in ({"type": "publishCode", "sid": self.sid, "token": "x"},
+                  {"type": "setAttendance", "sid": self.sid, "email": "dana@demo", "status": "manual"},
+                  {"type": "saveRoster", "entries": []},
+                  {"type": "resetDemo"}):
+            with self.assertRaises(srv.Denied):
+                srv.apply_action(self.s, self.dana, a)
+
+    def test_tc_srv_4_student_view_hides_secrets(self):
+        """TC-SRV-4: no codes, no class list, no other students' records or private comments."""
+        self.scan(self.dana)
+        self.scan(self.yossi)
+        srv.apply_action(self.s, self.yossi, {"type": "addComment", "sid": self.sid, "text": "secret", "visibility": "private"})
+        srv.apply_action(self.s, self.yossi, {"type": "addComment", "sid": self.sid, "text": "hello", "visibility": "public"})
+        v = srv.view_for(self.s, self.dana)
+        sub = v["sub"][self.sid]
+        self.assertEqual(sub["codes"], {})
+        self.assertEqual(v["roster"], {})
+        self.assertEqual(list(sub["attendance"]), ["dana@demo"])
+        self.assertEqual([c["text"] for c in sub["comments"]], ["hello"])
+        lect = srv.view_for(self.s, LECTURER)
+        self.assertEqual(lect["sub"][self.sid]["codes"], {})
+        self.assertEqual(len(lect["sub"][self.sid]["comments"]), 2)
+
+    def test_tc_srv_5_vote_once_while_open(self):
+        """TC-SRV-5: one vote per student; none after closing."""
+        pid = srv.apply_action(self.s, LECTURER, {"type": "createPoll", "sid": self.sid, "question": "q", "options": ["a", "b"]})
+        srv.apply_action(self.s, self.dana, {"type": "vote", "sid": self.sid, "pid": pid, "option": 1})
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, {"type": "vote", "sid": self.sid, "pid": pid, "option": 0})
+        srv.apply_action(self.s, LECTURER, {"type": "setPollOpen", "sid": self.sid, "pid": pid, "open": False})
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.yossi, {"type": "vote", "sid": self.sid, "pid": pid, "option": 0})
+        v = srv.view_for(self.s, self.yossi)
+        self.assertEqual(v["sub"][self.sid]["polls"][pid]["votes"], {})
+
+    def test_tc_srv_6_submission_links_must_be_http(self):
+        """TC-SRV-6: no javascript: links in submissions."""
+        aid = srv.apply_action(self.s, LECTURER, {"type": "createAssignment", "assignment": {"title": "Ex2"}})
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, {"type": "submit", "aid": aid, "repoUrl": "javascript:alert(1)", "files": []})
+        srv.apply_action(self.s, self.dana, {"type": "submit", "aid": aid, "repoUrl": "https://github.com/a/b", "files": []})
+        self.assertEqual(srv.view_for(self.s, self.yossi)["assignments"][aid]["submissions"], {})
+
+    def test_tc_srv_7_sign_in(self):
+        """TC-SRV-7: students only from the list (case-insensitive), staff rows and strangers refused."""
+        self.assertEqual(srv.sign_in(self.s, {"email": "DANA@demo"})["role"], "student")
+        with self.assertRaises(srv.Denied):
+            srv.sign_in(self.s, {"email": "ta@demo"})
+        with self.assertRaises(srv.Denied):
+            srv.sign_in(self.s, {"email": "stranger@x.com"})
+        with self.assertRaises(srv.Denied):
+            srv.sign_in(self.s, {"role": "lecturer", "password": "wrong"})
+
+
+class HttpTest(unittest.TestCase):
+    """The real HTTP API (plain HTTP on a free port)."""
+
+    @classmethod
+    def setUpClass(cls):
+        srv.STATE.clear()
+        srv.STATE.update(srv.empty_state())
+        srv.DATA_FILE = srv.HERE / "test-data.json"
+        srv.TOKENS_FILE = srv.HERE / "test-tokens.json"
+        cls.httpd = srv.make_server(0, use_tls=False)
+        cls.port = cls.httpd.server_address[1]
+        threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        srv.DATA_FILE.unlink(missing_ok=True)
+        srv.TOKENS_FILE.unlink(missing_ok=True)
+
+    def call(self, path, body=None, token=None):
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}",
+                                     data=None if body is None else json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        if token:
+            req.add_header("Authorization", "Bearer " + token)
+        try:
+            with urllib.request.urlopen(req) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read())
+
+    def test_tc_srv_8_full_flow_over_http(self):
+        """TC-SRV-8: sign in, import, open, scan, see; unauthenticated calls refused."""
+        self.assertEqual(self.call("/api/state")[0], 401)
+        code, r = self.call("/api/signin", {"role": "lecturer", "password": srv.LECTURER_PASSWORD})
+        self.assertEqual(code, 200)
+        lt = r["token"]
+        self.call("/api/action", {"type": "saveRoster", "entries": [
+            {"first": "D", "last": "L", "id": "1", "email": "dana@demo", "group": "3", "staff": False}]}, lt)
+        _, r = self.call("/api/action", {"type": "createSession", "title": "L1"}, lt)
+        sid = r["result"]
+        self.call("/api/action", {"type": "publishCode", "sid": sid, "token": "t1"}, lt)
+        _, r = self.call("/api/signin", {"email": "dana@demo"})
+        st = r["token"]
+        code, r = self.call("/api/action", {"type": "markMe", "sid": sid, "token": "t1"}, st)
+        self.assertEqual((code, r["result"]), (200, "present"))
+        code, r = self.call("/api/action", {"type": "markMe", "sid": sid, "token": "t1"}, st)
+        self.assertEqual((code, r["error"]), (403, "already"))
+        _, r = self.call("/api/state", token=lt)
+        self.assertEqual(r["state"]["sub"][sid]["attendance"]["dana@demo"]["status"], "present")
+
+    def test_tc_srv_9_sign_in_survives_a_restart(self):
+        """TC-SRV-9: tokens are saved, so phones stay signed in when the PC restarts the server."""
+        _, r = self.call("/api/signin", {"role": "lecturer", "password": srv.LECTURER_PASSWORD})
+        srv.TOKENS.clear()
+        srv.load_tokens()
+        self.assertEqual(self.call("/api/state", token=r["token"])[0], 200)
+
+
+if __name__ == "__main__":
+    unittest.main()

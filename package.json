@@ -1,0 +1,9 @@
+{
+  "name": "smartclass",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test web/test/*.test.js",
+    "serve": "cd web && python3 -m http.server 8000"
+  }
+}

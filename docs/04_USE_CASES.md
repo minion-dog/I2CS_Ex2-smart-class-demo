@@ -1,0 +1,100 @@
+# Main use cases (client stories)
+
+Actors: **Lecturer**, **Student**, and the external services **Groq** (AI) and **GitHub**.
+
+```mermaid
+flowchart LR
+    L([Lecturer])
+    S([Student])
+    G[(Groq AI)]
+    H[(GitHub)]
+    subgraph SmartClass
+        UC1(UC-1 Import the class list)
+        UC2(UC-2 Run a lecture: show the flicker code)
+        UC3(UC-3 Mark attendance by scanning)
+        UC4(UC-4 Watch and download the attendance sheet)
+        UC5(UC-5 Check attendance with a class photo)
+        UC6(UC-6 Comment during or after a lecture)
+        UC7(UC-7 Run a quick poll)
+        UC8(UC-8 Record and summarise the lecture)
+        UC9(UC-9 Submit homework)
+        UC10(UC-10 Review and grade homework)
+        UC11(UC-11 Sign in)
+    end
+    L --- UC1 & UC2 & UC4 & UC5 & UC7 & UC8 & UC10 & UC11
+    S --- UC3 & UC6 & UC9 & UC11
+    L --- UC6
+    S --- UC7
+    UC8 --- G
+    UC10 --- G
+    UC10 --- H
+```
+
+---
+
+## UC-1 Import the class list
+**Story:** As a lecturer, I want to load the Moodle participants file, so that only my students can sign in.
+- **Pre:** the lecturer is signed in.
+- **Main flow:** 1) Lecturer opens *Class list* → *Import*. 2) Chooses the Moodle CSV or XLSX. 3) The system reads the Hebrew headers, lower-cases the emails, marks rows without a group as staff. 4) The list is saved and shown.
+- **Alternative:** a row without an email is skipped; a duplicate email is kept once.
+- **Post:** students on the list can sign in. (FR-AUTH-3)
+
+## UC-2 Run a lecture
+**Story:** As a lecturer, I want one button that starts the lecture and shows the attendance code, so that I don't waste class time.
+- **Main flow:** 1) *Start lecture*. 2) The system creates the lecture (short id) and the first secret token. 3) The flicker code appears; *Full screen* fills the projector. 4) Every 30 s a new token is published and drawn.
+- **Alternative:** the network drops → the code keeps the last token and retries every 3 s.
+- **Post:** students can scan. (FR-ATT-1..3)
+
+## UC-3 Mark attendance by scanning
+**Story:** As a student in the room, I want to mark my attendance in a few seconds, and nobody at home should be able to do it with a photo.
+- **Pre:** the student is signed in; the lecture's code is on the screen.
+- **Main flow:** 1) *Start camera*. 2) The student points the phone at the screen (zooms with + / − or pinch if far). 3) The scanner builds the change map, finds the code, zooms in on it and reads it (~1–3 s). 4) The phone vibrates; the system writes the record "in class". 5) The page shows **🏫 Physical attendance, in class**.
+- **Alternatives:** 3a) A photo or a frozen picture → nothing is read ("what the scanner sees" stays grey). 4a) Already marked → "You are already marked". 4b) Offline → saved on the phone, "waiting to send", sent automatically. 4c) An old or foreign code → "not a valid code".
+- **Post:** the lecturer's list and counter update live. (FR-ATT-4..8)
+
+## UC-4 Watch and download the attendance sheet
+**Story:** As a lecturer, I want a spreadsheet of all my lectures, so that I can grade attendance.
+- **Main flow:** 1) *Sheet* tab. 2) The table shows one row per student and one column per lecture (V / M). 3) *Download XLSX* saves the file.
+- **Alternative:** offline → the sheet is built from the local copy.
+- (FR-ATT-9, FR-ATT-10)
+
+## UC-5 Check attendance with a class photo
+**Story:** As a lecturer, I want to compare the number of people in the room with the number of scans, so that I notice cheating.
+- **Main flow:** 1) *Upload photo*. 2) The model counts people. 3) The page shows people vs. in-class scans. 4) More scans than people → a warning. 5) The lecturer can correct the count and save it.
+- (FR-ATT-11)
+
+## UC-6 Comment during or after a lecture
+**Story:** As a student, I want to ask a question without speaking up, anonymously if I choose.
+- **Main flow:** 1) *Lecture* tab → type. 2) Choose public/private and anonymous/with name. 3) *Send*. 4) The lecturer sees it live; public comments are seen by all.
+- **Alternatives:** offline → waits and is sent later; a past lecture → the comment is added to that lecture.
+- (FR-COM-1..6)
+
+## UC-7 Run a quick poll
+**Story:** As a lecturer, I want to ask the class a question and see the answers immediately.
+- **Main flow:** 1) Lecturer writes a question and 2–6 answers → *Create*. 2) Students get a notification and vote once. 3) Results update live. 4) Lecturer closes the poll.
+- **Alternative:** fewer than 2 or more than 6 answers → the form refuses.
+- (FR-POLL-1..3)
+
+## UC-8 Record and summarise the lecture
+**Story:** As a lecturer, I want a summary of my lecture, so that students can review it.
+- **Pre:** a Groq key is saved on the lecturer's device.
+- **Main flow:** 1) *Record* (or upload a recording). 2) Every piece is transcribed (Whisper, Hebrew) and stored. 3) *Make summary* → the LLM writes topics, key points and questions. 4) Students read the summary.
+- **Alternative:** no key → the page explains where to paste it.
+- (FR-SUM-1..3)
+
+## UC-9 Submit homework
+**Story:** As a student, I want to hand in my repository link and files in one place.
+- **Main flow:** 1) *Assignments* → choose one. 2) Paste a GitHub link and/or attach text files (≤ 500 KB). 3) *Submit*.
+- **Alternative:** a non-http link → refused; offline → waits and is sent later.
+- (FR-HW-2)
+
+## UC-10 Review and grade homework
+**Story:** As a lecturer, I want an AI first review that also compares each student with the class.
+- **Main flow:** 1) Lecturer opens the submissions. 2) *Review all* → for each submission the system reads the repo (README first, up to 25 code files), adds anonymous summaries of the other submissions, and asks the LLM. 3) The lecturer edits the review, gives a grade and feedback. 4) The student sees them and gets a notification.
+- (FR-HW-1, FR-HW-3, FR-HW-4)
+
+## UC-11 Sign in
+- **Student:** *Sign in with Google* → the email must be on the class list, otherwise "not on the list".
+- **Lecturer:** email + password of the lecturer account (`staff/{uid}`).
+- **Local test server:** students type their email; the lecturer types the password shown in the server window.
+- (FR-AUTH-1, FR-AUTH-2)

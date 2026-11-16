@@ -1,0 +1,14 @@
+node_modules/
+.DS_Store
+*.log
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+*.iml
+server/data.json
+server/tokens.json
+server/lecturer-password.txt
+server/*.tmp
+server/__pycache__/

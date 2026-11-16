@@ -1,0 +1,9 @@
+{
+  "hosting": {
+    "public": "web",
+    "ignore": ["test/**", "package.json", "serve.ps1", "**/.*"]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

@@ -1,0 +1,167 @@
+rules_version = '2';
+
+// =====================================================================
+//  SmartClass - Firestore security rules
+// =====================================================================
+// WHY rules and not a server: the free Firebase plan has no server code,
+// so every check that matters (who may mark whom, is the QR code real,
+// is "in class" honest) is enforced here, on Google's side, where a
+// student cannot change it.
+//
+// Roles:
+//   lecturer = has a document staff/{uid}   (created by hand, see README)
+//   student  = signed in with Google, email verified, email in roster/
+//
+// Attendance with no server (decision): every 30 s the lecturer writes the
+// current code to sessions/{s}/codes/{token}. Students can NEVER read that
+// collection; a student's attendance is accepted only if its token EXISTS
+// there. An offline scan is sent later and still passes, because the code
+// belongs to the same session. Attendance is physical only (no Zoom marks).
+
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ------------------------------------------------------------ helpers
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isLecturer() {
+      return signedIn() && exists(/databases/$(db)/documents/staff/$(request.auth.uid));
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isStudent() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(db)/documents/roster/$(myEmail()));
+    }
+    function onlyKeys(keys) {
+      return request.resource.data.keys().hasOnly(keys);
+    }
+    // A link must be empty or http(s) (no "javascript:" links), at most 20 files.
+    function validSubmission() {
+      return request.resource.data.repoUrl is string
+        && request.resource.data.repoUrl.matches('^(https?://.+)?$')
+        && request.resource.data.files is list
+        && request.resource.data.files.size() <= 20;
+    }
+
+    // ------------------------------------------------------- staff/roster
+    match /staff/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;                       // created by hand in the console
+    }
+    // Student IDs live here, so only the lecturer reads it. exists() in the
+    // helpers above works even without read access.
+    match /roster/{email} {
+      allow read, write: if isLecturer();
+    }
+    // A student's profile (name, email) so the lecturer can show names.
+    match /users/{uid} {
+      allow read: if isLecturer() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.email == myEmail()
+        && onlyKeys(['email', 'name', 'lastSeen']);
+    }
+
+    // ------------------------------------------------------------ sessions
+    match /sessions/{s} {
+      allow read: if isLecturer() || isStudent();
+      allow create, update: if isLecturer();
+      allow delete: if false;
+
+      // The secret QR codes: write-only for the lecturer, invisible to students.
+      match /codes/{token} {
+        allow read, create: if isLecturer();
+        allow update, delete: if false;
+      }
+
+
+      // One attendance document per student per lecture, id = the email.
+      match /attendance/{email} {
+        allow read: if isLecturer() || (isStudent() && email == myEmail());
+
+        // A student marks ONLY themselves, ONCE (create, never update).
+        // Decision: attendance is physical only. Only someone in the room can film
+        // the flicker QR live, so a real QR token of THIS session = in class.
+        // No location.
+        allow create: if isStudent()
+          && email == myEmail()
+          && onlyKeys(['email', 'uid', 'name', 'status', 'token', 'scannedAt'])
+          && request.resource.data.email == myEmail()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.token is string
+          && request.resource.data.status == 'present'
+          && exists(/databases/$(db)/documents/sessions/$(s)/codes/$(request.resource.data.token));
+
+        // The lecturer can mark by hand, fix or remove a record.
+        allow create, update, delete: if isLecturer();
+      }
+
+      // Comments: public ones are visible to all students; private ones only
+      // to the lecturer and the author. An anonymous comment stores no name.
+      match /comments/{c} {
+        allow read: if isLecturer()
+          || (isStudent() && (resource.data.visibility == 'public'
+                              || resource.data.authorUid == request.auth.uid));
+        allow create: if (isStudent() || isLecturer())
+          && onlyKeys(['text', 'visibility', 'authorUid', 'authorName', 'createdAt', 'fromLecturer'])
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.visibility in ['public', 'private']
+          && request.resource.data.fromLecturer == isLecturer();
+        allow delete: if isLecturer();
+        allow update: if false;
+      }
+
+      // Polls: the lecturer creates and closes them; one vote per student.
+      match /polls/{p} {
+        allow read: if isLecturer() || isStudent();
+        allow create, update: if isLecturer();
+        match /votes/{uid} {
+          allow read: if isLecturer() || (signedIn() && request.auth.uid == uid);
+          allow create: if isStudent()
+            && request.auth.uid == uid
+            && get(/databases/$(db)/documents/sessions/$(s)/polls/$(p)).data.open == true
+            && onlyKeys(['option', 'votedAt'])
+            && request.resource.data.option is int
+            && request.resource.data.option >= 0
+            && request.resource.data.option < get(/databases/$(db)/documents/sessions/$(s)/polls/$(p)).data.options.size();
+          allow update, delete: if false;
+        }
+      }
+
+      // Transcript pieces and the summary are written by the lecturer only.
+      match /transcript/{piece} {
+        allow read: if isLecturer() || isStudent();
+        allow write: if isLecturer();
+      }
+    }
+
+    // ---------------------------------------------------------- assignments
+    match /assignments/{a} {
+      allow read: if isLecturer() || isStudent();
+      allow write: if isLecturer();
+
+      match /submissions/{email} {
+        allow read: if isLecturer() || (isStudent() && email == myEmail());
+        // A student writes only their own submission and cannot touch the
+        // review, grade or feedback fields.
+        allow create: if isStudent()
+          && email == myEmail()
+          && onlyKeys(['email', 'name', 'repoUrl', 'files', 'submittedAt'])
+          && request.resource.data.email == myEmail()
+          && validSubmission();
+        allow update: if isStudent()
+          && email == myEmail()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'repoUrl', 'files', 'submittedAt'])
+          && validSubmission();
+        allow update: if isLecturer();
+      }
+    }
+  }
+}
