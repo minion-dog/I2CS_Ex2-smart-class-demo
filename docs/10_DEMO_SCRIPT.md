@@ -22,12 +22,17 @@ Volunteers: 3–5 classmates with phones.
 | 3:30 | The lecturer's live list and counter; a second scan → "already marked" | "One mark per student, only from the room. No location needed." |
 | 4:00 | **Sheet** → **Download XLSX** | "The main feature: the attendance spreadsheet, online or offline." |
 | 5:30 | **Quiz mode** (same feature): ✨ AI writes 3 questions from today's transcript, with correct answers and 20 s → Run | "Mark a correct answer and a time and the poll becomes a Kahoot-style quiz: faster right answers get more points." |
-| 4:45 | **Class photo**: take it, remove one wrong box, add one missing face, save; on the phone tap your face → *Is this you?* → Yes | "Every face gets a box; each student confirms himself, one student per face; who is not in the photo tells me at once." |
+| 4:45 | **Class photo**: take it, remove one wrong box, add one missing face, save; on the phone tap your face → *Is this you?* → Yes | "Every face gets a box; each student confirms himself, one student per face; who is not in the photo tells me at once. Came, scanned and left? The photo can be taken at any moment of the lesson — whoever left is not in it. No GPS, no tracking." |
 | 5:30 | **Comments**: a private anonymous question, a public one; airplane mode → send → back online | "Real time, and offline it waits on the phone." |
 | 6:30 | **Quick poll**: question + 3 answers → *Ask now*, the class answers, *Close* | "KISS: one tap, it opens on every phone, live results." |
 | 7:30 | **Summary**: upload a short recording → transcript → summary | "Whisper in Hebrew, then a summary for the students." |
 | 8:30 | **Homework**: a sample repository from the course list → AI review → grade | "The review also compares with the rest of the class, anonymously." |
 | 9:30 | Wrap up: repository, documents, tests (31 + 18 + 9) | "All design documents are in the repository." |
+
+## Questions we expect
+| Question | Answer |
+|---|---|
+| "What if a student scans and leaves?" | The scan proves the start; the class photo proves he was still there. The lecturer takes it whenever he wants (middle, end, random), and whoever left has no face to confirm: "scanned, not in the photo". Scanning 3 times or GPS all lesson would be annoying, invasive and still not accurate indoors. |
 
 ## If something fails
 | Problem | Do this |
