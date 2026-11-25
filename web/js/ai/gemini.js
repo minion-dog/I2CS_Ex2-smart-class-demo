@@ -1,9 +1,8 @@
 // =====================================================================
-//  gemini.js - Google Gemini (free tier) as the second AI provider
+//  gemini.js - Google Gemini (free tier), the project's AI provider
 // =====================================================================
-// Same two jobs as Groq: speech to text (Hebrew) and chat (summary,
-// homework review). Chosen automatically when the saved key is not a
-// Groq key ("gsk_..."). The key is kept ONLY in the lecturer's browser.
+// Two jobs: speech to text (Hebrew) and chat (summary, homework review).
+// The key is passed in by ai.js (built in, never typed by the lecturer).
 // Model names checked with this key against the models list (25 Nov 2026).
 
 /** Models and limits. */

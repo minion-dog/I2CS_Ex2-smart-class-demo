@@ -29,7 +29,7 @@ fake (a photographed QR code is forwarded to friends at home).
 | Lecturer web app | Website: class list import, live lecture (flicker QR, live attendance, comments, polls, recording and summary, head count), spreadsheet, homework review. |
 | Android app | Native Java app with the same features for students and lecturers (an extra, not required by the sheet). |
 | Data | Firebase Auth + Firestore (free plan) with security rules; a local Python server and an in-browser demo store for testing without Firebase. |
-| AI | Groq (free tier): Whisper for Hebrew transcription, an LLM for summaries and reviews; TensorFlow.js COCO-SSD for the head count. |
+| AI | Google Gemini (free tier): Hebrew transcription, summaries and reviews, with a built-in key the lecturer never types; TensorFlow.js COCO-SSD for the head count. |
 | Documents | README, tools report, SoW, SRS, use cases, components, class and sequence diagrams, testing strategy, conclusion, AI usage log. |
 | Demo | A 10-minute live demo in class on real phones. |
 
@@ -86,7 +86,7 @@ fake (a photographed QR code is forwarded to friends at home).
 | Plain HTML/CSS/JS, no framework; Android in Java | What we learned; KISS. |
 | Hebrew UI with an English switch | Our class is Hebrew speaking. |
 | Free Firebase (Spark), no server code | No cost; the security rules do the checks. |
-| Groq free tier for AI, key on the lecturer's device only | No cost; the key is never in the code or the database. |
+| Gemini free tier for AI; the key is built in (Firestore, lecturer-only), never typed by the lecturer, never on GitHub | No cost; works "as you get it" for lecturers who know nothing about API keys; students can never read the key. |
 
 ## 8. Acceptance criteria
 
@@ -103,5 +103,5 @@ fake (a photographed QR code is forwarded to friends at home).
 | Real cameras differ from the simulation | Tested on real phones; zoom buttons, auto-zoom, and a "what the scanner sees" preview. |
 | Classroom projector too small from the back row | Bigger squares (25×25 code), full-screen code, camera zoom. |
 | A student films the code and replays it live for a friend | Possible within 60 s; the head count against a class photo catches extra marks. |
-| Free-plan limits (Firestore, Groq) | A 40-student class is far below the limits. |
+| Free-plan limits (Firestore, Gemini) | A 40-student class is far below the limits. |
 | The Android app could not be built in our cloud environment | It is built in Android Studio on our PC; the website is the main client. |

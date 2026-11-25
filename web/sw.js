@@ -1,6 +1,6 @@
 // Service worker: keeps the site's own files on the phone, so the student
 // page opens even with no internet (the data itself is cached by Firestore).
-const CACHE = 'smartclass-v12';
+const CACHE = 'smartclass-v13';
 const FILES = [
     'index.html', 'student.html', 'lecturer.html', 'css/app.css', 'manifest.webmanifest', 'icon.svg',
     'vendor/jsQR.js', 'vendor/qrcode.js',
@@ -8,7 +8,7 @@ const FILES = [
     'js/core/noisyqr.js', 'js/core/payload.js', 'js/core/sheet.js', 'js/core/classlist.js', 'js/core/xlsx.js',
     'js/ui/i18n.js', 'js/ui/dom.js', 'js/ui/page.js', 'js/ui/login.js', 'js/ui/student.js', 'js/ui/lecturer.js',
     'js/ui/scanner.js', 'js/ui/join.js', 'js/ui/qr-display.js', 'js/ui/comments.js', 'js/ui/polls.js', 'js/ui/recorder.js',
-    'js/ai/groq.js', 'js/ai/gemini.js', 'js/ai/prompts.js', 'js/ai/github.js', 'js/ai/headcount.js'
+    'js/ai/ai.js', 'js/ai/gemini.js', 'js/ai/prompts.js', 'js/ai/github.js', 'js/ai/headcount.js'
 ];
 
 self.addEventListener('install', (ev) =>

@@ -5,7 +5,7 @@ Volunteers: 3–5 classmates with phones.
 
 ## Before class (15 minutes before)
 - [ ] Laptop: open the site → sign in as lecturer → class list is loaded.
-- [ ] Settings: the Groq key is pasted (from Maor's PC).
+- [ ] AI key: in Firestore `config/ai` (Firebase), or the local file `web/js/ai-key.local.js` on the laptop (never on GitHub).
 - [ ] A test lecture was run once on the classroom projector: scan from the last row works (zoom +).
 - [ ] Phones of the team: signed in as students, camera permission allowed.
 - [ ] A photo of the class from the course folder is on the laptop (for the head count).
@@ -33,4 +33,4 @@ Volunteers: 3–5 classmates with phones.
 |---|---|
 | No internet in the room | Switch to the local server (`Start LAN Server.bat`) on the laptop's hotspot. |
 | A phone can't read from the back | Use **+** zoom, or walk two rows forward; explain the 10% size limit. |
-| Groq is slow | Show the summary made before class. |
+| Gemini is slow | Show the summary made before class. |

@@ -14,8 +14,7 @@ Every tool we suggest was tried for real, not only read about. "Result" says wha
 | Camera (Android) | **CameraX** (`ImageAnalysis`, `CameraControl.setZoomRatio`) | Steady frame stream; the camera's own zoom | In Android Studio on our PC | First builds failed (AGP 8.9 needs a newer Android Studio); moved to AGP 8.7.3; final build on our PC is on the demo checklist |
 | Attack check | **zxing-cpp** and **OpenCV** (Python) | Strong, standard QR readers to attack our code | 150 live frames, single and merged photos | 0 / 150 frames read; no photo read |
 | Local test server | **Python 3 standard library** (`http.server`, `ssl`) | Test on real phones over Wi-Fi before Firebase; no packages | `server/test_server.py`; browser over HTTPS | 9 / 9 tests; works with a self-signed demo certificate |
-| Speech to text | **Groq Whisper large-v3** (free tier) | Best open Whisper, handles Hebrew, very fast on Groq | Model names checked on console.groq.com (Nov 2026); prompts unit tested | Live run with the lecturer's key: part of the demo checklist |
-| LLM | **Groq `openai/gpt-oss-120b`** (free tier) | Long context (131k) for a lecture transcript or a repository | Prompts unit tested (TC-AI-1..6) | Live run with the lecturer's key: demo checklist |
+| LLM + speech to text | **Google Gemini `gemini-3.5-flash`** (free tier) | Hebrew, long context, takes audio directly; the team found it easier to set up than Groq | **Live, 25 Nov 2026, with our key, through our own code in a browser:** summary of a Hebrew lecture transcript in 8.6 s (structured, in Hebrew); homework review of a real course repository (25 files read from GitHub, requirements table + comparison) in 24 s; an audio request accepted in 2.3 s | Works. `gemini-2.5-flash` answered 404 "no longer available to new users", so we use 3.5 |
 | Head count | **TensorFlow.js 4.22 + COCO-SSD 2.2.3** (jsDelivr) | Runs in the browser, no server, detects "person" | Counting logic unit tested (TC-HC-1..2) | Live run on the course's class photos: demo checklist |
 | Tests | **Node `node:test`**, **JUnit 4**, **Python `unittest`**, **Playwright + Chromium fake camera** | No extra packages; real browser with a scripted camera | See the testing strategy | All green |
 | Diagrams | **Mermaid** | Text diagrams that GitHub draws | Every diagram rendered with `mmdc` | All render |
@@ -30,6 +29,8 @@ Every tool we suggest was tried for real, not only read about. "Result" says wha
 | A code for Zoom students (4 digits under the QR) | Built and tested | Can be forwarded by WhatsApp; Zoom's video loses the flicker. Decision: physical attendance only. |
 | Zoom participants report | Designed | Out of scope (no Zoom integration, per the sheet). |
 | Firebase Storage for homework files | Checked the plans | Needs a paid plan; text files are stored in Firestore (≤ 500 KB). |
+| **Groq** (Whisper + `gpt-oss-120b`) | Built and unit tested first | Replaced by Gemini: one free provider for both jobs, easier to set up, and the key can be stored in Firestore for the lecturer only. |
+| A key field in Settings | Built first | The lecturer should not need to know what an API key is ("works as you get it"); the key is now built in (Firestore, lecturer-only). |
 | Cloud Functions / push notifications | Checked the plans | Paid plan; in-app notifications instead. |
 | A framework (React, Kotlin) | Considered | We did not learn them; plain JS and Java keep it KISS. |
 | PowerShell web server for the demo | Built (`Start Demo.bat`) | Works on the PC only; phones need HTTPS on the network → the Python server or GitHub Pages. |

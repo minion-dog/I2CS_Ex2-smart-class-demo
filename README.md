@@ -33,7 +33,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 | Attendance check by a class photo (automatic head count) | ✓ | — | `web/js/ai/headcount.js` |
 | Comments in real time / offline | ✓ | ✓ | `web/js/ui/comments.js` |
 | KISS polls with live results | create, close | vote once | `web/js/ui/polls.js` |
-| ML summary of the lecture recording | record / upload, summarise | read | `web/js/ui/recorder.js`, `web/js/ai/groq.js` |
+| ML summary of the lecture recording | record / upload, summarise | read | `web/js/ui/recorder.js`, `web/js/ai/ai.js`, `gemini.js` |
 | Deep LLM review of homework, compared with the other students | review, grade | submit, see result | `web/js/ai/prompts.js`, `github.js` |
 | Class list import (Moodle CSV/XLSX), Hebrew UI with English switch | ✓ | ✓ | `web/js/core/classlist.js`, `web/js/ui/i18n.js` |
 
@@ -80,7 +80,8 @@ is needed.
  lecturer app ──────┼──►  Firebase Auth   ◄────┼── student Android app
                     └──►  Firestore + rules ◄──┘
                               ▲
-   Groq (Whisper, LLM) ◄──────┴── called only from the lecturer's device (key stays there)
+   Gemini (speech + LLM) ◄────┴── called only from the lecturer's device; the built-in key is
+                                  read from Firestore (lecturer only), never typed, never on GitHub
 ```
 
 - **Free Firebase plan, no server code.** [`firestore.rules`](firestore.rules) is the server: a
@@ -128,5 +129,7 @@ firestore.rules, firebase.json
   count from a class photo catches extra marks.
 - The Android app is built in Android Studio; our cloud build environment could not reach Google's
   servers, so only its pure-Java core is tested automatically.
-- AI features need the lecturer's free Groq key.
+- AI uses Google Gemini (free tier). The key is built in but private: it lives in Firestore
+  (`config/ai`, readable only by the lecturer) or, on our own PC, in an untracked local file. A
+  key written into public website code could be read by anyone, so the public demo site has no AI.
 - No push notifications on the free plan (in-app only, while open). Homework files: text only, ≤ 500 KB.

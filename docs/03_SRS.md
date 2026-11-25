@@ -32,7 +32,7 @@ in and out of scope.
 |---|---|
 | Lecturer | Runs the lecture on a laptop connected to the projector. One lecturer account per course. |
 | Student | On the class list; uses a phone (website or Android app). |
-| Groq (external) | Free AI service: speech to text (Whisper) and a large language model. |
+| Gemini (external) | Google's free AI service: speech to text and a large language model. |
 | GitHub (external) | Public repositories that students submit. |
 
 ## 2. Overall description
@@ -92,7 +92,7 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | ID | Requirement | Pri |
 |---|---|---|
 | FR-SUM-1 | The lecturer records the lecture in the browser (sent in pieces) or uploads a recording (Zoom, Meet, Classroom). | S |
-| FR-SUM-2 | Each piece is transcribed in Hebrew (Whisper, Groq) and stored with the lecture. | S |
+| FR-SUM-2 | Each piece is transcribed in Hebrew (Gemini) and stored with the lecture. | S |
 | FR-SUM-3 | One click produces a structured summary (topics, key points, questions to review) in the UI language; students can read it. | S |
 
 ### 3.6 Homework and AI review
@@ -119,8 +119,8 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | NFR-3 Speed | A scan reads within 2 s steady, within 3 s from far or with strong shake. | TC-QR-5, -6, -10, -11 |
 | NFR-4 Range | Readable when the code is 10% of the camera picture height (without camera zoom). | far-scan experiment, TC-QR-10 |
 | NFR-5 Usability | KISS: a student marks attendance with two taps; works at 360 px width. | browser tests at 390 px |
-| NFR-6 Privacy | The Groq key stays on the lecturer's device; AI never sees other students' names. | code review; TC-AI-5 |
-| NFR-7 Cost | Free plans only (Firebase Spark, Groq free tier, GitHub Pages). | SoW |
+| NFR-6 Privacy | The AI key is built in but private: stored in Firestore `config/ai`, readable only by the lecturer, never typed, never on GitHub; AI never sees other students' names. | rules; TC-AI-5, TC-AI-7, TC-SRV-11 |
+| NFR-7 Cost | Free plans only (Firebase Spark, Gemini free tier, GitHub Pages). | SoW |
 | NFR-8 Portability | Any modern phone browser; Android 8+ for the app. | real-phone test |
 | NFR-9 Maintainability | Same algorithms and test names in JS and Java; one data interface (Strategy) for three stores. | class diagrams; tests |
 
@@ -137,6 +137,7 @@ sessions/{sid}                      title, startedAt, endedAt, summary, headcoun
   polls/{pid}                       question, options[], open, createdAt
     votes/{uid}                     option
   transcript/{index}                index, text
+config/ai                           geminiKey            (lecturer-only read; set by the admin)
 assignments/{aid}                   title, requirements, due
   submissions/{email}               repoUrl, files[], review, grade, feedback
 ```
@@ -152,6 +153,7 @@ assignments/{aid}                   title, requirements, due
 | — | The flicker code (§3.1) | A normal QR was photographed and forwarded in our own test. |
 | Push notifications on the phone | In-app notifications while open | Push needs server functions (paid plan). |
 | — | Head count from a class photo, attendance sheet, class-list import | Features of the Ex2 sheet that v1 did not cover. |
+| AI key pasted by the lecturer (Groq) | Gemini with a built-in, private key (Firestore, lecturer-only) | The lecturer should get a working system without knowing what an API key is. |
 
 ## 7. Traceability to the Ex2 sheet
 

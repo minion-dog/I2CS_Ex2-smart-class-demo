@@ -131,6 +131,7 @@ classDiagram
         +setPollOpen(sid, pid, open)
         +vote(sid, pid, option)
         +watchPolls(sid, cb) unsubscribe
+        +loadAiKey() string
         +addTranscript(sid, index, text)
         +createAssignment(a) string
         +submit(aid, s)
@@ -202,13 +203,20 @@ classDiagram
         +writeXlsx(sheetName, rows) Uint8Array
         +readXlsx(bytes) string[][]
     }
-    class groq {
-        <<module groq.js>>
-        GROQ: SPEECH_MODEL, CHAT_MODEL
-        +groqKey() string
-        +saveGroqKey(key)
+    class ai {
+        <<module ai.js>>
+        +initAi(store) boolean
+        +aiReady() boolean
         +transcribe(audio, language) string
         +chat(messages) string
+    }
+    class gemini {
+        <<module gemini.js>>
+        GEMINI: MODEL, MAX_INLINE_BYTES
+        +toGeminiBody(messages) object
+        +textOf(data) string
+        +geminiChat(key, messages) string
+        +geminiTranscribe(key, audio, language) string
     }
     class prompts {
         <<module prompts.js>>
@@ -244,8 +252,9 @@ classDiagram
     classlist ..> xlsx : reads .xlsx
     sheet ..> xlsx : the lecturer downloads
     github ..> prompts : githubParts, pickRepoFiles
-    LectureRecorder ..> groq : transcribe
-    prompts ..> groq : messages for chat
+    LectureRecorder ..> ai : transcribe
+    prompts ..> ai : messages for chat
+    ai ..> gemini : calls
 ```
 
 ## 4. Pages (web UI)
@@ -289,8 +298,9 @@ classDiagram
     class QrNoiseView { -plan: FlickerSchedule +setText(text) }
     class LectureActivity
     class AssignmentsActivity
-    class SettingsActivity
-    class Repo { <<singleton>> +get() Repo +createSession(title, done) +publishCode(sid, token) +markMe(sid, token) +listenSessions(l) }
+    class Repo { <<singleton>> +get() Repo +createSession(title, done) +publishCode(sid, token) +markMe(sid, token) +loadAiKey(done) }
+    class Ai { <<Gemini>> +ready(c) +setKey(c, key) +chat(c, system, user) +transcribe(c, file) }
+    LecturerHomeActivity ..> Ai : setKey from Repo
     class ChangeMap
     class FlickerSchedule
     class Payload
@@ -300,7 +310,6 @@ classDiagram
     BaseActivity <|-- LiveSessionActivity
     BaseActivity <|-- LectureActivity
     BaseActivity <|-- AssignmentsActivity
-    BaseActivity <|-- SettingsActivity
     MainActivity ..> LoginActivity
     ScanActivity *-- QrAnalyzer
     QrAnalyzer *-- ChangeMap

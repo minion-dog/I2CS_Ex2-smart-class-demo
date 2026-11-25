@@ -7,7 +7,7 @@ flowchart TB
         subgraph WEB["Website (web/) — plain HTML/CSS/JS"]
             UI["UI pages<br/>login · lecturer · student<br/>(js/ui)"]
             CORE["Core logic<br/>flicker QR · payload · sheet · XLSX · class list<br/>(js/core)"]
-            AI["AI helpers<br/>Groq · prompts · GitHub reader · head count<br/>(js/ai)"]
+            AI["AI helpers<br/>Gemini · prompts · GitHub reader · head count<br/>(js/ai)"]
             DATA["Data layer (Strategy)<br/>FirebaseStore · LanStore · FakeStore<br/>(js/data)"]
         end
         subgraph APP["Android app (android/) — Java"]
@@ -23,7 +23,7 @@ flowchart TB
         LS[("Browser storage<br/>(demo)")]
     end
     subgraph External["External services (free)"]
-        GROQ["Groq<br/>Whisper + LLM"]
+        GEM["Gemini<br/>speech + LLM"]
         GH["GitHub API"]
         CDN["jsDelivr CDN<br/>TF.js COCO-SSD"]
     end
@@ -35,7 +35,7 @@ flowchart TB
     DATA --> LS
     AUI --> ACORE
     AUI --> AREPO --> FB
-    AI --> GROQ
+    AI --> GEM
     AI --> GH
     AI --> CDN
 ```
@@ -53,7 +53,7 @@ flowchart TB
 | **Data layer (Strategy)** | One interface (`signIn…`, `createSession`, `publishCode`, `markMe`, `watch…`, `addComment`, `vote`, `submit`, …) with three implementations. | `web/js/data/store.js` picks one: `firebase-store.js`, `lan-store.js`, `fake-store.js` · `Repo.java` | Firebase SDK / fetch / localStorage |
 | **Security rules** | Every check that matters on the free plan: a student writes only their own record, once, with a real token; codes and the class list are hidden. | `firestore.rules` | Firestore |
 | **Local test server** | The same rules in Python for testing on real phones over Wi-Fi before Firebase. | `server/server.py` | Python standard library |
-| **AI** | Transcription (Whisper), summary and review prompts, GitHub repository reader, people detection. | `web/js/ai/*.js` · `android/.../ai/*.java` | Groq, GitHub API, TF.js |
+| **AI** | Transcription and chat (Gemini, built-in key read from Firestore by the lecturer only), summary and review prompts, GitHub repository reader, people detection. | `web/js/ai/*.js` · `android/.../ai/*.java` | Gemini, GitHub API, TF.js |
 | **UI pages** | Login, lecturer (live lecture, sheet, class list, assignments, settings), student (scan, lecture, assignments); Hebrew/English. | `web/*.html`, `web/js/ui/*.js` · `android/.../ui/*.java` | all of the above |
 
 ## Design choices
@@ -65,5 +65,6 @@ flowchart TB
   with the same constants and the same test names (TC-QR-*, TC-PL-*, …).
 - **No server code.** On the free plan the security rules are the server: they check the
   token, the owner and "once".
-- **The AI key never leaves the lecturer's device.** It is pasted in Settings and kept in the
-  browser; it is not in the code, the database or the app.
+- **The AI key is built in but private.** The course admin stores it once in Firestore
+  (`config/ai`); the rules let only the lecturer read it. The lecturer never types it, students
+  never see it, and it is not in the code or on GitHub.

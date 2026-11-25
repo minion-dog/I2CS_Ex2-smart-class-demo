@@ -17,7 +17,6 @@
     <string name="scan">סריקת נוכחות</string>
     <string name="lectures">שיעורים</string>
     <string name="assignments">עבודות</string>
-    <string name="settings">הגדרות</string>
     <string name="my_attendance">הנוכחות שלי</string>
     <string name="scan_hint">כוונו את המצלמה לקוד שעל המסך והחזיקו יציב כשנייה.</string>
     <string name="scan_ok_in_class">נרשמת! · בכיתה</string>
@@ -76,8 +75,7 @@
     <string name="feedback">משוב</string>
     <string name="submissions">הגשות</string>
     <string name="review_all">ביקורת AI לכולם</string>
-    <string name="groq_key">מפתח Groq (נשמר רק בטלפון הזה)</string>
-    <string name="groq_missing">כדי להשתמש ב-AI הדביקו מפתח Groq בהגדרות.</string>
+    <string name="ai_missing">ה-AI עוד לא הוגדר לקורס (המפתח המובנה חסר). פנו למנהל המערכת.</string>
     <string name="no_open_session">אין שיעור פתוח כרגע.</string>
     <string name="files_too_big">הקבצים גדולים מ-500KB.</string>
     <string name="cancel">ביטול</string>

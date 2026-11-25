@@ -1,12 +1,12 @@
 # Main use cases (client stories)
 
-Actors: **Lecturer**, **Student**, and the external services **Groq** (AI) and **GitHub**.
+Actors: **Lecturer**, **Student**, and the external services **Gemini** (AI) and **GitHub**.
 
 ```mermaid
 flowchart LR
     L([Lecturer])
     S([Student])
-    G[(Groq AI)]
+    G[(Gemini AI)]
     H[(GitHub)]
     subgraph SmartClass
         UC1(UC-1 Import the class list)
@@ -77,9 +77,9 @@ flowchart LR
 
 ## UC-8 Record and summarise the lecture
 **Story:** As a lecturer, I want a summary of my lecture, so that students can review it.
-- **Pre:** a Groq key is saved on the lecturer's device.
+- **Pre:** the course admin stored the AI key once (Firestore `config/ai`); the lecturer types nothing.
 - **Main flow:** 1) *Record* (or upload a recording). 2) Every piece is transcribed (Whisper, Hebrew) and stored. 3) *Make summary* → the LLM writes topics, key points and questions. 4) Students read the summary.
-- **Alternative:** no key → the page explains where to paste it.
+- **Alternative:** the admin has not stored the key → the page says AI is not set up for the course.
 - (FR-SUM-1..3)
 
 ## UC-9 Submit homework

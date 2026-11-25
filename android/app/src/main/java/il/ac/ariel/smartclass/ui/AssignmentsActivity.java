@@ -31,7 +31,7 @@ import java.util.concurrent.Executors;
 
 import il.ac.ariel.smartclass.R;
 import il.ac.ariel.smartclass.ai.GitHub;
-import il.ac.ariel.smartclass.ai.Groq;
+import il.ac.ariel.smartclass.ai.Ai;
 import il.ac.ariel.smartclass.core.Prompts;
 import il.ac.ariel.smartclass.data.Repo;
 
@@ -344,9 +344,9 @@ public class AssignmentsActivity extends BaseActivity
      */
     private void review(final DocumentSnapshot a, final DocumentSnapshot s, List<DocumentSnapshot> all)
     {
-        if (Groq.key(this).isEmpty())
+        if (!Ai.ready(this))
         {
-            Ui.toast(this, getString(R.string.groq_missing));
+            Ui.toast(this, getString(R.string.ai_missing));
             return;
         }
         final List<String> peers = new ArrayList<String>();
@@ -376,7 +376,7 @@ public class AssignmentsActivity extends BaseActivity
                         text = text + GitHub.repoText(repoUrl);
                     }
                     String[] m = Prompts.review(requirements, text, peers, english);
-                    String review = Groq.chat(AssignmentsActivity.this, m[0], m[1]);
+                    String review = Ai.chat(AssignmentsActivity.this, m[0], m[1]);
                     Map<String, Object> f = new HashMap<String, Object>();
                     f.put("review", review);
                     Repo.get().updateSubmission(a.getId(), s.getId(), f);

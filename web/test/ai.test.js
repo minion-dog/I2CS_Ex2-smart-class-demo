@@ -83,10 +83,9 @@ test('TC-I18N-1: Hebrew and English have exactly the same keys', () =>
     assert.deepEqual(keysOf('he').sort(), keysOf('en').sort());
 });
 
-test('TC-AI-7: Gemini request: system -> systemInstruction, assistant -> model; Groq keys stay on Groq', async () =>
+test('TC-AI-7: Gemini request shape; the built-in key comes from the store, never typed', async () =>
 {
     const { toGeminiBody, textOf } = await import('../js/ai/gemini.js');
-    const { providerOf } = await import('../js/ai/groq.js');
     const body = toGeminiBody([
         { role: 'system', content: 'Answer in Hebrew.' },
         { role: 'user', content: 'Q1' },
@@ -98,7 +97,9 @@ test('TC-AI-7: Gemini request: system -> systemInstruction, assistant -> model; 
     assert.equal(body.contents[2].parts[0].text, 'Q2');
     assert.equal(textOf({ candidates: [{ content: { parts: [{ text: 'שלום ' }, { text: 'עולם' }] } }] }), 'שלום עולם');
     assert.equal(textOf({}), '');
-    assert.equal(providerOf('gsk_abc'), 'groq');
-    assert.equal(providerOf('AQ.xyz'), 'gemini');
-    assert.equal(providerOf('AIzaSyX'), 'gemini');
+    const ai = await import('../js/ai/ai.js');
+    assert.equal(ai.aiReady(), false);                              // no key yet
+    await assert.rejects(() => ai.chat([{ role: 'user', content: 'x' }]), /no-key/);
+    assert.equal(await ai.initAi({ loadAiKey: async () => 'K-FROM-FIREBASE' }), true);
+    assert.equal(ai.aiSource(), 'firebase');
 });

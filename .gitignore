@@ -12,3 +12,6 @@ server/tokens.json
 server/lecturer-password.txt
 server/*.tmp
 server/__pycache__/
+
+# the built-in AI key for local runs (never on GitHub)
+web/js/ai-key.local.js

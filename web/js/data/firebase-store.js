@@ -109,6 +109,30 @@ export class FirebaseStore
     }
 
     /**
+     * Reads the built-in AI key (config/ai.geminiKey). The security rules let only
+     * the lecturer read it, so students and visitors never see it.
+     * @returns {Promise<string>} the key, or '' when not set or not allowed
+     */
+    async loadAiKey()
+    {
+        await this.ready;
+        if (!this.user || this.user.role !== 'lecturer')
+        {
+            return '';
+        }
+        const f = this.fs;
+        try
+        {
+            const d = await f.getDoc(f.doc(this.db, 'config', 'ai'));
+            return d.exists() ? String(d.data().geminiKey || '') : '';
+        }
+        catch (e)
+        {
+            return '';
+        }
+    }
+
+    /**
      * Finds out who a signed-in account is.
      * Lecturer = a staff/{uid} document exists. Student = may read sessions
      * (the rules allow that only for emails on the class list).

@@ -154,21 +154,23 @@ sequenceDiagram
     actor L as Lecturer
     participant P as lecturer.js
     participant R as LectureRecorder
-    participant G as groq.js
-    participant Groq as Groq API
+    participant G as ai.js / gemini.js
+    participant GM as Gemini API
     participant S as Store
+    P->>S: loadAiKey() (Firestore config/ai, lecturer only)
+    S-->>P: key (kept in memory)
     L->>P: Record
     P->>R: start()
     loop every 60 s piece
         R->>G: transcribe(piece, "he")
-        G->>Groq: Whisper large-v3 (key from this browser only)
-        Groq-->>G: text
+        G->>GM: gemini-3.5-flash, audio inside the request (built-in key)
+        GM-->>G: text
         R->>S: addTranscript(sid, index, text)
     end
     L->>P: Make summary
     P->>G: chat(summaryPrompt(title, transcript, lang))
-    G->>Groq: LLM
-    Groq-->>G: summary
+    G->>GM: gemini-3.5-flash
+    GM-->>G: summary
     P->>S: updateSession(sid, {summary})
 ```
 
@@ -181,7 +183,7 @@ sequenceDiagram
     participant Gh as github.js
     participant GitHub
     participant Pr as prompts.js
-    participant G as groq.js
+    participant G as ai.js
     participant S as Store
     L->>P: Review all
     loop each submission

@@ -20,7 +20,6 @@
         <button data-tab="sheet" role="tab" data-i18n="tabSheet"></button>
         <button data-tab="roster" role="tab" data-i18n="tabRoster"></button>
         <button data-tab="assignments" role="tab" data-i18n="tabAssignments"></button>
-        <button data-tab="settings" role="tab" data-i18n="tabSettings"></button>
     </nav>
     <main>
         <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
@@ -180,17 +179,6 @@
                     <div id="a-subs"></div>
                 </div>
             </div>
-        </section>
-
-        <!-- ============================ SETTINGS ============================ -->
-        <section id="tab-settings" class="card" hidden>
-            <h2 data-i18n="tabSettings"></h2>
-            <label for="groq-key" data-i18n="groqKey"></label>
-            <div class="row">
-                <input id="groq-key" type="password" class="grow" autocomplete="off">
-                <button id="groq-save" data-i18n="save"></button>
-            </div>
-            <p class="hint">aistudio.google.com → Get API key (Gemini) · console.groq.com → API Keys (Groq)</p>
         </section>
     </main>
     <script src="vendor/qrcode.js"></script>

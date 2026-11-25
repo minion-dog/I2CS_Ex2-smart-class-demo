@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import il.ac.ariel.smartclass.R;
+import il.ac.ariel.smartclass.ai.Ai;
 import il.ac.ariel.smartclass.core.AttendanceSheet;
 import il.ac.ariel.smartclass.core.ClassList;
 import il.ac.ariel.smartclass.core.Student;
@@ -128,12 +129,16 @@ public class LecturerHomeActivity extends BaseActivity
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.web_url))));
             }
         });
-        Ui.button(col, getString(R.string.settings), new View.OnClickListener()
+        // the built-in AI key: read once from Firestore (lecturer only), nothing to type
+        Repo.get().loadAiKey(new Repo.Done<String>()
         {
             @Override
-            public void onClick(View v)
+            public void onDone(@Nullable String key, @Nullable Exception error)
             {
-                startActivity(new Intent(LecturerHomeActivity.this, SettingsActivity.class));
+                if (key != null && !key.isEmpty())
+                {
+                    Ai.setKey(LecturerHomeActivity.this, key);
+                }
             }
         });
         Ui.title(col, getString(R.string.lectures));

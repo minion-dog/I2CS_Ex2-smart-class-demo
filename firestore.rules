@@ -48,6 +48,13 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------- staff/roster
+    // The built-in AI key (Gemini). Set once by the course admin in the Firebase
+    // console; only the lecturer's account can read it, nobody can write it from the app.
+    match /config/{doc} {
+      allow read: if isLecturer();
+      allow write: if false;
+    }
+
     match /staff/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;                       // created by hand in the console

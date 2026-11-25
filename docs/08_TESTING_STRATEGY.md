@@ -33,20 +33,20 @@
 | `classlist.js` / `ClassList` | TC-CL-1..3 | Moodle CSV with BOM, quotes, Hebrew headers; lower-case emails; staff rows; duplicates. |
 | `sheet.js` / `AttendanceSheet` | TC-SH-1, TC-SH-2 | One row per student, one column per lecture, ordered by time. |
 | `xlsx.js` / `Xlsx` | TC-XL-1, TC-XL-2 | Round trip keeps Hebrew and numbers; numeric XML entities decoded. |
-| `prompts.js`, `github.js` | TC-AI-1..6 | Summary prompt in Hebrew; GitHub URLs parsed; README first, build folders skipped; long submissions cut; **peers are anonymous**; summary line extracted. |
+| `prompts.js`, `github.js`, `ai.js`, `gemini.js` | TC-AI-1..7 | Summary prompt in Hebrew; GitHub URLs parsed; README first, build folders skipped; long submissions cut; **peers are anonymous**; summary line extracted; Gemini request shape; the key comes from the store, never typed. |
 | `headcount.js` | TC-HC-1, TC-HC-2 | Only confident "person" boxes count; more scans than people is flagged. |
 | `polls.js` (`readPollForm`) | TC-POLL-1 (Java) | 2–6 answers. |
 | `i18n.js` | TC-I18N-1 | Hebrew and English have exactly the same keys. |
-| `server.py` (rules) | TC-SRV-1..9 | A real scan = in class; fake code / second scan refused; students cannot do lecturer actions; students never see codes, the class list or others' records; one vote while open; only http(s) links; sign-in rules; full HTTP flow; sign-ins survive a restart. |
+| `server.py` (rules) | TC-SRV-1..9, 11 | A real scan = in class; fake code / second scan refused; students cannot do lecturer actions; students never see codes, the class list or others' records; one vote while open; only http(s) links; sign-in rules; full HTTP flow; sign-ins survive a restart; the local AI key file is never served to phones. |
 | `FirebaseStore` + `firestore.rules` | browser tests against the real project (§5) and the Rules Playground | The same cases as TC-SRV, on Firebase. |
 
 ## 4. Results (15 November 2026)
 
 | Suite | Result |
 |---|---|
-| JS unit + simulation (`npm test`) | **31 / 31 pass** |
+| JS unit + simulation (`npm test`) | **32 / 32 pass** |
 | Java core (JUnit) | **18 / 18 pass** (compiled with `-Xlint:all -Werror`) |
-| Server rules (`unittest`) | **9 / 9 pass** |
+| Server rules (`unittest`) | **10 / 10 pass** |
 | Browser, local server over HTTPS, fake camera | scan without location → in class; second scan → "already"; offline comment sent after the server restarts |
 | Browser, demo mode, fake camera, code 15% of the picture, 2× zoom | read in 1.8 s |
 | Far reading (simulated 720p camera, auto-zoom) | smallest readable code: **10%** of the picture height (was 15% before the 25×25 code) |
@@ -85,5 +85,8 @@
   build environment blocks; the same rules are covered by TC-SRV on the local server and checked
   in the Firebase console.
 - **Android UI classes:** built and run in Android Studio on our PC; the pure-Java core is unit tested.
-- **Live Groq calls and the COCO-SSD model:** need the lecturer's key / an external download; the
-  prompts and the counting logic are unit tested, and the live calls are part of the demo checklist.
+- **Live Gemini calls:** tested by hand on 25 Nov 2026 through our own modules in a real browser
+  (summary 8.6 s, homework review of a real course repository 24 s, audio request accepted); not in the
+  automatic suite because they need the private key.
+- **The COCO-SSD model:** an external download; the counting logic is unit tested and the live run is
+  on the demo checklist.

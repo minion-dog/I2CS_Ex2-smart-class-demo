@@ -33,7 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import il.ac.ariel.smartclass.R;
-import il.ac.ariel.smartclass.ai.Groq;
+import il.ac.ariel.smartclass.ai.Ai;
 import il.ac.ariel.smartclass.ai.LectureRecorder;
 import il.ac.ariel.smartclass.core.Prompts;
 import il.ac.ariel.smartclass.data.Repo;
@@ -468,9 +468,9 @@ public class LectureActivity extends BaseActivity
             rec.setText(getString(R.string.record_start));
             return;
         }
-        if (Groq.key(this).isEmpty())
+        if (!Ai.ready(this))
         {
-            Ui.toast(this, getString(R.string.groq_missing));
+            Ui.toast(this, getString(R.string.ai_missing));
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
@@ -514,9 +514,9 @@ public class LectureActivity extends BaseActivity
             Ui.toast(this, getString(R.string.no_summary));
             return;
         }
-        if (Groq.key(this).isEmpty())
+        if (!Ai.ready(this))
         {
-            Ui.toast(this, getString(R.string.groq_missing));
+            Ui.toast(this, getString(R.string.ai_missing));
             return;
         }
         recStatus.setText(getString(R.string.working));
@@ -530,7 +530,7 @@ public class LectureActivity extends BaseActivity
                 try
                 {
                     String[] m = Prompts.summary(title, text, english);
-                    String summary = Groq.chat(LectureActivity.this, m[0], m[1]);
+                    String summary = Ai.chat(LectureActivity.this, m[0], m[1]);
                     Map<String, Object> f = new HashMap<String, Object>();
                     f.put("summary", summary);
                     Repo.get().updateSession(sid, f);

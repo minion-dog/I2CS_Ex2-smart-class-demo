@@ -18,7 +18,7 @@ import { encodePayload, newToken, CODE } from '../core/payload.js';
 import { buildAttendanceSheet, STATUS } from '../core/sheet.js';
 import { parseCsv, rosterFromRows } from '../core/classlist.js';
 import { writeXlsx, readXlsx } from '../core/xlsx.js';
-import { groqKey, saveGroqKey, chat } from '../ai/groq.js';
+import { initAi, aiReady, chat } from '../ai/ai.js';
 import { summaryPrompt, submissionText, reviewPrompt, reviewSummaryLine } from '../ai/prompts.js';
 import { fetchRepoFiles } from '../ai/github.js';
 import { detectPeople, compareWithScans } from '../ai/headcount.js';
@@ -72,12 +72,7 @@ setupTabs($('tabs'), (name) =>
     }
 });
 $('session-title').value = defaultTitle();
-$('groq-key').value = groqKey();
-$('groq-save').onclick = () =>
-{
-    saveGroqKey($('groq-key').value);
-    toast('✓');
-};
+initAi(store);                         // the built-in key: no settings for the lecturer
 roster = await store.listRoster();
 fillRosterOptions();
 
@@ -300,7 +295,7 @@ $('poll-create').onclick = async () =>
 // -------------------------------------------------------- transcript
 $('rec-start').onclick = async () =>
 {
-    if (!requireGroq() || current === null)
+    if (!requireAi() || current === null)
     {
         return;
     }
@@ -337,7 +332,7 @@ $('rec-upload').onchange = async (ev) =>
 {
     const file = ev.target.files[0];
     ev.target.value = '';
-    if (!file || !requireGroq() || current === null)
+    if (!file || !requireAi() || current === null)
     {
         return;
     }
@@ -355,7 +350,7 @@ $('rec-upload').onchange = async (ev) =>
 
 $('make-summary').onclick = async () =>
 {
-    if (!requireGroq() || current === null)
+    if (!requireAi() || current === null)
     {
         return;
     }
@@ -652,7 +647,7 @@ function submissionCard(s)
  */
 async function reviewOne(s)
 {
-    if (!requireGroq())
+    if (!requireAi())
     {
         return;
     }
@@ -738,14 +733,14 @@ function defaultTitle()
 }
 
 /**
- * Checks that a Groq key exists; otherwise explains where to put it.
+ * Checks that the built-in AI is set up; otherwise says so (no key to type).
  * @returns {boolean} true when AI can be used
  */
-function requireGroq()
+function requireAi()
 {
-    if (groqKey() === '')
+    if (!aiReady())
     {
-        toast(t('groqMissing'), 'warn');
+        toast(t('aiMissing'), 'warn');
         return false;
     }
     return true;

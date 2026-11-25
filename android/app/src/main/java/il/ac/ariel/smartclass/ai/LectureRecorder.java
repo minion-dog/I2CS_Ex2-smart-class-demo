@@ -185,7 +185,7 @@ public final class LectureRecorder
         try
         {
             post("…");
-            String text = Groq.transcribe(context, piece);
+            String text = Ai.transcribe(context, piece);
             if (!text.isEmpty())
             {
                 Repo.get().addTranscript(sid, index, text);

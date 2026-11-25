@@ -382,6 +382,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.reply(HTTPStatus.OK, {"user": user, "state": view_for(STATE, user)})
         if self.path.startswith("/api/info"):
             return self.reply(HTTPStatus.OK, {"server": "smartclass", "urls": urls()})
+        if "ai-key.local" in self.path and self.client_address[0] not in ("127.0.0.1", "::1"):
+            # the built-in AI key is for the lecturer's PC only, never for the phones
+            return self.reply(HTTPStatus.NOT_FOUND, {"error": "not found"})
         return super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802

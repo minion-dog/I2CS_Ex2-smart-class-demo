@@ -159,6 +159,26 @@ class HttpTest(unittest.TestCase):
         _, r = self.call("/api/state", token=lt)
         self.assertEqual(r["state"]["sub"][sid]["attendance"]["dana@demo"]["status"], "present")
 
+    def test_tc_srv_11_ai_key_file_only_for_this_pc(self):
+        """TC-SRV-11: the local AI key file is served to the lecturer's PC only (here: 127.0.0.1)."""
+        key_file = srv.WEB / "js" / "ai-key.local.js"
+        made = not key_file.exists()
+        if made:
+            key_file.write_text("export const GEMINI_KEY = 'test';", encoding="utf-8")
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/js/ai-key.local.js") as r:
+                self.assertEqual(r.status, 200)
+            handler = srv.Handler.__new__(srv.Handler)
+            handler.client_address = ("192.168.1.20", 5555)
+            handler.path = "/js/ai-key.local.js"
+            sent = {}
+            handler.reply = lambda code, body: sent.update(code=code)
+            handler.do_GET()
+            self.assertEqual(sent["code"], 404)
+        finally:
+            if made:
+                key_file.unlink()
+
     def test_tc_srv_9_sign_in_survives_a_restart(self):
         """TC-SRV-9: tokens are saved, so phones stay signed in when the PC restarts the server."""
         _, r = self.call("/api/signin", {"role": "lecturer", "password": srv.LECTURER_PASSWORD})

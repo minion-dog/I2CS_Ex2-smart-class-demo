@@ -171,7 +171,7 @@ public final class GitHub
         {
             throw new IOException("GitHub " + code);
         }
-        return Groq.readAll(con.getInputStream());
+        return Ai.readAll(con.getInputStream());
     }
 
     /**

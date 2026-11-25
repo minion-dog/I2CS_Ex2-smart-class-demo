@@ -349,6 +349,31 @@ public final class Repo
     // ==========================================
 
     /**
+     * Reads the built-in AI key (config/ai.geminiKey). The security rules let only the
+     * lecturer read it, so students never can.
+     * @param (Done&lt;String&gt;) done Receives the key, or "" when it is not set.
+     */
+    public void loadAiKey(final Done<String> done)
+    {
+        db.collection("config").document("ai").get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>()
+        {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> t)
+            {
+                if (t.isSuccessful() && t.getResult() != null && t.getResult().exists())
+                {
+                    String key = t.getResult().getString("geminiKey");
+                    done.onDone(key == null ? "" : key, null);
+                }
+                else
+                {
+                    done.onDone("", t.getException());
+                }
+            }
+        });
+    }
+
+    /**
      * Opens a lecture (lecturer). The id is short capitals/digits so the QR stays small.
      * No location: attendance is the live scan (decision: physical attendance only).
      * @param (String) title Name.

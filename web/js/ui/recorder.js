@@ -7,7 +7,7 @@
 // sent to Whisper, and its text is stored as transcript/<n>. Students see
 // the transcript grow during the lecture.
 
-import { transcribe } from '../ai/groq.js';
+import { transcribe } from '../ai/ai.js';
 
 const PIECE_MS = 60000;
 const LANGUAGE = 'he';     // the lecturer teaches in Hebrew (SRS section 9)
@@ -129,7 +129,7 @@ export class LectureRecorder
  * Transcribes an uploaded recording file in one request.
  * @param {object} store - data layer
  * @param {string} sid - session
- * @param {File} file - audio or video file (Groq limit: 100 MB)
+ * @param {File} file - audio file (up to 18 MB is sent in one request)
  * @returns {Promise<void>}
  */
 export async function transcribeUpload(store, sid, file)

@@ -27,7 +27,6 @@
         <activity android:name=".ui.LecturerHomeActivity" android:exported="false" />
         <activity android:name=".ui.LiveSessionActivity" android:exported="false" />
         <activity android:name=".ui.AssignmentsActivity" android:exported="false" />
-        <activity android:name=".ui.SettingsActivity" android:exported="false" />
 
         <!-- Shares the exported attendance .xlsx with other apps (mail, Drive, WhatsApp). -->
         <provider

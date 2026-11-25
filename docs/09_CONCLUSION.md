@@ -2,7 +2,7 @@
 
 ## What we built
 SmartClass, a teaching tool for the classroom: a phone-first website for students and lecturers
-(plus an optional Android app), on free services (Firebase, GitHub Pages, Groq). It covers all
+(plus an optional Android app), on free services (Firebase, GitHub Pages, Google Gemini). It covers all
 five features of the Ex2 sheet: automatic attendance with a photo-based check and a live/offline
 **spreadsheet**, real-time and offline comments, KISS polls, an AI lecture summary, and an AI
 homework review that compares each student with the class.
@@ -38,8 +38,9 @@ The information is in *how fast* each square changes, which only a live film sho
   the head count from a class photo is the check against that.
 - The Android app is built in Android Studio on our PC; our cloud build environment could not reach
   Google's servers, so its pure-Java core is what we test automatically.
-- AI features need the lecturer's free Groq key at the demo; the prompts are tested, the live calls
-  are part of the demo checklist.
+- AI (Gemini) works with a built-in key the lecturer never types; it lives in Firestore
+  (lecturer-only). The public demo site has no Firebase yet, so it has no AI; on our own PC the key
+  comes from an untracked local file.
 - No push notifications on the free plan (in-app only while open).
 
 ## What we learned
