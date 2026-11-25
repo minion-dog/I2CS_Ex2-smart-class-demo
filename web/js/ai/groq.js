@@ -1,10 +1,14 @@
 // =====================================================================
-//  groq.js - the only place that talks to the AI (Groq)
+//  groq.js - the only place the pages call for AI (Groq or Gemini)
 // =====================================================================
-// Groq is free and has Whisper (speech to text, supports Hebrew) and
-// chat models. The key is pasted by the lecturer in Settings and kept
-// ONLY in this browser (localStorage) - never in the code, never in
-// Firestore, never in the Android app that students install.
+// Two free providers with the same two jobs (speech to text, chat):
+//   a Groq key ("gsk_...")  -> Groq: Whisper + an open chat model
+//   any other key           -> Google Gemini (see gemini.js)
+// The key is pasted by the lecturer in Settings and kept ONLY in this
+// browser (localStorage) - never in the code, never in Firestore, never
+// on GitHub, never in the Android app that students install.
+
+import { geminiChat, geminiTranscribe } from './gemini.js';
 
 /** Models and limits. Model names checked at console.groq.com/docs/models (Nov 2026). */
 export const GROQ = Object.freeze({
@@ -14,6 +18,16 @@ export const GROQ = Object.freeze({
     MAX_AUDIO_BYTES: 100 * 1024 * 1024,     // Groq's file limit
     KEY_STORAGE: 'smartclass-groq-key'
 });
+
+/**
+ * Which provider a key belongs to.
+ * @param {string} key - the saved key
+ * @returns {'groq'|'gemini'} provider
+ */
+export function providerOf(key)
+{
+    return key.startsWith('gsk_') ? 'groq' : 'gemini';
+}
 
 /**
  * Returns the saved key, or '' when none.
@@ -50,6 +64,10 @@ export function saveGroqKey(key)
 export async function transcribe(audio, language)
 {
     const key = requireKey();
+    if (providerOf(key) === 'gemini')
+    {
+        return geminiTranscribe(key, audio, language);
+    }
     if (audio.size > GROQ.MAX_AUDIO_BYTES)
     {
         throw new Error('file-too-large');
@@ -77,6 +95,10 @@ export async function transcribe(audio, language)
 export async function chat(messages)
 {
     const key = requireKey();
+    if (providerOf(key) === 'gemini')
+    {
+        return geminiChat(key, messages);
+    }
     const res = await fetch(GROQ.BASE + '/chat/completions', {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },

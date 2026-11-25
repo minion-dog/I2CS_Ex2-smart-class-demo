@@ -82,3 +82,23 @@ test('TC-I18N-1: Hebrew and English have exactly the same keys', () =>
 {
     assert.deepEqual(keysOf('he').sort(), keysOf('en').sort());
 });
+
+test('TC-AI-7: Gemini request: system -> systemInstruction, assistant -> model; Groq keys stay on Groq', async () =>
+{
+    const { toGeminiBody, textOf } = await import('../js/ai/gemini.js');
+    const { providerOf } = await import('../js/ai/groq.js');
+    const body = toGeminiBody([
+        { role: 'system', content: 'Answer in Hebrew.' },
+        { role: 'user', content: 'Q1' },
+        { role: 'assistant', content: 'A1' },
+        { role: 'user', content: 'Q2' }
+    ]);
+    assert.deepEqual(body.systemInstruction, { parts: [{ text: 'Answer in Hebrew.' }] });
+    assert.deepEqual(body.contents.map((c) => c.role), ['user', 'model', 'user']);
+    assert.equal(body.contents[2].parts[0].text, 'Q2');
+    assert.equal(textOf({ candidates: [{ content: { parts: [{ text: 'שלום ' }, { text: 'עולם' }] } }] }), 'שלום עולם');
+    assert.equal(textOf({}), '');
+    assert.equal(providerOf('gsk_abc'), 'groq');
+    assert.equal(providerOf('AQ.xyz'), 'gemini');
+    assert.equal(providerOf('AIzaSyX'), 'gemini');
+});
