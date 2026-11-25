@@ -4,7 +4,7 @@
 
 **Live site (demo mode):** https://minion-dog.github.io/I2CS_Ex2-smart-class-demo/ · **Repository:** https://github.com/minion-dog/I2CS_Ex2-smart-class-demo
 
-> The live site runs in **demo mode** for now: no accounts, *Load a sample class*, then enter as lecturer or student. Data stays in each browser, so the lecturer and the students are tabs of the same browser (or the local server for real phones). The Firebase version is ready in the code (`web/js/firebase-config.js` + `firestore.rules`); setup steps in [docs/SETUP_HE.md](docs/SETUP_HE.md).
+> The live site runs in **demo mode** for now: no accounts, *Load a sample class*, then enter as lecturer or student. A student phone that scans the lecturer's screen in demo mode continues with a sample class photo (or press *🧪 try without scanning*) to try choosing a face. Data stays in each browser, so the lecturer and the students are tabs of the same browser (or the local server for real phones). The Firebase version is ready in the code (`web/js/firebase-config.js` + `firestore.rules`); setup steps in [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 ### Scan to open the site
 

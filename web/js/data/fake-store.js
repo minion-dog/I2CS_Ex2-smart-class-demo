@@ -248,6 +248,36 @@ export class FakeStore
     }
 
     /**
+     * Demo only: a practice lecture in this browser with a sample class photo, so the face
+     * step can be tried on one phone (in demo mode the real lecture is on another device and
+     * its data never reaches this phone). Some classmates already stand on faces (green).
+     * @param {string} title - lecture title
+     * @param {{image:string, aspect:number, boxes:object[]}} photo - sample photo and its boxes
+     * @param {number} classmates - how many faces are already taken
+     * @returns {Promise<string>} the practice lecture's id
+     */
+    async demoPractice(title, photo, classmates)
+    {
+        const sid = await this.createSession(title);
+        const sub = this.state.sub[sid];
+        const boxes = withIds(photo.boxes);
+        sub.photo = { v: 1, image: photo.image, boxes: boxes, aspect: photo.aspect, at: Date.now() };
+        sub.claims = {};
+        const now = Date.now();
+        sub.attendance[this.user.email] = { email: this.user.email, uid: this.user.uid, name: this.user.name, status: 'present', token: 'demo', scannedAt: now };
+        const others = Object.values(this.state.roster).filter((r) => !r.staff && r.email !== this.user.email);
+        const free = boxes.map((b) => b.id);
+        for (const r of others.slice(0, classmates))
+        {
+            const id = free.splice(Math.floor(Math.random() * free.length), 1)[0];
+            sub.claims[claimId(1, id)] = { uid: 'demo-' + r.email, v: 1 };
+            sub.attendance[r.email] = { email: r.email, uid: 'demo-' + r.email, name: r.first + ' ' + r.last, status: 'present', token: 'demo', scannedAt: now, face: id, photoV: 1 };
+        }
+        this.commit();
+        return sid;
+    }
+
+    /**
      * Watches the class photo.
      * @param {string} sid - session
      * @param {function(object|null):void} cb - receives the photo or null

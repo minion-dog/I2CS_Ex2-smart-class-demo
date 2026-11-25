@@ -24,7 +24,8 @@ import { newlyOpened } from '../core/schedule.js';
 // ---------------------------------------------------------------------
 
 const MAX_UPLOAD_BYTES = 500 * 1024;
-const OLD_CHOICE_MS = 5000;     // how long the previous (removed) choice stays shown, dashed
+const OLD_CHOICE_MS = 5000;
+const DEMO_CLASSMATES = 8;      // demo practice photo: faces already chosen by classmates (green)     // how long the previous (removed) choice stays shown, dashed
 
 const $ = (id) => document.getElementById(id);
 
@@ -218,13 +219,37 @@ async function onScanned(text)
     }
     if (store.kind === 'demo' && !sessions.some((x) => x.id === p.sessionId))
     {
-        // demo mode keeps data in each browser: the lecture is open on another device
-        setResult(t('scanReadDemo'), 'warn');
-        showWhere();
+        // demo mode keeps data in each browser: the lecture is open on another device, so its
+        // photo never reaches this phone. Go on with a sample class photo to try the face step.
+        setResult(t('scanReadDemo') + ' ' + t('demoPracticeNext'), 'warn');
+        await startPractice();
         return;
     }
     await mark(() => store.markMe(p.sessionId, { token: p.token }));
     followFaces(p.sessionId);
+}
+
+/**
+ * Demo only: a practice lecture in this browser with a sample class photo, so the
+ * student can choose his face, confirm and continue on one phone.
+ */
+async function startPractice()
+{
+    const res = await fetch('demo/class-sample.json');
+    const photo = await res.json();
+    const sid = await store.demoPractice(t('demoPracticeTitle'), photo, DEMO_CLASSMATES);
+    followFaces(sid);
+    $('face-step').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+if (store.kind === 'demo')
+{
+    $('demo-practice-row').hidden = false;
+    $('demo-practice').onclick = async () =>
+    {
+        setResult(t('demoPracticeNext'), 'warn');
+        await startPractice();
+    };
 }
 
 /**
