@@ -34,7 +34,7 @@ Volunteers: 3–5 classmates with phones.
 |---|---|
 | "What if a student scans and leaves?" | The scan proves the start; the class photo proves he was still there. The lecturer takes it whenever he wants (middle, end, random), and whoever left has no face to confirm: "scanned, not in the photo". Scanning 3 times or GPS all lesson would be annoying, invasive and still not accurate indoors. |
 
-| "A friend in class streams the code by video call to a student at home?" | Video calls (Zoom, WhatsApp) compress and drop frames, so the 30-per-second flicker is mostly lost (our Zoom test: not readable). Even if it works, it must be live within ~10 s, and the student at home has no face in the class photo: the friend's own face is already his, and a box on an empty seat is checked by Gemini and the lecturer. Lying to the lecturer face to face is not something software can stop. |
+| "A friend in class streams the code by video call to a student at home?" | Video calls (Zoom, WhatsApp) compress and drop frames, so the 30-per-second flicker is mostly lost (our Zoom test: not readable). Even if it works, it must be live within ~10 s, and the student at home has no face in the class photo: the friend's own face is already his. Someone out of frame is added by the lecturer by hand, and the lecturer sees the photo and the room; a box asked for an empty seat is checked by Gemini and still decided by the lecturer. If the lecturer is fooled face to face, that is outside what software can secure. |
 | "GPS?" | Not needed and not used: indoors it can't tell the room from the hallway, a VPN or fake location app defeats it, and it is personal data. |
 
 ## If something fails
