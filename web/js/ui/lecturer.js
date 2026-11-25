@@ -21,8 +21,11 @@ import { writeXlsx, readXlsx } from '../core/xlsx.js';
 import { initAi, aiReady, chat } from '../ai/ai.js';
 import { summaryPrompt, submissionText, reviewPrompt, reviewSummaryLine } from '../ai/prompts.js';
 import { fetchRepoFiles } from '../ai/github.js';
-import { findFaces } from '../ai/facefind.js';
+import { findFaces, checkRequest } from '../ai/facefind.js';
 import { FaceView } from './faceview.js';
+import { setupQuizHost } from './quiz-host.js';
+import { cleanSlots, dueSlot } from '../core/schedule.js';
+import { exportEverything } from './export.js';
 import { FACES, claimsOf, photoStats, compareWithScans, storedSize } from '../core/faces.js';
 
 // ---------------------------------------------------------------------
@@ -44,8 +47,15 @@ let attendanceNow = [];
 let dismissedId = null;      // an open session the lecturer closed the view of
 let photo = null;            // the saved class photo of the current session {v, image, boxes, aspect}
 let draft = null;            // the photo being checked {image, aspect, newVersion}
+let requests = [];           // students' "no box on me" requests
+const aiChecks = new Map();  // request key -> 'checking' | Gemini's answer
 const editView = new FaceView($('face-edit-view'), { mode: 'edit', onChange: (b) => { $('face-count').textContent = b.length; } });
 const watchView = new FaceView($('face-watch-view'), { mode: 'watch', onBox: showBoxInfo });
+const watchQuizzes = setupQuizHost(store, () => current,
+    () => $('transcript-box').textContent || (current && current.summary) || '',
+    () => attendanceNow.filter((r) => r.status === STATUS.PRESENT || r.status === STATUS.MANUAL).length,
+    { blocks: $('quiz-blocks'), title: $('quiz-name'), add: $('quiz-add'), save: $('quiz-save'), ai: $('quiz-ai'),
+        topic: $('quiz-topic'), list: $('quiz-list'), stage: $('quiz-stage') });
 const qr = new NoisyQrDisplay($('qr'), globalThis.qrcode);
 if (store.kind === 'lan')
 {
@@ -81,6 +91,60 @@ $('session-title').value = defaultTitle();
 initAi(store);                         // the built-in key: no settings for the lecturer
 roster = await store.listRoster();
 fillRosterOptions();
+
+// ------------------------------------------------ timetable (our first SRS)
+let slots = cleanSlots(await store.loadSchedule());
+drawSchedule();
+setInterval(autoStart, 30 * 1000);
+
+/** Opens the lecture by itself when its time comes (this page must be open). */
+async function autoStart()
+{
+    const slot = dueSlot(slots, sessions, new Date());
+    if (slot === null || current !== null && current.endedAt === null)
+    {
+        return;
+    }
+    const title = slot.title || defaultTitle();
+    const id = await store.createSession(title);
+    openLive({ id: id, title: title, endedAt: null, startedAt: Date.now() });
+    toast('🗓 ' + t('autoStarted'));
+}
+
+/** The timetable editor: one row per weekly lecture. */
+function drawSchedule()
+{
+    fill($('schedule-rows'), ...slots.map((s) => scheduleRow(s)));
+}
+
+/**
+ * One timetable row.
+ * @param {{day:number, start:string, end:string, title:string}} s - slot
+ * @returns {Element} row
+ */
+function scheduleRow(s)
+{
+    const days = t('days').split(',');
+    const row = el('div', { class: 'row wrap sched-row' }, [
+        el('select', { class: 'sd' }, days.map((d, i) => el('option', { value: String(i), selected: i === s.day, text: d }))),
+        el('input', { type: 'time', class: 'ss', value: s.start }),
+        el('input', { type: 'time', class: 'se', value: s.end }),
+        el('input', { type: 'text', class: 'st grow', value: s.title, placeholder: t('sessionTitle') }),
+        el('button', { type: 'button', class: 'secondary small', text: '🗑', onclick: () => row.remove() })
+    ]);
+    return row;
+}
+
+$('schedule-add').onclick = () => $('schedule-rows').append(scheduleRow({ day: new Date().getDay(), start: '10:00', end: '12:00', title: '' }));
+$('schedule-save').onclick = async () =>
+{
+    slots = cleanSlots([...document.querySelectorAll('.sched-row')].map((r) => ({
+        day: r.querySelector('.sd').value, start: r.querySelector('.ss').value, end: r.querySelector('.se').value, title: r.querySelector('.st').value
+    })));
+    await store.saveSchedule(slots);
+    drawSchedule();
+    toast('✓ ' + t('scheduleSaved'));
+};
 
 store.watchSessions((list) =>
 {
@@ -179,6 +243,13 @@ function openLive(s)
     stopWatchers.push(store.watchTranscript(s.id, renderTranscript));
     showSummary(s.summary);
     stopWatchers.push(store.watchPhoto(s.id, showPhoto));
+    stopWatchers.push(watchQuizzes(s.id));
+    stopWatchers.push(store.watchBoxRequests(s.id, (list) =>
+    {
+        requests = list;
+        drawRequests();
+        autoCheckRequests();
+    }));
 }
 
 /** Leaves the live view. */
@@ -508,6 +579,8 @@ function showPhoto(p)
         watchView.setPhoto(p.image, p.boxes, p.aspect);
     }
     updatePhotoStats();
+    drawRequests();
+    autoCheckRequests();
 }
 
 /** Counters, names on the boxes and the "not in the photo" list. */
@@ -535,6 +608,66 @@ function updatePhotoStats()
     $('head-warning').hidden = !compareWithScans(st.faces, scans).suspicious;
     const missing = attendanceNow.filter((r) => r.photoV === photo.v && r.face === FACES.NOT_FOUND);
     fill($('not-found-list'), ...missing.map((r) => el('li', {}, [el('span', { class: 'grow', text: '⚠ ' + displayName(r.email) })])));
+}
+
+/** The students' box requests: on the photo (dashed) and as a list with Approve / Reject. */
+function drawRequests()
+{
+    const v = photo ? photo.v : -1;
+    const open = requests.filter((r) => r.v === v && r.status !== 'ok');
+    watchView.setExtra(open.map((r) => Object.assign({ label: displayName(r.email), state: r.status }, r.box)));
+    fill($('req-list'), ...open.map((r) =>
+    {
+        const check = aiChecks.get(r.email + '@' + r.at);
+        let state = r.status === 'no' ? (r.reason || t('reject')) : '';
+        if (check === 'checking')
+        {
+            state = t('aiChecking');
+        }
+        return el('li', {}, [
+            el('span', { class: 'grow', text: displayName(r.email) }),
+            el('span', { class: 'muted', text: state }),
+            el('button', { class: 'small', text: t('approve'), onclick: () => store.resolveBoxRequest(current.id, r, true, 'lecturer', photo) }),
+            el('button', { class: 'secondary small', text: t('reject'), onclick: () => store.resolveBoxRequest(current.id, r, false, 'lecturer', photo) })
+        ]);
+    }));
+}
+
+/**
+ * Decision (ours, 25 Nov 2026): Gemini checks a box a student placed himself. A person
+ * there -> the box is added and given to the student; no person -> refused, and the
+ * lecturer can still approve it. Without AI the lecturer decides.
+ */
+async function autoCheckRequests()
+{
+    if (!aiReady() || photo === null || !watchView.img.complete)
+    {
+        return;
+    }
+    for (const r of requests)
+    {
+        const key = r.email + '@' + r.at;
+        if (r.status !== 'pending' || r.v !== photo.v || aiChecks.has(key))
+        {
+            continue;
+        }
+        aiChecks.set(key, 'checking');
+        drawRequests();
+        try
+        {
+            const answer = await checkRequest(watchView.img, r.box);
+            aiChecks.set(key, answer);
+            if (answer !== null)
+            {
+                await store.resolveBoxRequest(current.id, r, answer.person, (answer.person ? t('aiYes') : t('aiNo')) + ': ' + answer.reason, photo);
+            }
+        }
+        catch (e)
+        {
+            aiChecks.set(key, null);              // left to the lecturer
+        }
+        drawRequests();
+    }
 }
 
 /**
@@ -656,9 +789,61 @@ async function renderRoster()
     fill($('roster-list'), ...roster.map((r) => el('li', {}, [
         el('span', { class: 'grow', text: r.first + ' ' + r.last }),
         el('span', { class: 'muted', text: r.email }),
-        r.staff ? el('span', { class: 'badge manual', text: t('staff') }) : null
+        r.staff ? el('span', { class: 'badge manual', text: t('staff') }) : null,
+        el('button', { class: 'secondary small', text: t('remove'), onclick: () => removeFromRoster(r.email) })
     ])));
 }
+
+/**
+ * Removes one student from the class list (from our first SRS).
+ * @param {string} email - student
+ */
+async function removeFromRoster(email)
+{
+    if (!confirm(t('removeAsk') + '\n' + email))
+    {
+        return;
+    }
+    await store.saveRoster(roster.filter((r) => r.email !== email));
+    await renderRoster();
+    fillRosterOptions();
+}
+
+$('ra-add').onclick = async () =>
+{
+    const email = $('ra-email').value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+$/.test(email) || $('ra-first').value.trim() === '')
+    {
+        toast(t('error'), 'warn');
+        return;
+    }
+    const entry = { first: $('ra-first').value.trim(), last: $('ra-last').value.trim(), id: $('ra-id').value.trim(), email: email, group: '', staff: false };
+    await store.saveRoster(roster.filter((r) => r.email !== email).concat([entry]));
+    for (const id of ['ra-first', 'ra-last', 'ra-id', 'ra-email'])
+    {
+        $(id).value = '';
+    }
+    await renderRoster();
+    fillRosterOptions();
+};
+
+$('export-zip').onclick = async () =>
+{
+    $('export-zip').disabled = true;
+    toast(t('exporting'));
+    try
+    {
+        await exportEverything(store, sessions, roster);
+    }
+    catch (e)
+    {
+        toast(t('error') + ': ' + e.message, 'error');
+    }
+    finally
+    {
+        $('export-zip').disabled = false;
+    }
+};
 
 /** Fills the search suggestions for manual marking. */
 function fillRosterOptions()

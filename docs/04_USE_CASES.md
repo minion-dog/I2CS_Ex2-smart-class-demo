@@ -15,6 +15,9 @@ flowchart LR
         UC4(UC-4 Watch and download the attendance sheet)
         UC5(UC-5 Class photo: fix the face boxes)
         UC12(UC-12 Tap my face in the class photo)
+        UC13(UC-13 Play a live quiz)
+        UC14(UC-14 Download everything as ZIP)
+        UC15(UC-15 Lectures open by the timetable)
         UC6(UC-6 Comment during or after a lecture)
         UC7(UC-7 Run a quick poll)
         UC8(UC-8 Record and summarise the lecture)
@@ -22,8 +25,10 @@ flowchart LR
         UC10(UC-10 Review and grade homework)
         UC11(UC-11 Sign in)
     end
-    L --- UC1 & UC2 & UC4 & UC5 & UC7 & UC8 & UC10 & UC11
-    S --- UC3 & UC6 & UC9 & UC11 & UC12
+    L --- UC1 & UC2 & UC4 & UC5 & UC7 & UC8 & UC10 & UC11 & UC13 & UC14 & UC15
+    S --- UC3 & UC6 & UC9 & UC11 & UC12 & UC13
+    UC13 --- G
+    UC12 --- G
     L --- UC6
     S --- UC7
     UC8 --- G
@@ -99,7 +104,20 @@ flowchart LR
 - **Actor:** Student. **Pre:** scanned the code (UC-3).
 - **Main flow:** 1) The photo opens (a notification when it arrives later). 2) The student zooms and taps their face. 3) The face is shown enlarged: *Is this you?* 4) *Yes* → attendance confirmed; the face turns grey for everyone else.
 - **Alternatives:** the face is taken → "tell the lecturer"; *I can't find myself* → the lecturer sees the name at once; a new photo → choose again.
-- (FR-ATT-13, FR-ATT-14)
+- **No box on me:** the student taps where he sits (also at the edge of the photo) → *Send* → "checking". Gemini looks at that part of the photo: a person → the box is added and the attendance confirmed; no → "not approved", and the lecturer can still approve.
+- (FR-ATT-13, FR-ATT-14, FR-ATT-16)
+
+## UC-13 Play a live quiz (Kahoot style)
+- **Actors:** Lecturer, Students, Gemini (optional).
+- **Main flow:** 1) The lecturer writes the questions (or *✨ Write questions with AI* from the transcript or a topic) and saves. 2) *Run* → the projector shows the lobby; the phones open the quiz by themselves. 3) *Start* → a question with a countdown; students tap one of four coloured buttons. 4) Time up or everyone answered → answer bars and the correct answer; each phone shows right / wrong and the points. 5) *Leaderboard* (top 5) → *Next* … → podium.
+- **Alternative:** an answer after the time → "time is up" (refused by the rules).
+- (FR-QZ-1..5)
+
+## UC-14 Download everything as ZIP
+- **Actor:** Lecturer. **Main flow:** Sheet tab → *Everything as ZIP* → one organised folder per lecture and per assignment, plus the class list and the attendance XLSX. (FR-GEN-4)
+
+## UC-15 Lectures open by the timetable
+- **Actor:** Lecturer (once), the system. **Main flow:** 1) Live tab → *Lecture times* → add day, start, end, name → *Save*. 2) At the time, the lecturer's page (open on the classroom computer) opens the lecture by itself. 3) Students' phones show "the lecture started". (FR-SES-1, FR-SES-2)
 
 ## UC-11 Sign in
 - **Student:** *Sign in with Google* → the email must be on the class list, otherwise "not on the list".

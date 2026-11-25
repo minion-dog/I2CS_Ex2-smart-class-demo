@@ -73,6 +73,28 @@ public final class FacePickView extends View
     /** Callback. */
     private OnPick onPick;
 
+    /**
+     * Receives a place tapped in "no box on me" mode.
+     */
+    public interface OnPlace
+    {
+        /**
+         * Called with the tapped point.
+         * @param (double) px X as a fraction of the photo.
+         * @param (double) py Y as a fraction of the photo.
+         */
+        void onPlace(double px, double py);
+    }
+
+    /** "No box on me": the next tap places my own box. */
+    private OnPlace onPlace;
+
+    /** My requested box {x, y, w, h}, drawn dashed (null = none). */
+    private double[] requested;
+
+    /** Dashed outline of a requested box. */
+    private final Paint dashed = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     /** Box outline. */
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
 
@@ -95,6 +117,10 @@ public final class FacePickView extends View
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(3 * getResources().getDisplayMetrics().density);
         shade.setColor(Color.argb(115, 0, 0, 0));
+        dashed.setStyle(Paint.Style.STROKE);
+        dashed.setStrokeWidth(3 * getResources().getDisplayMetrics().density);
+        dashed.setColor(Color.rgb(179, 136, 255));
+        dashed.setPathEffect(new android.graphics.DashPathEffect(new float[] {18, 10}, 0));
         scale = new ScaleGestureDetector(c, new ScaleGestureDetector.SimpleOnScaleGestureListener()
         {
             @Override
@@ -174,12 +200,57 @@ public final class FacePickView extends View
     }
 
     /**
+     * Turns "no box on me" on: the next tap anywhere calls l (null = off).
+     * @param (OnPlace) l Callback.
+     */
+    public void setPlacing(OnPlace l)
+    {
+        onPlace = l;
+    }
+
+    /**
+     * Draws my requested box dashed.
+     * @param (double[]) box {x, y, w, h} or null.
+     */
+    public void setRequested(double[] box)
+    {
+        requested = box;
+        invalidate();
+    }
+
+    /**
      * Sets the tap callback.
      * @param (OnPick) l Callback.
      */
     public void setOnPick(OnPick l)
     {
         onPick = l;
+    }
+
+    /**
+     * A box the size of the faces near a point (for "no box on me"), clamped to the photo.
+     * @param (double) px X fraction.
+     * @param (double) py Y fraction.
+     * @return (double[]) {x, y, w, h}.
+     */
+    public double[] boxNear(double px, double py)
+    {
+        double w = 0.06;
+        double h = 0.06 * (photo == null ? 1 : photo.getWidth() / (double) photo.getHeight());
+        double best = Double.MAX_VALUE;
+        for (Faces.Box b : boxes)
+        {
+            double d = Math.hypot(b.x + b.w / 2 - px, b.y + b.h / 2 - py);
+            if (d < best)
+            {
+                best = d;
+                w = b.w;
+                h = b.h;
+            }
+        }
+        double x = Math.max(0, Math.min(1 - w, px - w / 2));
+        double y = Math.max(0, Math.min(1 - h, py - h / 2));
+        return new double[] {x, y, w, h};
     }
 
     /**
@@ -273,6 +344,10 @@ public final class FacePickView extends View
             }
             c.drawRoundRect(r, 8, 8, line);
         }
+        if (requested != null)
+        {
+            c.drawRoundRect(screenRect(new Faces.Box(0, requested[0], requested[1], requested[2], requested[3])), 8, 8, dashed);
+        }
     }
 
     /**
@@ -338,6 +413,13 @@ public final class FacePickView extends View
     {
         double px = (x - panX) / (getWidth() * zoom);
         double py = (y - panY) / (getHeight() * zoom);
+        if (onPlace != null)
+        {
+            OnPlace l = onPlace;
+            onPlace = null;
+            l.onPlace(Math.max(0, Math.min(1, px)), Math.max(0, Math.min(1, py)));
+            return;
+        }
         int i = Faces.hitTest(boxes, px, py);
         if (i < 0 || onPick == null)
         {

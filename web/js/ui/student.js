@@ -15,8 +15,10 @@ import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
 import { bindPolls, notify } from './polls.js';
 import { decodePayload } from '../core/payload.js';
-import { FACES, myStep } from '../core/faces.js';
+import { FACES, myStep, requestedBox } from '../core/faces.js';
 import { FaceView } from './faceview.js';
+import { setupQuizPlay } from './quiz-play.js';
+import { newlyOpened } from '../core/schedule.js';
 
 // ---------------------------------------------------------------------
 //  CONSTANTS & FIELDS
@@ -31,8 +33,11 @@ let sessions = [];
 let scanner = null;
 let lectureWatchers = [];
 const myRecords = new Map();     // session id -> unsubscribe
-const face = { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, told: false };
-const pickView = new FaceView($('face-pick-view'), { mode: 'pick', onPick: askIsThisYou });
+const face = { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, told: false, request: null, placed: null };
+const seenOpen = new Set();
+let firstSessions = true;
+const followQuiz = setupQuizPlay(store, user, $('quiz-play'));
+const pickView = new FaceView($('face-pick-view'), { mode: 'pick', onPick: askIsThisYou, onPlace: placeMyBox });
 
 // ---------------------------------------------------------------------
 //  ENTRY
@@ -52,7 +57,17 @@ store.watchSessions((list) =>
     sessions = list;
     fillSessionPicker();
     watchMyAttendance();
+    for (const id of newlyOpened(seenOpen, list))
+    {
+        seenOpen.add(id);
+        if (!firstSessions)
+        {
+            notify(t('lectureStarted') + ' ' + (list.find((x) => x.id === id).title || ''));   // from our first SRS
+        }
+    }
+    firstSessions = false;
     const open = list.find((x) => x.endedAt === null);
+    followQuiz(open ? open.id : null);       // a quiz of the open lecture pops up by itself
     if (open && face.sid === null)
     {
         followFaces(open.id);           // already scanned earlier? the face step comes back
@@ -252,6 +267,11 @@ function followFaces(sid)
         face.record = list[0] || null;
         drawFaceStep(false);
     }));
+    face.stops.push(store.watchBoxRequests(sid, (list) =>
+    {
+        face.request = list[0] || null;
+        drawFaceStep(false);
+    }));
 }
 
 /** Watches which faces of the current photo are taken. */
@@ -279,7 +299,7 @@ function stopFaces()
     {
         face.stopTaken();
     }
-    Object.assign(face, { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0 });
+    Object.assign(face, { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, request: null, placed: null });
 }
 
 /**
@@ -322,7 +342,90 @@ function drawFaceStep(newPhoto)
         msg.textContent = '';
         msg.className = 'scan-result';
     }
+    drawMyRequest(step);
 }
+
+/**
+ * Shows my own requested box and its state.
+ * @param {string} step - from myStep
+ */
+function drawMyRequest(step)
+{
+    const r = face.request && face.photo && face.request.v === face.photo.v ? face.request : null;
+    const open = r && r.status === 'pending';
+    $('face-place').hidden = Boolean(open) || step === 'done';
+    if (face.placed)
+    {
+        pickView.setExtra([Object.assign({ state: 'mine' }, face.placed)]);
+    }
+    else if (r && r.status !== 'ok')
+    {
+        pickView.setExtra([Object.assign({ state: r.status }, r.box)]);
+    }
+    else
+    {
+        pickView.setExtra([]);
+    }
+    if (open)
+    {
+        $('place-status').textContent = t('reqPending');
+    }
+    else if (r && r.status === 'no')
+    {
+        $('place-status').textContent = t('reqNo') + (r.reason ? ' (' + r.reason + ')' : '') + ' · ' + t('toldLecturer');
+    }
+    else
+    {
+        $('place-status').textContent = '';
+    }
+}
+
+$('face-place').onclick = () =>
+{
+    $('face-confirm').hidden = true;
+    pickView.select(0);
+    pickView.setPlacing(true);
+    $('place-status').textContent = t('placeHint');
+};
+
+/**
+ * "No box on me": the student tapped where he sits; show the box and ask to send it.
+ * @param {number} px - tap x (fraction)
+ * @param {number} py - tap y (fraction)
+ */
+function placeMyBox(px, py)
+{
+    face.placed = requestedBox(pickView.boxes, px, py, face.photo.aspect);
+    pickView.setPlacing(false);
+    $('place-confirm').hidden = false;
+    drawFaceStep(false);
+}
+
+$('place-cancel').onclick = () =>
+{
+    face.placed = null;
+    $('place-confirm').hidden = true;
+    drawFaceStep(false);
+};
+
+$('place-send').onclick = async () =>
+{
+    if (!face.placed || !face.photo)
+    {
+        return;
+    }
+    try
+    {
+        await store.requestBox(face.sid, face.photo.v, face.placed);
+    }
+    catch (e)
+    {
+        toast(t('error') + ': ' + e.message, 'warn');
+    }
+    face.placed = null;
+    $('place-confirm').hidden = true;
+    drawFaceStep(false);
+};
 
 /**
  * A face was tapped: show it big and ask "is this you?".

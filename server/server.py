@@ -172,6 +172,13 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
                 state["roster"][email] = {**e, "email": email}
         return len(state["roster"])
 
+    # ----- timetable: lectures open by themselves (our first SRS)
+    if kind == "saveSchedule":
+        require(lecturer, "lecturer only")
+        state["schedule"] = [{"day": int(x["day"]), "start": str(x["start"])[:5], "end": str(x["end"])[:5],
+                              "title": str(x.get("title", ""))[:120]} for x in a["slots"]][:20]
+        return None
+
     # ----- lectures
     if kind == "createSession":
         require(lecturer, "lecturer only")
@@ -238,6 +245,35 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
             claims[f"{v}_{face}"] = {"uid": user["uid"], "v": v}
         me["face"], me["photoV"] = face, v
         return None
+    if kind == "requestBox":
+        # no box on me (face hidden, or cut off at the edge): ask for one where I tapped
+        require(student, "students only")
+        sub = state["sub"][a["sid"]]
+        photo = sub.get("photo")
+        v = int(a["v"])
+        require(user["email"] in sub["attendance"] and photo is not None and photo["v"] == v, "scan-first")
+        old = sub.setdefault("requests", {}).get(user["email"])
+        require(not (old and old["status"] == "pending" and old["v"] == v), "already")
+        b = a["box"]
+        box = {k: min(1.0, max(0.0, float(b[k]))) for k in ("x", "y", "w", "h")}
+        sub["requests"][user["email"]] = {"email": user["email"], "uid": user["uid"], "name": user["name"], "v": v,
+                                          "box": box, "status": "pending", "reason": "", "faceId": 0, "at": now_ms()}
+        return None
+    if kind == "resolveBoxRequest":
+        require(lecturer, "lecturer only")
+        sub = state["sub"][a["sid"]]
+        req = sub.get("requests", {}).get(str(a["email"]).lower())
+        require(req is not None, "no request")
+        photo = sub["photo"]
+        if not a.get("ok") or req["v"] != photo["v"]:
+            req.update(status="no", reason=str(a.get("reason", ""))[:200])
+            return None
+        box_id = max([b["id"] for b in photo["boxes"]] or [0]) + 1
+        photo["boxes"].append({"id": box_id, **req["box"]})
+        sub.setdefault("claims", {})[f"{photo['v']}_{box_id}"] = {"uid": req["uid"], "v": photo["v"]}
+        sub["attendance"][req["email"]].update(face=box_id, photoV=photo["v"])
+        req.update(status="ok", reason=str(a.get("reason", ""))[:200], faceId=box_id)
+        return box_id
     if kind == "freeFace":
         require(lecturer, "lecturer only")
         sub = state["sub"][a["sid"]]
@@ -245,6 +281,46 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         me = sub["attendance"].get(str(a["email"]).lower())
         if me:
             me["face"], me["photoV"] = None, None
+        return None
+    # ----- live quiz (Kahoot style); the answer key is never sent to students
+    if kind == "createQuiz":
+        require(lecturer, "lecturer only")
+        quiz = a["quiz"]
+        questions = []
+        for x in quiz["questions"][:30]:
+            options = [str(o)[:200] for o in x["options"]][:4]
+            require(2 <= len(options) <= 4 and 0 <= int(x["correct"]) < len(options), "bad question")
+            questions.append({"q": str(x["q"])[:200], "options": options, "seconds": int(x.get("seconds") or 20)})
+        require(questions, "no questions")
+        sub = state["sub"][a["sid"]]
+        qid = new_id("q")
+        sub.setdefault("quizzes", {})[qid] = {
+            "id": qid, "title": str(quiz.get("title") or "Quiz")[:200], "questions": questions, "createdAt": now_ms(),
+            "state": {"phase": "draft", "index": -1, "startedAt": None, "correct": -1, "starts": [], "top": [], "scores": {}, "counts": []},
+            "answers": {}}
+        sub.setdefault("quizKeys", {})[qid] = [int(x["correct"]) for x in quiz["questions"][:30]]
+        return qid
+    if kind == "quizKey":
+        require(lecturer, "lecturer only")
+        return state["sub"][a["sid"]].get("quizKeys", {}).get(a["qid"], [])
+    if kind == "setQuizState":
+        require(lecturer, "lecturer only")
+        q = state["sub"][a["sid"]]["quizzes"][a["qid"]]
+        st = dict(a["state"])
+        if st.get("startedAt") == "now":
+            st["startedAt"] = now_ms()
+        q["state"] = st
+        return None
+    if kind == "answerQuiz":
+        require(student, "students only")
+        q = state["sub"][a["sid"]]["quizzes"][a["qid"]]
+        st, index, option = q["state"], int(a["index"]), int(a["option"])
+        aid = f"{user['uid']}_{index}"
+        require(st["phase"] == "question" and st["index"] == index, "closed")
+        require(now_ms() <= st["startedAt"] + q["questions"][index]["seconds"] * 1000 + 2000, "closed")   # timed by the server
+        require(0 <= option < len(q["questions"][index]["options"]), "bad option")
+        require(aid not in q["answers"], "already")                                                       # once per question
+        q["answers"][aid] = {"uid": user["uid"], "name": user["name"], "index": index, "option": option, "at": now_ms()}
         return None
     if kind == "setAttendance":
         require(lecturer, "lecturer only")
@@ -357,6 +433,7 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
         v = json.loads(json.dumps(state))
         for sub in v["sub"].values():
             sub["codes"] = {}
+            sub.pop("quizKeys", None)          # read with the quizKey action
         return v
     me, uid = user["email"], user["uid"]
     out: dict[str, Any] = {"version": state["version"], "roster": {}, "sessions": state["sessions"],
@@ -371,6 +448,9 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "transcript": sub["transcript"],
             "photo": sub.get("photo"),
             "claims": {k: {"v": c["v"]} for k, c in sub.get("claims", {}).items()},   # which boxes, not who
+            "requests": {k: r for k, r in sub.get("requests", {}).items() if k == me},
+            "quizzes": {qid: {**q, "answers": {k: x for k, x in q["answers"].items() if x["uid"] == uid}}
+                        for qid, q in sub.get("quizzes", {}).items()},
         }
     for aid, a in state["assignments"].items():
         out["assignments"][aid] = {**a, "submissions": {k: s for k, s in a["submissions"].items() if k == me}}

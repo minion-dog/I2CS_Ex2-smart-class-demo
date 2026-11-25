@@ -71,6 +71,12 @@ public final class FacePickActivity extends BaseActivity
     /** The face being confirmed. */
     private int chosen;
 
+    /** "No box on me" button. */
+    private Button place;
+
+    /** State of my box request. */
+    private TextView reqStatus;
+
     // ==========================================
     //                   ENTRY
     // ==========================================
@@ -123,7 +129,33 @@ public final class FacePickActivity extends BaseActivity
             }
         });
         none.setAlpha(0.85f);
+        place = Ui.button(col, getString(R.string.place_box), new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                select(0);
+                status.setText(getString(R.string.place_hint));
+                view.setPlacing(new FacePickView.OnPlace()
+                {
+                    @Override
+                    public void onPlace(double px, double py)
+                    {
+                        sendBox(view.boxNear(px, py));
+                    }
+                });
+            }
+        });
         status = Ui.text(col, "");
+        reqStatus = Ui.text(col, "");
+        keep(Repo.get().listenMyBoxRequest(sid, new Repo.Listener<DocumentSnapshot>()
+        {
+            @Override
+            public void onChange(DocumentSnapshot d)
+            {
+                showRequest(d);
+            }
+        }));
         view.setOnPick(new FacePickView.OnPick()
         {
             @Override
@@ -290,6 +322,69 @@ public final class FacePickActivity extends BaseActivity
                 }
             }
         });
+    }
+
+    /**
+     * Sends my own box ("no box on me"); the lecturer's page checks it.
+     * @param (double[]) box {x, y, w, h}.
+     */
+    private void sendBox(final double[] box)
+    {
+        if (version == null)
+        {
+            return;
+        }
+        view.setRequested(box);
+        Repo.get().requestBox(sid, version, box, new Repo.Done<Void>()
+        {
+            @Override
+            public void onDone(@Nullable Void value, @Nullable Exception error)
+            {
+                if (error != null)
+                {
+                    Ui.toast(FacePickActivity.this, getString(R.string.error));
+                    view.setRequested(null);
+                }
+            }
+        });
+    }
+
+    /**
+     * Shows my box request: checking / refused (with the reason).
+     * @param (DocumentSnapshot) d The request (may not exist).
+     */
+    @SuppressWarnings("unchecked")
+    private void showRequest(DocumentSnapshot d)
+    {
+        if (d == null || !d.exists() || version == null || Repo.num(d, "v") != version)
+        {
+            reqStatus.setText("");
+            return;
+        }
+        String st = Repo.str(d, "status");
+        java.util.Map<String, Object> b = (java.util.Map<String, Object>) d.get("box");
+        if (b != null && !"ok".equals(st))
+        {
+            view.setRequested(new double[] {((Number) b.get("x")).doubleValue(), ((Number) b.get("y")).doubleValue(),
+                ((Number) b.get("w")).doubleValue(), ((Number) b.get("h")).doubleValue()});
+        }
+        else
+        {
+            view.setRequested(null);
+        }
+        place.setEnabled(!"pending".equals(st));
+        if ("pending".equals(st))
+        {
+            reqStatus.setText(getString(R.string.req_pending));
+        }
+        else if ("no".equals(st))
+        {
+            reqStatus.setText(getString(R.string.req_no) + " " + Repo.str(d, "reason"));
+        }
+        else
+        {
+            reqStatus.setText("");
+        }
     }
 
     /**

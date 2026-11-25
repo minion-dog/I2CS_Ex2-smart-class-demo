@@ -26,3 +26,35 @@ export function zipForTest(name, text)
     end.writeUInt32LE(46 + nameB.length, 12); end.writeUInt32LE(30 + nameB.length + comp.length, 16);
     return new Uint8Array(Buffer.concat([local, nameB, comp, cen, nameB, end]));
 }
+
+/**
+ * Reads a stored (uncompressed) zip independently of xlsx.js and checks every CRC.
+ * @param {Uint8Array} zip - zip bytes
+ * @returns {Promise<Object<string, Uint8Array>>} name -> bytes
+ */
+export async function readZip(zip)
+{
+    const b = Buffer.from(zip);
+    const end = b.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+    const count = b.readUInt16LE(end + 10);
+    let p = b.readUInt32LE(end + 16);
+    const out = {};
+    for (let i = 0; i < count; i++)
+    {
+        const crc = b.readUInt32LE(p + 16);
+        const size = b.readUInt32LE(p + 20);
+        const nameLen = b.readUInt16LE(p + 28);
+        const extra = b.readUInt16LE(p + 30) + b.readUInt16LE(p + 32);
+        const offset = b.readUInt32LE(p + 42);
+        const name = b.subarray(p + 46, p + 46 + nameLen).toString('utf8');
+        const start = offset + 30 + b.readUInt16LE(offset + 26) + b.readUInt16LE(offset + 28);
+        const data = b.subarray(start, start + size);
+        if (crc32(data) !== crc)
+        {
+            throw new Error('bad CRC in ' + name);
+        }
+        out[name] = new Uint8Array(data);
+        p += 46 + nameLen + extra;
+    }
+    return out;
+}

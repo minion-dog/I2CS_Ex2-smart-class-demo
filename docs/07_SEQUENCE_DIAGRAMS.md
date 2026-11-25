@@ -236,3 +236,57 @@ sequenceDiagram
     end
     S-->>P: names on faces, counters, "not in the photo" list
 ```
+
+## SD-10 Live quiz, Kahoot style (UC-13)
+
+```mermaid
+sequenceDiagram
+    actor L as Lecturer (projector)
+    participant H as quiz-host.js
+    participant S as Store / Firestore + rules
+    participant P as quiz-play.js (phones)
+    actor St as Students
+    L->>H: Run quiz
+    H->>S: loadQuizKey (lecturer only)
+    H->>S: setQuizState {phase: lobby}
+    S-->>P: quiz is live → full screen "get ready"
+    L->>H: Start
+    loop every question
+        H->>S: setQuizState {phase: question, index, startedAt: server time}
+        S-->>P: four coloured buttons + timer
+        St->>P: tap an answer
+        P->>S: create answers/{uid_index} {option, at: server time}
+        Note over S: rules: this question, still open, once
+        S-->>H: live answer count
+        alt time is up or everyone answered
+            H->>H: scoreboard(answers, key, starts) — 500..1000, faster = more
+            H->>S: setQuizState {phase: reveal, correct, top 5, scores}
+            S-->>P: right / wrong, +points, my rank
+        end
+        L->>H: Leaderboard → Next
+    end
+    H->>S: setQuizState {phase: end}
+    S-->>P: final place
+```
+
+## SD-11 "No box on me", checked by Gemini (UC-12)
+
+```mermaid
+sequenceDiagram
+    actor St as Student
+    participant SP as student.js
+    participant S as Store / Firestore
+    participant LP as lecturer.js
+    participant G as Gemini (Worker)
+    St->>SP: No box on me → tap where I sit → Send
+    SP->>S: set requests/{email} {box, status: pending}
+    S-->>LP: new request (dashed box on the photo)
+    LP->>G: crop around the box + red rectangle: "is a person there?"
+    G-->>LP: {"person": true, "reason": ...}
+    alt person
+        LP->>S: batch: photo.boxes += box, claims/{v_id}, attendance.face, request ok
+        S-->>SP: attendance confirmed
+    else no person / no AI
+        LP->>S: request no (reason) — the lecturer can still Approve
+    end
+```

@@ -1,0 +1,77 @@
+package il.ac.ariel.smartclass.core;
+
+/**
+ * The live quiz, Kahoot style (same rules as web/js/core/quiz.js). A correct answer gives
+ * 500-1000 points: faster = more. The phone shows four coloured buttons with shapes.
+ */
+public final class Quiz
+{
+
+    // ==========================================
+    //             CONSTANTS & FIELDS
+    // ==========================================
+
+    /** Points for an instant correct answer. */
+    public static final int MAX_POINTS = 1000;
+
+    /** Points for a correct answer at the last moment. */
+    public static final int MIN_POINTS = 500;
+
+    /** Network time after the timer ends. */
+    public static final long GRACE_MS = 2000;
+
+    /** Button colours (red, blue, yellow, green). */
+    public static final int[] COLORS = {0xFFE21B3C, 0xFF1368CE, 0xFFD89E00, 0xFF26890C};
+
+    /** Button shapes. */
+    public static final String[] SHAPES = {"▲", "◆", "●", "■"};
+
+    /** Not instantiable. */
+    private Quiz()
+    {
+    }
+
+    // ==========================================
+    //                  LOGIC
+    // ==========================================
+
+    /**
+     * Points for one answer.
+     * @param (boolean) correct Right answer.
+     * @param (long) elapsedMs From the question's start to the answer.
+     * @param (long) limitMs The question's time.
+     * @return (int) Points.
+     */
+    public static int points(boolean correct, long elapsedMs, long limitMs)
+    {
+        if (!correct || elapsedMs > limitMs + GRACE_MS)
+        {
+            return 0;
+        }
+        double part = Math.min(1.0, Math.max(0.0, elapsedMs / (double) limitMs));
+        return (int) Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * part);
+    }
+
+    /**
+     * Whole seconds left in a question.
+     * @param (long) startedAt Start (ms).
+     * @param (long) seconds Question time.
+     * @param (long) now Now (ms).
+     * @return (long) Seconds left, 0 at the end.
+     */
+    public static long secondsLeft(long startedAt, long seconds, long now)
+    {
+        return Math.max(0, (long) Math.ceil((startedAt + seconds * 1000 - now) / 1000.0));
+    }
+
+    /**
+     * Tells whether students see the quiz (the lecturer opened it).
+     * @param (String) phase State phase.
+     * @return (boolean) Shown on phones.
+     */
+    public static boolean isLive(String phase)
+    {
+        return "lobby".equals(phase) || "question".equals(phase) || "reveal".equals(phase)
+                || "board".equals(phase) || "end".equals(phase);
+    }
+}

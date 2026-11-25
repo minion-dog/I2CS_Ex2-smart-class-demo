@@ -10,7 +10,7 @@
 // This replaces the old COCO-SSD "person" count: a box per FACE is what a
 // student can recognise and tap.
 
-import { mergeBoxes, parseGeminiBoxes, tiles, trustLocal } from '../core/faces.js';
+import { mergeBoxes, parseGeminiBoxes, tiles, trustLocal, checkCrop, parseCheck } from '../core/faces.js';
 import { aiReady, see } from './ai.js';
 
 /** Settings of the local finder. */
@@ -23,7 +23,11 @@ export const FINDER = Object.freeze({
     PROMPT: 'This is a photo of students in a classroom or lecture hall. Find EVERY human face, '
         + 'including small faces far at the back, faces turned sideways or down, and partly hidden faces. '
         + 'Return only a JSON list, one item per face: [{"box_2d": [ymin, xmin, ymax, xmax]}], '
-        + 'coordinates normalized to 0-1000. No labels, no other text.'
+        + 'coordinates normalized to 0-1000. No labels, no other text.',
+    CHECK_PROMPT: 'This is part of a classroom photo. A student says they are sitting inside the RED rectangle '
+        + '(they may be partly cut off by the edge of the photo, or turned away, or looking down). '
+        + 'Is any part of a person (face, head, hair, body, arm) inside or touching the red rectangle? '
+        + 'Answer only JSON: {"person": true or false, "reason": "a few words"}.'
 });
 
 let detectorPromise = null;
@@ -53,6 +57,27 @@ export async function findFaces(canvas, jpegBase64, status)
         throw results.find((r) => r.status === 'rejected').reason;
     }
     return { boxes: mergeBoxes(all), used: used };
+}
+
+/**
+ * Asks Gemini whether a box a student placed himself really has a person in it.
+ * @param {HTMLImageElement} img - the class photo (loaded)
+ * @param {{x:number,y:number,w:number,h:number}} box - the requested box (fractions)
+ * @returns {Promise<{person:boolean, reason:string}|null>} Gemini's answer, null when unreadable
+ */
+export async function checkRequest(img, box)
+{
+    const c = checkCrop(box, img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = c.sw;
+    canvas.height = c.sh;
+    const g = canvas.getContext('2d');
+    g.drawImage(img, c.sx, c.sy, c.sw, c.sh, 0, 0, c.sw, c.sh);
+    g.lineWidth = Math.max(3, c.sw / 120);
+    g.strokeStyle = '#ff0000';
+    g.strokeRect(c.box.x, c.box.y, c.box.w, c.box.h);
+    const text = await see(FINDER.CHECK_PROMPT, canvas.toDataURL('image/jpeg', 0.85).split(',')[1], true);
+    return parseCheck(text);
 }
 
 /**

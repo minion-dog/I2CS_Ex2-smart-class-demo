@@ -9,7 +9,8 @@
 // this file only calls Firestore the way the rules allow.
 
 import { newSessionId } from '../core/payload.js';
-import { claimId } from '../core/faces.js';
+import { claimId, withIds } from '../core/faces.js';
+import { splitKey, toMs, newQuizState } from '../core/quiz.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
@@ -145,6 +146,34 @@ export class FirebaseStore
         catch (e)
         {
             return '';
+        }
+    }
+
+    /**
+     * Saves the weekly lecture times (lecturer).
+     * @param {object[]} slots - clean slots
+     */
+    async saveSchedule(slots)
+    {
+        await this.ready;
+        await this.fs.setDoc(this.fs.doc(this.db, 'config', 'schedule'), { slots: slots });
+    }
+
+    /**
+     * Reads the weekly lecture times (lecturer).
+     * @returns {Promise<object[]>} slots
+     */
+    async loadSchedule()
+    {
+        await this.ready;
+        try
+        {
+            const d = await this.fs.getDoc(this.fs.doc(this.db, 'config', 'schedule'));
+            return d.exists() ? d.data().slots || [] : [];
+        }
+        catch (e)
+        {
+            return [];
         }
     }
 
@@ -394,6 +423,67 @@ export class FirebaseStore
     }
 
     /**
+     * The student has no box (face hidden, or cut off at the edge): asks for a box
+     * where he tapped. The lecturer's page checks it (Gemini) or the lecturer decides.
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {{x:number,y:number,w:number,h:number}} box - the requested box (fractions)
+     */
+    async requestBox(sid, v, box)
+    {
+        await this.ready;
+        const f = this.fs;
+        await f.setDoc(f.doc(this.db, 'sessions', sid, 'requests', this.user.email), {
+            email: this.user.email, uid: this.user.uid, name: this.user.name, v: v,
+            box: { x: box.x, y: box.y, w: box.w, h: box.h }, status: 'pending', reason: '', faceId: 0, at: Date.now()
+        });
+    }
+
+    /**
+     * Watches box requests (lecturer: all; student: own).
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives requests
+     * @returns {function():void} unsubscribe
+     */
+    watchBoxRequests(sid, cb)
+    {
+        if (this.user && this.user.role === 'lecturer')
+        {
+            return this.live((f) => f.collection(this.db, 'sessions', sid, 'requests'), cb);
+        }
+        return this.liveDoc((f) => f.doc(this.db, 'sessions', sid, 'requests', this.user.email), cb);
+    }
+
+    /**
+     * Accepts or refuses a requested box (lecturer). Accepting adds the box to the photo
+     * (same version, a new id) and gives it to the student, all in one write.
+     * @param {string} sid - session
+     * @param {object} req - the request {email, uid, v, box}
+     * @param {boolean} ok - accept
+     * @param {string} reason - why (Gemini's words or "lecturer")
+     * @param {object} photo - the current photo {v, boxes}
+     */
+    async resolveBoxRequest(sid, req, ok, reason, photo)
+    {
+        await this.ready;
+        const f = this.fs;
+        const ref = f.doc(this.db, 'sessions', sid, 'requests', req.email);
+        if (!ok || req.v !== photo.v)
+        {
+            await f.updateDoc(ref, { status: 'no', reason: reason });
+            return;
+        }
+        const boxes = withIds(photo.boxes.concat([req.box]));
+        const id = boxes[boxes.length - 1].id;
+        const batch = f.writeBatch(this.db);
+        batch.update(f.doc(this.db, 'sessions', sid, 'photo', 'main'), { boxes: boxes });
+        batch.set(f.doc(this.db, 'sessions', sid, 'claims', claimId(photo.v, id)), { uid: req.uid, v: photo.v });
+        batch.update(f.doc(this.db, 'sessions', sid, 'attendance', req.email), { face: id, photoV: photo.v });
+        batch.update(ref, { status: 'ok', reason: reason, faceId: id });
+        await batch.commit();
+    }
+
+    /**
      * Frees a box a student chose by mistake (lecturer).
      * @param {string} sid - session
      * @param {number} v - photo version
@@ -553,6 +643,103 @@ export class FirebaseStore
     {
         await this.ready;
         await this.fs.updateDoc(this.fs.doc(this.db, 'sessions', sid, 'polls', pid), { open: open });
+    }
+
+    // -------------------------------------------------- live quiz (Kahoot style)
+    /**
+     * Creates a quiz (lecturer). The answer key goes to a lecturer-only document.
+     * @param {string} sid - session
+     * @param {{title:string, questions:object[]}} quiz - a valid quiz (with correct answers)
+     * @returns {Promise<string>} quiz id
+     */
+    async createQuiz(sid, quiz)
+    {
+        await this.ready;
+        const f = this.fs;
+        const parts = splitKey(quiz);
+        const ref = f.doc(f.collection(this.db, 'sessions', sid, 'quizzes'));
+        const batch = f.writeBatch(this.db);
+        batch.set(ref, Object.assign(parts.public, { state: newQuizState(), createdAt: Date.now() }));
+        batch.set(f.doc(this.db, 'sessions', sid, 'quizzes', ref.id, 'secret', 'key'), { key: parts.key });
+        await batch.commit();
+        return ref.id;
+    }
+
+    /**
+     * Watches the quizzes of a session, newest first.
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives quizzes
+     * @returns {function():void} unsubscribe
+     */
+    watchQuizzes(sid, cb)
+    {
+        return this.live((f) => f.query(f.collection(this.db, 'sessions', sid, 'quizzes'), f.orderBy('createdAt', 'desc')), cb);
+    }
+
+    /**
+     * Reads the answer key (lecturer).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @returns {Promise<number[]>} correct option per question
+     */
+    async loadQuizKey(sid, qid)
+    {
+        await this.ready;
+        const d = await this.fs.getDoc(this.fs.doc(this.db, 'sessions', sid, 'quizzes', qid, 'secret', 'key'));
+        return d.exists() ? d.data().key : [];
+    }
+
+    /**
+     * Moves the quiz on (lecturer): lobby -> question -> reveal -> board -> ... -> end.
+     * startedAt 'now' = the server's clock (the rules time the answers with it).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {object} state - the new state
+     */
+    async setQuizState(sid, qid, state)
+    {
+        await this.ready;
+        const f = this.fs;
+        const st = Object.assign({}, state);
+        if (st.startedAt === 'now')
+        {
+            st.startedAt = f.serverTimestamp();
+        }
+        await f.updateDoc(f.doc(this.db, 'sessions', sid, 'quizzes', qid), { state: st });
+    }
+
+    /**
+     * Answers the current question (student); once per question, timed by the server.
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {number} index - question
+     * @param {number} option - chosen answer
+     */
+    async answerQuiz(sid, qid, index, option)
+    {
+        await this.ready;
+        const f = this.fs;
+        await f.setDoc(f.doc(this.db, 'sessions', sid, 'quizzes', qid, 'answers', this.user.uid + '_' + index), {
+            uid: this.user.uid, name: this.user.name, index: index, option: option, at: f.serverTimestamp()
+        });
+    }
+
+    /**
+     * Watches answers (lecturer: everyone's; student: own), with `at` in ms.
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {function(object[]):void} cb - receives answers
+     * @returns {function():void} unsubscribe
+     */
+    watchQuizAnswers(sid, qid, cb)
+    {
+        const col = (f) => f.collection(this.db, 'sessions', sid, 'quizzes', qid, 'answers');
+        const fix = (list) => cb(list.map((a) => Object.assign({}, a, { at: toMs(a.at, Date.now()) })));
+        if (this.user.role === 'lecturer')
+        {
+            return this.live(col, fix);
+        }
+        return this.live((f) => f.query(col(f), f.where('uid', '==', this.user.uid)), fix);
     }
 
     /**

@@ -33,6 +33,9 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 | Class photo: faces found (MediaPipe + Gemini), the lecturer fixes the boxes, each student taps their own face and confirms | take photo, fix boxes, see who is who | tap my face | `web/js/core/faces.js`, `web/js/ai/facefind.js`, `web/js/ui/faceview.js` · Android `FacePickActivity` |
 | Comments in real time / offline | ✓ | ✓ | `web/js/ui/comments.js` |
 | KISS polls with live results | create, close | vote once | `web/js/ui/polls.js` |
+| 🎮 Live quiz like Kahoot (AI can write the questions) | build, run on the projector | 4 coloured buttons, points by speed | `web/js/core/quiz.js`, `ui/quiz-host.js`, `ui/quiz-play.js` · Android `QuizPlayActivity` |
+| Lectures open by the timetable + "lecture started" | weekly times | notified | `web/js/core/schedule.js` |
+| Everything as one organised ZIP | ✓ | — | `web/js/core/archive.js`, `ui/export.js` |
 | ML summary of the lecture recording | record / upload, summarise | read | `web/js/ui/recorder.js`, `web/js/ai/ai.js`, `gemini.js` |
 | Deep LLM review of homework, compared with the other students | review, grade | submit, see result | `web/js/ai/prompts.js`, `github.js` |
 | Class list import (Moodle CSV/XLSX), Hebrew UI with English switch | ✓ | ✓ | `web/js/core/classlist.js`, `web/js/ui/i18n.js` |
@@ -108,9 +111,9 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 | Suite | Command | Result |
 |---|---|---|
-| Web logic + camera simulation + photo attacks + faces + AI Worker | `npm test` | 43 / 43 |
-| Android pure-Java core | `cd android && ./gradlew test` | 19 / 19 |
-| Rules of the local server | `cd server && python -m unittest test_server` | 13 / 13 |
+| Web logic + camera simulation + photo attacks + faces + quiz + timetable + ZIP + AI Worker | `npm test` | 56 / 56 |
+| Android pure-Java core | `cd android && ./gradlew test` | 20 / 20 |
+| Rules of the local server | `cd server && python -m unittest test_server` | 15 / 15 |
 | Browser, fake camera, both roles | Playwright | see [testing strategy](docs/08_TESTING_STRATEGY.md) |
 
 ## Repository map

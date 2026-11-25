@@ -17,6 +17,7 @@ import java.util.Map;
 
 import il.ac.ariel.smartclass.R;
 import il.ac.ariel.smartclass.core.AttendanceSheet;
+import il.ac.ariel.smartclass.core.Quiz;
 import il.ac.ariel.smartclass.data.Repo;
 
 /**
@@ -41,6 +42,21 @@ public class StudentHomeActivity extends BaseActivity
 
     /** Live listeners of my own records, per session. */
     private final Map<String, ListenerRegistration> myRecords = new HashMap<String, ListenerRegistration>();
+
+    /** Open lectures already seen (for "the lecture started", from our first SRS). */
+    private final java.util.Set<String> seenOpen = new java.util.HashSet<String>();
+
+    /** False until the first list arrived (lectures open at start are not "new"). */
+    private boolean listed;
+
+    /** The open lecture whose quizzes are followed. */
+    private String quizSid;
+
+    /** Quizzes of the open lecture. */
+    private ListenerRegistration quizReg;
+
+    /** Quizzes already shown (open once). */
+    private final java.util.Set<String> shownQuizzes = new java.util.HashSet<String>();
 
     // ==========================================
     //                   ENTRY
@@ -80,14 +96,73 @@ public class StudentHomeActivity extends BaseActivity
             public void onChange(List<DocumentSnapshot> list)
             {
                 showLectures(list);
+                followOpen(list);
             }
         }));
+    }
+
+    /**
+     * "The lecture started" for a newly opened lecture, and its live quiz opens by itself.
+     * @param (List&lt;DocumentSnapshot&gt;) list Sessions.
+     */
+    private void followOpen(List<DocumentSnapshot> list)
+    {
+        String open = null;
+        for (DocumentSnapshot s : list)
+        {
+            if (!Repo.isOpen(s))
+            {
+                continue;
+            }
+            open = open == null ? s.getId() : open;
+            if (seenOpen.add(s.getId()) && listed)
+            {
+                Ui.toast(this, getString(R.string.lecture_started) + " " + Repo.str(s, "title"));
+            }
+        }
+        listed = true;
+        if (open == null ? quizSid == null : open.equals(quizSid))
+        {
+            return;
+        }
+        if (quizReg != null)
+        {
+            quizReg.remove();
+        }
+        quizSid = open;
+        if (open == null)
+        {
+            return;
+        }
+        final String sid = open;
+        quizReg = Repo.get().listenQuizzes(sid, new Repo.Listener<List<DocumentSnapshot>>()
+        {
+            @Override
+            @SuppressWarnings("unchecked")
+            public void onChange(List<DocumentSnapshot> quizzes)
+            {
+                for (DocumentSnapshot q : quizzes)
+                {
+                    Map<String, Object> st = (Map<String, Object>) q.get("state");
+                    String phase = st == null ? "" : String.valueOf(st.get("phase"));
+                    if (Quiz.isLive(phase) && !"end".equals(phase) && shownQuizzes.add(q.getId()))
+                    {
+                        startActivity(new Intent(StudentHomeActivity.this, QuizPlayActivity.class)
+                                .putExtra(QuizPlayActivity.EXTRA_SID, sid).putExtra(QuizPlayActivity.EXTRA_QID, q.getId()));
+                    }
+                }
+            }
+        });
     }
 
     /** Removes the per-session listeners too. */
     @Override
     protected void onDestroy()
     {
+        if (quizReg != null)
+        {
+            quizReg.remove();
+        }
         for (ListenerRegistration r : myRecords.values())
         {
             r.remove();

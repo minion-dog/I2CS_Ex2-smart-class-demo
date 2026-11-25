@@ -154,9 +154,51 @@ export class LanStore extends FakeStore
     }
 
     /** @override */
+    async requestBox(sid, v, box)
+    {
+        await this.act({ type: 'requestBox', sid: sid, v: v, box: box });
+    }
+
+    /** @override */
+    async resolveBoxRequest(sid, req, ok, reason, photo)
+    {
+        await this.act({ type: 'resolveBoxRequest', sid: sid, email: req.email, ok: ok, reason: reason });
+    }
+
+    /** @override */
     async freeFace(sid, v, face, email)
     {
         await this.act({ type: 'freeFace', sid: sid, v: v, face: face, email: email });
+    }
+
+    /** @override */
+    async saveSchedule(slots)
+    {
+        await this.act({ type: 'saveSchedule', slots: slots });
+    }
+
+    /** @override */
+    async createQuiz(sid, quiz)
+    {
+        return this.act({ type: 'createQuiz', sid: sid, quiz: quiz });
+    }
+
+    /** @override */
+    async loadQuizKey(sid, qid)
+    {
+        return this.act({ type: 'quizKey', sid: sid, qid: qid });
+    }
+
+    /** @override */
+    async setQuizState(sid, qid, state)
+    {
+        await this.act({ type: 'setQuizState', sid: sid, qid: qid, state: state });
+    }
+
+    /** @override */
+    async answerQuiz(sid, qid, index, option)
+    {
+        await this.act({ type: 'answerQuiz', sid: sid, qid: qid, index: index, option: option });
     }
 
     /** @override */

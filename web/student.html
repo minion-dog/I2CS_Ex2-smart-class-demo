@@ -58,7 +58,16 @@
                         </div>
                     </div>
                 </div>
-                <p><button id="face-none" class="secondary small" data-i18n="cantFind"></button></p>
+                <div id="place-confirm" class="row" hidden>
+                    <span class="grow" data-i18n="sendBoxAsk"></span>
+                    <button id="place-send" data-i18n="sendBox"></button>
+                    <button id="place-cancel" class="secondary" data-i18n="cancel"></button>
+                </div>
+                <p class="hint" id="place-status" role="status"></p>
+                <div class="row">
+                    <button id="face-place" class="secondary small" data-i18n="placeBox"></button>
+                    <button id="face-none" class="secondary small" data-i18n="cantFind"></button>
+                </div>
             </div>
             <div class="scan-result" id="face-msg" role="status" aria-live="polite"></div>
             <p><button id="scan-start" class="big" data-i18n="startCamera"></button></p>
@@ -102,5 +111,6 @@
     </main>
     <script src="vendor/jsQR.js"></script>
     <script type="module" src="js/ui/student.js"></script>
+    <div id="quiz-play" class="quiz-stage phone" hidden></div>
 </body>
 </html>

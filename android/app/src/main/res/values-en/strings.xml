@@ -94,4 +94,16 @@
     <string name="told_lecturer">The lecturer was told you are not in the photo. You can also go and say so.</string>
     <string name="wait_photo">The lecturer has not taken the class photo yet. This screen updates when it is up.</string>
     <string name="box_taken">Someone already chose this face. If it is you, tell the lecturer.</string>
+    <string name="place_box">No box on me – mark where I sit</string>
+    <string name="place_hint">Tap the place where you sit (also at the edge of the photo).</string>
+    <string name="req_pending">⏳ Your box is being checked…</string>
+    <string name="req_no">Your box was not approved.</string>
+    <string name="lecture_started">The lecture started! 🎓</string>
+    <string name="quiz_ready">Get ready… the first question is coming</string>
+    <string name="quiz_sent">Sent</string>
+    <string name="quiz_right">Correct!</string>
+    <string name="quiz_wrong">Wrong</string>
+    <string name="quiz_no_answer">No answer in time</string>
+    <string name="quiz_score">Your score</string>
+    <string name="quiz_late">Time is up</string>
 </resources>

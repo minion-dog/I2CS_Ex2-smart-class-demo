@@ -44,6 +44,15 @@
                 </div>
                 <h3 data-i18n="chooseSession"></h3>
                 <ul class="list" id="past-sessions"></ul>
+                <details id="schedule-box">
+                    <summary data-i18n="scheduleTitle"></summary>
+                    <p class="hint" data-i18n="scheduleHint"></p>
+                    <div id="schedule-rows"></div>
+                    <div class="row">
+                        <button id="schedule-add" class="secondary small" data-i18n="scheduleAdd"></button>
+                        <button id="schedule-save" class="small" data-i18n="save"></button>
+                    </div>
+                </details>
             </div>
 
             <div id="live" hidden>
@@ -112,6 +121,25 @@
                         <details><summary data-i18n="transcript"></summary><div id="transcript-box" class="comment"></div></details>
                     </div>
 
+                    <div class="card" id="quiz-card">
+                        <h2 data-i18n="quizTitle"></h2>
+                        <p class="hint" data-i18n="quizHint"></p>
+                        <ul class="list" id="quiz-list"></ul>
+                        <details>
+                            <summary data-i18n="quizNew"></summary>
+                            <label for="quiz-name" data-i18n="quizName"></label>
+                            <input id="quiz-name" type="text" maxlength="120">
+                            <label for="quiz-topic" data-i18n="quizTopic"></label>
+                            <textarea id="quiz-topic" rows="2"></textarea>
+                            <p><button id="quiz-ai" class="secondary" data-i18n="quizAi"></button></p>
+                            <div id="quiz-blocks"></div>
+                            <div class="row">
+                                <button id="quiz-add" class="secondary" data-i18n="quizAdd"></button>
+                                <button id="quiz-save" data-i18n="quizSave"></button>
+                            </div>
+                        </details>
+                    </div>
+
                     <div class="card" id="photo-card">
                         <h2 data-i18n="classPhoto"></h2>
                         <p class="hint" data-i18n="photoHint"></p>
@@ -150,6 +178,8 @@
                                 <span class="grow" id="box-name"></span>
                                 <button id="box-free" class="secondary small" data-i18n="freeBox"></button>
                             </div>
+                            <h3 data-i18n="boxRequests"></h3>
+                            <ul class="list req-list" id="req-list"></ul>
                             <h3 data-i18n="notInPhoto"></h3>
                             <ul class="list not-found" id="not-found-list"></ul>
                             <p><button id="face-reedit" class="secondary small" data-i18n="editBoxes"></button></p>
@@ -165,6 +195,7 @@
                 <h2 class="grow" data-i18n="tabSheet"></h2>
                 <button id="sheet-refresh" class="secondary small" data-i18n="refresh"></button>
                 <button id="sheet-xlsx" class="small" data-i18n="downloadXlsx"></button>
+                <button id="export-zip" class="small" data-i18n="exportZip"></button>
             </div>
             <p class="hint">V = <span data-i18n="inClass"></span> · M = <span data-i18n="manual"></span></p>
             <div class="table-wrap"><table class="sheet" id="sheet-table"></table></div>
@@ -176,6 +207,16 @@
             <label for="roster-file" data-i18n="importRoster"></label>
             <input id="roster-file" type="file" accept=".csv,.xlsx">
             <p class="hint" id="roster-status"></p>
+            <details>
+                <summary data-i18n="rosterAddOne"></summary>
+                <div class="row wrap">
+                    <input id="ra-first" type="text" data-i18n-placeholder="firstName">
+                    <input id="ra-last" type="text" data-i18n-placeholder="lastName">
+                    <input id="ra-id" type="text" inputmode="numeric" data-i18n-placeholder="studentId">
+                    <input id="ra-email" type="email" dir="ltr" data-i18n-placeholder="email">
+                    <button id="ra-add" class="small" data-i18n="add"></button>
+                </div>
+            </details>
             <ul class="list" id="roster-list"></ul>
         </section>
 
@@ -205,5 +246,6 @@
     </main>
     <script src="vendor/qrcode.js"></script>
     <script type="module" src="js/ui/lecturer.js"></script>
+    <div id="quiz-stage" class="quiz-stage" hidden></div>
 </body>
 </html>

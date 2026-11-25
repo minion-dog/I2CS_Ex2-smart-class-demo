@@ -479,4 +479,19 @@ public class CoreTest
         m.put("h", 0.04);
         assertEquals(4, Faces.fromMaps(java.util.Arrays.asList(m, "junk")).get(0).id);
     }
+
+    /** Checks quiz points, the timer and which phases phones show (TC-QZ-J1, same as web TC-QZ-1/5). */
+    @Test
+    public void quizPointsAndTimer()
+    {
+        assertEquals(1000, Quiz.points(true, 0, 20000));
+        assertEquals(750, Quiz.points(true, 10000, 20000));
+        assertEquals(500, Quiz.points(true, 20000, 20000));
+        assertEquals(0, Quiz.points(true, 20000 + Quiz.GRACE_MS + 1, 20000));
+        assertEquals(0, Quiz.points(false, 0, 20000));
+        assertEquals(15, Quiz.secondsLeft(0, 20, 5500));
+        assertEquals(0, Quiz.secondsLeft(0, 20, 25000));
+        assertTrue(Quiz.isLive("question"));
+        assertFalse(Quiz.isLive("draft"));
+    }
 }

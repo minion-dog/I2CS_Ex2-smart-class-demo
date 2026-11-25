@@ -66,6 +66,7 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-ATT-12 | The lecturer fixes the boxes: tap a box = remove, tap a face without a box = add (sized like its neighbours), undo, retake; zoom with + / − or two fingers. | M |
 | FR-ATT-13 | After scanning, the student sees the photo, taps their own face, sees it enlarged ("is this you?") and confirms. One student per face; a taken face is grey. | M |
 | FR-ATT-14 | "I can't find myself" tells the lecturer at once (a list on the lecturer's screen); the student may still choose later. | M |
+| FR-ATT-16 | **No box on me** (face hidden, or cut off at the photo's edge): the student taps where he sits; the lecturer's page sends that part of the photo to **Gemini**, which says whether a person is there. Yes → the box is added and given to the student; no (or no AI) → the lecturer approves or rejects with one tap. | S |
 | FR-ATT-15 | The lecturer sees confirmed / waiting / not-in-photo counters and names on the faces, can free a face chosen by mistake, and is warned when there are more scans than faces. A new photo asks everyone again. | S |
 
 ### 3.2 Sign-in and class list
@@ -74,7 +75,9 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-AUTH-1 | The lecturer signs in with a dedicated account (email + password); a `staff/{uid}` document marks the account as lecturer. | M |
 | FR-AUTH-2 | Students sign in with Google, using the email that appears on the class list; anyone else is refused. | M |
 | FR-AUTH-3 | The lecturer imports the Moodle participants file (CSV or XLSX, Hebrew headers); staff rows (no group) are not students. | M |
-| FR-AUTH-4 | The lecturer can add or remove students by importing an updated list. | S |
+| FR-AUTH-4 | The lecturer can add or remove students by importing an updated list, **or one by one by hand** (from our first SRS). | S |
+| FR-SES-1 | **Lectures open by themselves** at the weekly times the lecturer types once (up to 5 minutes early), while the lecturer's page is open on the classroom computer (from our first SRS). | S |
+| FR-SES-2 | Students' phones show **"the lecture started"** when a lecture opens. | S |
 
 ### 3.3 Comments
 | ID | Requirement | Pri |
@@ -92,6 +95,11 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-POLL-1 | The lecturer creates a poll on the spot: one question, 2–6 answers. | M |
 | FR-POLL-2 | Students vote once per poll, while it is open. | M |
 | FR-POLL-3 | The lecturer sees results live and closes the poll. | M |
+| FR-QZ-1 | **Live quiz like Kahoot** (lecturer's request in class): the lecturer writes questions with 2–4 answers, marks the correct one and a time (10/20/30/60 s), or **lets Gemini write them** from the lecture transcript or a topic. | S |
+| FR-QZ-2 | The projector shows the lobby, then each question with a countdown, four coloured answers with shapes, and how many answered; the answer shows by itself when time is up or everyone answered. | S |
+| FR-QZ-3 | Phones open the quiz by themselves and show four big coloured buttons; one answer per question, accepted only while the question is open (timed by the server). | S |
+| FR-QZ-4 | Points: a correct answer gives 500–1000, faster = more. After each question: answer bars with the correct one, my result and score on the phone, the top 5 on the projector; at the end a podium. | S |
+| FR-QZ-5 | The correct answers are kept in a lecturer-only document until each is revealed. | M |
 
 ### 3.5 Lecture recording and AI summary
 | ID | Requirement | Pri |
@@ -113,7 +121,8 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 |---|---|---|
 | FR-GEN-1 | Hebrew UI (right to left) with an English switch on every page. | M |
 | FR-GEN-2 | Offline: scans, comments, votes and submissions wait on the device and are sent automatically; the page shows "waiting to send". | M |
-| FR-GEN-3 | In-app notifications while the app is open (new poll, new grade). | C |
+| FR-GEN-3 | In-app notifications while the app is open (new poll, new grade, new quiz, lecture started, class photo up). | C |
+| FR-GEN-4 | **Everything as one ZIP** (our idea in the first SRS): one folder per lecture (attendance, comments, polls, quiz results, transcript, summary, class photo with names) and per assignment (requirements, grades, each student's link, files, AI review, feedback), plus the class list and the attendance XLSX. | S |
 
 ## 4. Non-functional requirements
 
@@ -138,6 +147,11 @@ users/{uid}                         email, name, role
 sessions/{sid}                      title, startedAt, endedAt, summary, headcount
 sessions/{sid}/photo/main           v, image (JPEG data URL < 1 MB), boxes[{id,x,y,w,h}], aspect
 sessions/{sid}/claims/{v_box}       uid, v          (created once = one student per face)
+sessions/{sid}/requests/{email}     v, box, status pending|ok|no, reason, faceId   ("no box on me")
+sessions/{sid}/quizzes/{qid}        title, questions[{q, options, seconds}], state{phase, index, startedAt, correct, starts, top, scores, counts}
+  secret/key                        key[]           (lecturer only)
+  answers/{uid_index}               uid, name, index, option, at (server time)
+config/schedule                     slots[{day, start, end, title}]   (lecturer only)
   codes/{token}                     createdAt              (hidden from students)
   attendance/{email}                email, uid, name, status, token, scannedAt
   comments/{cid}                    text, visibility, authorUid, authorName|null, fromLecturer, createdAt
@@ -153,7 +167,7 @@ assignments/{aid}                   title, requirements, due
 
 | v1 said | v2 says | Reason (team decision) |
 |---|---|---|
-| Sessions start automatically by the timetable, with a notification | The lecturer opens the lecture with one button | No timetable integration is allowed (no Moodle); one tap is simpler and always right. |
+| Sessions start automatically by the timetable, with a notification | Back in (FR-SES-1, FR-SES-2): the lecturer types the weekly times once; no Moodle connection needed | First we used one button only; the team brought the v1 idea back. |
 | Students log in with university email | Google sign-in with the email on the class list | The Moodle list holds the students' Gmail addresses. |
 | Website login only for the lecturer; students use a mobile app | Students use the website too; the Android app is optional | The sheet asks for a web-based smartphone app (KISS). |
 | Location within ~500 m = present, otherwise Zoom | **No location; a valid scan = in class; no Zoom attendance** | Real-phone tests: Zoom's video loses the flicker, and any number shown for Zoom can be forwarded by WhatsApp. Only someone in the room can film the live code, so location adds nothing. |
@@ -168,9 +182,9 @@ assignments/{aid}                   title, requirements, due
 
 | Ex2 feature | Requirements |
 |---|---|
-| Automatic attendance + evaluation (photo count) + online/offline spreadsheet | FR-ATT-1..11 |
+| Automatic attendance + evaluation (class photo) + online/offline spreadsheet | FR-ATT-1..16, FR-GEN-4 |
 | Comments and suggestions, real time / offline | FR-COM-1..6, FR-GEN-2 |
-| On-the-spot KISS polls | FR-POLL-1..3 |
+| On-the-spot KISS polls | FR-POLL-1..3, FR-QZ-1..5 (Kahoot-style quiz) |
 | ML summary of the class video | FR-SUM-1..3 |
 | Deep LLM review of homework with comparison to other students | FR-HW-1..4 |
 | Works in this class, real demo; simple smartphone web app | NFR-5, NFR-8; [demo script](10_DEMO_SCRIPT.md) |

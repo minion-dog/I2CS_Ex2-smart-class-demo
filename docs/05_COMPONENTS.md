@@ -7,7 +7,7 @@ flowchart TB
         subgraph WEB["Website (web/) — plain HTML/CSS/JS"]
             UI["UI pages<br/>login · lecturer · student<br/>(js/ui)"]
             CORE["Core logic<br/>flicker QR · payload · sheet · XLSX · class list<br/>(js/core)"]
-            AI["AI helpers<br/>Gemini · prompts · GitHub reader · face finder<br/>(js/ai)"]
+            AI["AI helpers<br/>Gemini · prompts (summary, review, quiz) · GitHub reader · face finder<br/>(js/ai)"]
             DATA["Data layer (Strategy)<br/>FirebaseStore · LanStore · FakeStore<br/>(js/data)"]
         end
         subgraph APP["Android app (android/) — Java"]

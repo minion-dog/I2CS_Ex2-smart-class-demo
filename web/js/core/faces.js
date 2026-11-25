@@ -312,6 +312,69 @@ export function claimId(version, id)
 }
 
 /**
+ * A box the student places himself (his face has no box, or he is cut off at the
+ * edge of the photo): centred on the tap, sized like the boxes around it. A tap on
+ * the very edge still gives a box (it may stick out; it is clamped to the photo).
+ * @param {{x:number,y:number,w:number,h:number}[]} boxes - existing boxes
+ * @param {number} px - tap x (fraction)
+ * @param {number} py - tap y (fraction)
+ * @param {number} aspect - photo width / height
+ * @returns {{x:number,y:number,w:number,h:number}} the requested box
+ */
+export function requestedBox(boxes, px, py, aspect)
+{
+    return boxAt(boxes, Math.min(1, Math.max(0, px)), Math.min(1, Math.max(0, py)), aspect);
+}
+
+/**
+ * The part of the photo Gemini gets to check a requested box: the box with room around it
+ * (3 box sizes each way), clamped to the photo, in pixels.
+ * @param {{x:number,y:number,w:number,h:number}} b - requested box (fractions)
+ * @param {number} W - photo width in pixels
+ * @param {number} H - photo height in pixels
+ * @returns {{sx:number,sy:number,sw:number,sh:number, box:{x:number,y:number,w:number,h:number}}} crop and the box inside it (pixels)
+ */
+export function checkCrop(b, W, H)
+{
+    const side = Math.max(b.w * W, b.h * H) * 7;
+    const cx = (b.x + b.w / 2) * W;
+    const cy = (b.y + b.h / 2) * H;
+    const sx = Math.max(0, Math.round(cx - side / 2));
+    const sy = Math.max(0, Math.round(cy - side / 2));
+    const sw = Math.min(W, Math.round(cx + side / 2)) - sx;
+    const sh = Math.min(H, Math.round(cy + side / 2)) - sy;
+    return { sx: sx, sy: sy, sw: sw, sh: sh, box: { x: b.x * W - sx, y: b.y * H - sy, w: b.w * W, h: b.h * H } };
+}
+
+/**
+ * Reads Gemini's yes / no about a requested box.
+ * @param {string} text - model output, e.g. {"person": true, "reason": "..."}
+ * @returns {{person:boolean, reason:string}|null} the answer, or null when unreadable
+ */
+export function parseCheck(text)
+{
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start < 0 || end <= start)
+    {
+        return null;
+    }
+    try
+    {
+        const o = JSON.parse(text.slice(start, end + 1));
+        if (typeof o.person !== 'boolean')
+        {
+            return null;
+        }
+        return { person: o.person, reason: String(o.reason || '').slice(0, 200) };
+    }
+    catch (e)
+    {
+        return null;
+    }
+}
+
+/**
  * Compares the photo with the scans.
  * @param {number} people - faces in the photo (after the lecturer's fixes)
  * @param {number} scannedInClass - in-class scans for this lecture

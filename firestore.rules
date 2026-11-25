@@ -40,6 +40,11 @@ service cloud.firestore {
         && request.auth.token.email_verified == true
         && exists(/databases/$(db)/documents/roster/$(myEmail()));
     }
+    function quizOpen(s, q, index) {
+      let z = get(/databases/$(db)/documents/sessions/$(s)/quizzes/$(q)).data;
+      return z.state.phase == 'question' && z.state.index == index
+        && request.time < z.state.startedAt + duration.value(z.questions[index].seconds + 2, 's');
+    }
     function onlyKeys(keys) {
       return request.resource.data.keys().hasOnly(keys);
     }
@@ -65,6 +70,10 @@ service cloud.firestore {
     }
     // Student IDs live here, so only the lecturer reads it. exists() in the
     // helpers above works even without read access.
+    // The weekly lecture times (lectures open by themselves): lecturer only.
+    match /config/schedule {
+      allow read, write: if isLecturer();
+    }
     match /roster/{email} {
       allow read, write: if isLecturer();
     }
@@ -106,8 +115,26 @@ service cloud.firestore {
           // written together with my own attendance, which names this same box
           && claim == string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.photoV)
                       + '_' + string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.face);
+        // the lecturer gives a box to a student (an accepted box request)
+        allow create: if isLecturer() && onlyKeys(['uid', 'v']);
         allow update: if false;
         allow delete: if isLecturer();
+      }
+
+      // "There is no box on me": the student asks for a box where he tapped (one open
+      // request at a time). The lecturer's page checks it with Gemini, or the lecturer decides.
+      match /requests/{email} {
+        allow read: if isLecturer() || (isStudent() && email == myEmail());
+        allow create, update: if isStudent()
+          && email == myEmail()
+          && exists(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail()))
+          && onlyKeys(['email', 'uid', 'name', 'v', 'box', 'status', 'reason', 'faceId', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && request.resource.data.faceId == 0
+          && request.resource.data.v == get(/databases/$(db)/documents/sessions/$(s)/photo/main).data.v
+          && (resource == null || resource.data.status != 'pending' || resource.data.v != request.resource.data.v);
+        allow update, delete: if isLecturer();
       }
 
 
@@ -144,6 +171,31 @@ service cloud.firestore {
 
         // The lecturer can mark by hand, fix or remove a record.
         allow create, update, delete: if isLecturer();
+      }
+
+      // Live quiz (Kahoot style). The answer key is in secret/ (lecturer only) and is
+      // revealed one question at a time through the quiz's state.
+      match /quizzes/{q} {
+        allow read: if isLecturer() || isStudent();
+        allow create, update: if isLecturer();
+        allow delete: if false;
+        match /secret/{doc} {
+          allow read, write: if isLecturer();
+        }
+        // One answer per student per question, only while that question is open, timed
+        // with the server's clock (question time + 2 s for the network).
+        match /answers/{a} {
+          allow read: if isLecturer() || (isStudent() && resource.data.uid == request.auth.uid);
+          allow create: if isStudent()
+            && onlyKeys(['uid', 'name', 'index', 'option', 'at'])
+            && request.resource.data.uid == request.auth.uid
+            && a == request.auth.uid + '_' + string(request.resource.data.index)
+            && request.resource.data.at == request.time
+            && request.resource.data.option is int
+            && request.resource.data.option >= 0 && request.resource.data.option < 4
+            && quizOpen(s, q, request.resource.data.index);
+          allow update, delete: if false;
+        }
       }
 
       // Comments: public ones are visible to all students; private ones only

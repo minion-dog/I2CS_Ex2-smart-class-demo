@@ -10,7 +10,8 @@
 // tabs, so a scan in the student tab shows up live in the lecturer tab.
 
 import { newSessionId, isCurrentCode } from '../core/payload.js';
-import { FACES, claimId } from '../core/faces.js';
+import { FACES, claimId, withIds } from '../core/faces.js';
+import { QUIZ, splitKey, newQuizState } from '../core/quiz.js';
 
 const KEY = 'smartclass-demo-v1';
 const STATUS_PRESENT = 'present';       // scanned the flicker QR
@@ -125,6 +126,25 @@ export class FakeStore
     }
 
     // -------------------------------------------------------- sessions
+    /**
+     * Saves the weekly lecture times (lecturer).
+     * @param {object[]} slots - clean slots
+     */
+    async saveSchedule(slots)
+    {
+        this.state.schedule = slots;
+        this.commit();
+    }
+
+    /**
+     * Reads the weekly lecture times.
+     * @returns {Promise<object[]>} slots
+     */
+    async loadSchedule()
+    {
+        return (this.state.schedule || []).slice();
+    }
+
     /**
      * Opens a lecture.
      * @param {string} title - shown in lists and in the sheet
@@ -284,6 +304,74 @@ export class FakeStore
     }
 
     /**
+     * The student asks for a box where he tapped.
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {{x:number,y:number,w:number,h:number}} box - requested box
+     */
+    async requestBox(sid, v, box)
+    {
+        const sub = this.state.sub[sid];
+        if (!sub.attendance[this.user.email] || !sub.photo || sub.photo.v !== v)
+        {
+            throw new Error('scan-first');
+        }
+        sub.requests = sub.requests || {};
+        const old = sub.requests[this.user.email];
+        if (old && old.status === 'pending' && old.v === v)
+        {
+            throw new Error('already');
+        }
+        sub.requests[this.user.email] = {
+            email: this.user.email, uid: this.user.uid, name: this.user.name, v: v,
+            box: { x: box.x, y: box.y, w: box.w, h: box.h }, status: 'pending', reason: '', faceId: 0, at: Date.now()
+        };
+        this.commit();
+    }
+
+    /**
+     * Watches box requests (lecturer: all; student: own).
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives requests
+     * @returns {function():void} unsubscribe
+     */
+    watchBoxRequests(sid, cb)
+    {
+        return this.watch(() =>
+        {
+            const all = Object.values((this.state.sub[sid] && this.state.sub[sid].requests) || {});
+            return this.user && this.user.role === 'lecturer' ? all : all.filter((r) => r.email === this.user.email);
+        }, cb);
+    }
+
+    /**
+     * Accepts or refuses a requested box (lecturer).
+     * @param {string} sid - session
+     * @param {object} req - the request
+     * @param {boolean} ok - accept
+     * @param {string} reason - why
+     * @param {object} photo - current photo
+     */
+    async resolveBoxRequest(sid, req, ok, reason, photo)
+    {
+        const sub = this.state.sub[sid];
+        const r = sub.requests[req.email];
+        if (!ok || req.v !== sub.photo.v)
+        {
+            Object.assign(r, { status: 'no', reason: reason });
+            this.commit();
+            return;
+        }
+        sub.photo.boxes = withIds(sub.photo.boxes.concat([req.box]));
+        const id = sub.photo.boxes[sub.photo.boxes.length - 1].id;
+        sub.claims = sub.claims || {};
+        sub.claims[claimId(sub.photo.v, id)] = { uid: req.uid, v: sub.photo.v };
+        Object.assign(sub.attendance[req.email], { face: id, photoV: sub.photo.v });
+        Object.assign(r, { status: 'ok', reason: reason, faceId: id });
+        this.commit();
+    }
+
+    /**
      * Frees a box chosen by mistake (lecturer).
      * @param {string} sid - session
      * @param {number} v - photo version
@@ -404,6 +492,105 @@ export class FakeStore
     {
         this.state.sub[sid].polls[pid].open = open;
         this.commit();
+    }
+
+    // -------------------------------------------------- live quiz (Kahoot style)
+    /**
+     * Creates a quiz (lecturer); the key is kept apart (students never get it).
+     * @param {string} sid - session
+     * @param {object} quiz - valid quiz
+     * @returns {Promise<string>} quiz id
+     */
+    async createQuiz(sid, quiz)
+    {
+        const sub = this.state.sub[sid];
+        sub.quizzes = sub.quizzes || {};
+        const qid = 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const parts = splitKey(quiz);
+        sub.quizzes[qid] = Object.assign(parts.public, { id: qid, state: newQuizState(), createdAt: Date.now(), answers: {} });
+        sub.quizKeys = sub.quizKeys || {};
+        sub.quizKeys[qid] = parts.key;
+        this.commit();
+        return qid;
+    }
+
+    /**
+     * Watches the quizzes of a session, newest first (without answers).
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives quizzes
+     * @returns {function():void} unsubscribe
+     */
+    watchQuizzes(sid, cb)
+    {
+        return this.watch(() => Object.values((this.state.sub[sid] && this.state.sub[sid].quizzes) || {})
+            .map((q) => Object.assign({}, q, { answers: undefined }))
+            .sort((a, b) => b.createdAt - a.createdAt), cb);
+    }
+
+    /**
+     * Reads the answer key (lecturer).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @returns {Promise<number[]>} key
+     */
+    async loadQuizKey(sid, qid)
+    {
+        return ((this.state.sub[sid].quizKeys || {})[qid] || []).slice();
+    }
+
+    /**
+     * Moves the quiz on (lecturer).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {object} state - new state ('now' = this moment)
+     */
+    async setQuizState(sid, qid, state)
+    {
+        const st = Object.assign({}, state);
+        if (st.startedAt === 'now')
+        {
+            st.startedAt = Date.now();
+        }
+        this.state.sub[sid].quizzes[qid].state = st;
+        this.commit();
+    }
+
+    /**
+     * Answers the current question (the same checks as the rules).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {number} index - question
+     * @param {number} option - answer
+     */
+    async answerQuiz(sid, qid, index, option)
+    {
+        const q = this.state.sub[sid].quizzes[qid];
+        const st = q.state;
+        const id = this.user.uid + '_' + index;
+        if (st.phase !== 'question' || st.index !== index || q.answers[id]
+            || Date.now() > st.startedAt + q.questions[index].seconds * 1000 + QUIZ.GRACE_MS)
+        {
+            throw new Error('closed');
+        }
+        q.answers[id] = { uid: this.user.uid, name: this.user.name, index: index, option: option, at: Date.now() };
+        this.commit();
+    }
+
+    /**
+     * Watches answers (lecturer: all; student: own).
+     * @param {string} sid - session
+     * @param {string} qid - quiz
+     * @param {function(object[]):void} cb - receives answers
+     * @returns {function():void} unsubscribe
+     */
+    watchQuizAnswers(sid, qid, cb)
+    {
+        return this.watch(() =>
+        {
+            const q = this.state.sub[sid] && this.state.sub[sid].quizzes && this.state.sub[sid].quizzes[qid];
+            const all = Object.values((q && q.answers) || {});
+            return this.user.role === 'lecturer' ? all : all.filter((a) => a.uid === this.user.uid);
+        }, cb);
     }
 
     /**

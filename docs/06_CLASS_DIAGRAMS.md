@@ -266,6 +266,30 @@ classDiagram
         +undo()
         +crop(id, side) Canvas
     }
+    class quiz {
+        <<module core/quiz.js>>
+        QUIZ: MAX_POINTS, MIN_POINTS, COLORS, SHAPES
+        +points(correct, elapsedMs, limitMs) int
+        +validateQuiz(draft)
+        +splitKey(quiz)
+        +scoreboard(answers, key, starts, limits, upTo)
+        +publishBoard(board)
+        +parseAiQuiz(text)
+    }
+    class schedule {
+        <<module core/schedule.js>>
+        +cleanSlots(slots)
+        +dueSlot(slots, sessions, now)
+        +newlyOpened(known, sessions)
+    }
+    class archive {
+        <<module core/archive.js>>
+        +buildArchive(data) File[]
+        +csv(rows) string
+        +safeName(name) string
+    }
+    archive ..> quiz : quiz results
+    archive ..> faces : names on faces
     facefind ..> faces
     facefind ..> ai : Gemini boxes
     FaceView ..> faces : hitTest, boxAt
@@ -337,6 +361,9 @@ classDiagram
     FacePickActivity *-- FacePickView
     FacePickView ..> Faces
     ScanActivity ..> FacePickActivity : after a scan
+    class QuizPlayActivity
+    BaseActivity <|-- QuizPlayActivity
+    StudentHomeActivity ..> QuizPlayActivity : a quiz opens by itself
     LecturerHomeActivity ..> Ai : setKey from Repo
     class ChangeMap
     class FlickerSchedule

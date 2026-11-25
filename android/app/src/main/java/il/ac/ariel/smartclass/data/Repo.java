@@ -538,6 +538,110 @@ public final class Repo
     }
 
     /**
+     * "No box on me" (face hidden, or cut off at the edge): asks for a box where the student
+     * tapped. The lecturer's page checks it with Gemini, or the lecturer decides.
+     * @param (String) sid Session.
+     * @param (long) v Photo version.
+     * @param (double[]) box {x, y, w, h} as fractions of the photo.
+     * @param (Done&lt;Void&gt;) done Receives an error when refused.
+     */
+    public void requestBox(String sid, long v, double[] box, final Done<Void> done)
+    {
+        Map<String, Object> b = new HashMap<String, Object>();
+        b.put("x", box[0]);
+        b.put("y", box[1]);
+        b.put("w", box[2]);
+        b.put("h", box[3]);
+        Map<String, Object> m = new HashMap<String, Object>();
+        m.put("email", myEmail());
+        m.put("uid", user().getUid());
+        m.put("name", myName());
+        m.put("v", v);
+        m.put("box", b);
+        m.put("status", "pending");
+        m.put("reason", "");
+        m.put("faceId", 0L);
+        m.put("at", System.currentTimeMillis());
+        db.collection("sessions").document(sid).collection("requests").document(myEmail()).set(m)
+                .addOnCompleteListener(new OnCompleteListener<Void>()
+                {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> t)
+                    {
+                        done.onDone(null, t.getException());
+                    }
+                });
+    }
+
+    /**
+     * Watches my own box request.
+     * @param (String) sid Session.
+     * @param (Listener&lt;DocumentSnapshot&gt;) l Receives it (exists() may be false).
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenMyBoxRequest(String sid, Listener<DocumentSnapshot> l)
+    {
+        return listenDoc(db.collection("sessions").document(sid).collection("requests").document(myEmail()), l);
+    }
+
+    // ==========================================
+    //          LIVE QUIZ (KAHOOT STYLE)
+    // ==========================================
+
+    /**
+     * Watches the quizzes of a lecture, newest first (the answer key is not in them).
+     * @param (String) sid Session.
+     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives quizzes.
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenQuizzes(String sid, Listener<List<DocumentSnapshot>> l)
+    {
+        return listen(db.collection("sessions").document(sid).collection("quizzes")
+                .orderBy("createdAt", Query.Direction.DESCENDING), l);
+    }
+
+    /**
+     * Answers the current question; once, timed by the server (the rules check it).
+     * @param (String) sid Session.
+     * @param (String) qid Quiz.
+     * @param (long) index Question.
+     * @param (long) option Chosen button.
+     * @param (Done&lt;Void&gt;) done Receives an error when too late.
+     */
+    public void answerQuiz(String sid, String qid, long index, long option, final Done<Void> done)
+    {
+        Map<String, Object> m = new HashMap<String, Object>();
+        m.put("uid", user().getUid());
+        m.put("name", myName());
+        m.put("index", index);
+        m.put("option", option);
+        m.put("at", FieldValue.serverTimestamp());
+        db.collection("sessions").document(sid).collection("quizzes").document(qid).collection("answers")
+                .document(user().getUid() + "_" + index).set(m)
+                .addOnCompleteListener(new OnCompleteListener<Void>()
+                {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> t)
+                    {
+                        done.onDone(null, t.getException());
+                    }
+                });
+    }
+
+    /**
+     * Watches my own quiz answers.
+     * @param (String) sid Session.
+     * @param (String) qid Quiz.
+     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives answers.
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenMyQuizAnswers(String sid, String qid, Listener<List<DocumentSnapshot>> l)
+    {
+        return listen(db.collection("sessions").document(sid).collection("quizzes").document(qid).collection("answers")
+                .whereEqualTo("uid", user().getUid()), l);
+    }
+
+    /**
      * Sets or clears a student's attendance by hand (lecturer).
      * @param (String) sid Session.
      * @param (String) email Student.

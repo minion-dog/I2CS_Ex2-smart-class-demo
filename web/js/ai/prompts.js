@@ -38,6 +38,30 @@ export function summaryPrompt(title, transcript, uiLang)
 }
 
 /**
+ * Asks the model for a Kahoot-style quiz about the lecture (or a topic).
+ * @param {string} title - lecture name or topic
+ * @param {string} material - transcript, summary, or the lecturer's topic text
+ * @param {number} count - number of questions
+ * @param {string} uiLang - 'he' or 'en'
+ * @returns {{role:string, content:string}[]} messages
+ */
+export function quizPrompt(title, material, count, uiLang)
+{
+    const langName = uiLang === 'en' ? 'English' : 'Hebrew';
+    return [
+        {
+            role: 'system',
+            content: 'You write short multiple-choice quiz questions for a live classroom game (like Kahoot). Write in ' + langName + '. '
+                + 'Each question: at most 90 characters; exactly 4 answers, each at most 40 characters; exactly one correct; '
+                + 'wrong answers must be believable. Ask about the important ideas, not trivia. Use only the material given. '
+                + 'Answer only JSON: [{"q": "...", "options": ["...", "...", "...", "..."], "correct": <0-3>}]. '
+                + 'Put the correct answer at different positions.'
+        },
+        { role: 'user', content: 'Write ' + count + ' questions.\nLecture / topic: ' + title + '\n\nMaterial:\n' + material.slice(0, LIMITS.TRANSCRIPT_CHARS) }
+    ];
+}
+
+/**
  * Splits a GitHub URL into owner and repo.
  * @param {string} url - e.g. https://github.com/owner/repo(.git)(/tree/...)
  * @returns {{owner:string, repo:string}|null} parts, or null when not a GitHub repo URL

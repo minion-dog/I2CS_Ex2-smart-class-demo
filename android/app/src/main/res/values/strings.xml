@@ -96,4 +96,16 @@
     <string name="told_lecturer">המרצה קיבל/ה הודעה שלא מצאת את עצמך. אפשר גם לגשת אליו/ה.</string>
     <string name="wait_photo">המרצה עוד לא צילם/ה את הכיתה. המסך יתעדכן כשהתמונה תעלה.</string>
     <string name="box_taken">מישהו כבר בחר בפנים האלה. אם זה את/ה, ספר/י למרצה.</string>
+    <string name="place_box">אין עליי ריבוע – לסמן איפה אני יושב/ת</string>
+    <string name="place_hint">לחצו על המקום שבו אתם יושבים (גם בקצה התמונה).</string>
+    <string name="req_pending">⏳ הריבוע שלך נבדק…</string>
+    <string name="req_no">הריבוע לא אושר.</string>
+    <string name="lecture_started">ההרצאה התחילה! 🎓</string>
+    <string name="quiz_ready">מתכוננים… השאלה הראשונה תכף מגיעה</string>
+    <string name="quiz_sent">נשלח</string>
+    <string name="quiz_right">נכון!</string>
+    <string name="quiz_wrong">לא נכון</string>
+    <string name="quiz_no_answer">לא ענית בזמן</string>
+    <string name="quiz_score">הניקוד שלך</string>
+    <string name="quiz_late">הזמן נגמר</string>
 </resources>

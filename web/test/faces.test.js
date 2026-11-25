@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    FACES, iou, mergeBoxes, trustLocal, parseGeminiBoxes, tiles, hitTest, boxAt, withIds,
+    FACES, iou, mergeBoxes, trustLocal, requestedBox, checkCrop, parseCheck, parseGeminiBoxes, tiles, hitTest, boxAt, withIds,
     claimsOf, myStep, photoStats, claimId, compareWithScans, storedSize
 } from '../js/core/faces.js';
 
@@ -116,4 +116,19 @@ test('TC-FACE-9: local hits are trusted by size: back-row faces with low scores 
     const kept = trustLocal(raw);
     assert.equal(kept.length, 3);
     assert.ok(kept.some((b) => b.x === 0.30) && kept.some((b) => b.x === 0.40) && kept.some((b) => b.x === 0.20));
+});
+
+test('TC-FACE-10: a student places his own box (also at the edge); Gemini gets a crop around it; its yes/no is read', () =>
+{
+    const boxes = withIds([box(0.1, 0.1, 0.04, 0.05), box(0.2, 0.1, 0.04, 0.05)]);
+    const edge = requestedBox(boxes, 1.2, 0.5, 4 / 3);               // tapped past the right edge
+    assert.ok(edge.x + edge.w <= 1.000001 && edge.w > 0, 'clamped to the photo');
+    const c = checkCrop({ x: 0.5, y: 0.5, w: 0.02, h: 0.03 }, 2000, 1500);
+    assert.ok(c.sw > 0 && c.sh > 0 && c.sx >= 0 && c.sy >= 0);
+    assert.ok(c.box.x > 0 && c.box.x + c.box.w < c.sw, 'the box is inside the crop');
+    const corner = checkCrop({ x: 0.99, y: 0.0, w: 0.01, h: 0.02 }, 2000, 1500);
+    assert.ok(corner.sx + corner.sw <= 2000 && corner.sy === 0, 'crop clamped at the corner');
+    assert.deepEqual(parseCheck('```json\n{"person": true, "reason": "a head, cut off"}\n```'), { person: true, reason: 'a head, cut off' });
+    assert.equal(parseCheck('{"person": "maybe"}'), null);
+    assert.equal(parseCheck('no json'), null);
 });

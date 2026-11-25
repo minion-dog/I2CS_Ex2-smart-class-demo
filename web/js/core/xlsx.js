@@ -66,6 +66,17 @@ export function writeXlsx(sheetName, rows)
 }
 
 /**
+ * Packs files into a .zip (no compression; any program opens it).
+ * @param {{path:string, data:(string|Uint8Array)}[]} files - path inside the zip and content
+ * @returns {Uint8Array} zip bytes
+ */
+export function makeZip(files)
+{
+    const enc = new TextEncoder();
+    return zipStore(files.map((f) => ({ name: enc.encode(f.path), data: typeof f.data === 'string' ? enc.encode(f.data) : f.data })));
+}
+
+/**
  * Builds the worksheet XML (inline strings, so no shared-strings file is needed).
  * @param {(string|number)[][]} rows - cells
  * @returns {string} XML

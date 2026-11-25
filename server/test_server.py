@@ -129,6 +129,53 @@ class RulesTest(unittest.TestCase):
         self.scan(self.yossi)
         self.choose(self.yossi, 3, v=2)                  # the freed box can be taken
 
+    def test_tc_srv_15_box_request(self):
+        """TC-SRV-15: no box on me -> request; one open at a time; accepted = new box + mine; refused can retry."""
+        self.photo()
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, {"type": "requestBox", "sid": self.sid, "v": 1,
+                                                 "box": {"x": 0.9, "y": 0.5, "w": 0.2, "h": 0.06}})   # did not scan
+        self.scan(self.dana)
+        req = {"type": "requestBox", "sid": self.sid, "v": 1, "box": {"x": 0.97, "y": 0.5, "w": 0.05, "h": 0.06}}
+        srv.apply_action(self.s, self.dana, req)
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, req)                     # one open request
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, {"type": "resolveBoxRequest", "sid": self.sid, "email": "dana@demo", "ok": True})
+        srv.apply_action(self.s, LECTURER, {"type": "resolveBoxRequest", "sid": self.sid, "email": "dana@demo",
+                                            "ok": False, "reason": "AI: no person seen"})
+        srv.apply_action(self.s, self.dana, req)                         # refused: may try again
+        new_id = srv.apply_action(self.s, LECTURER, {"type": "resolveBoxRequest", "sid": self.sid, "email": "dana@demo",
+                                                     "ok": True, "reason": "AI: a person is there"})
+        sub = self.s["sub"][self.sid]
+        self.assertEqual(new_id, 4)
+        self.assertEqual(sub["attendance"]["dana@demo"]["face"], 4)
+        self.assertIn("1_4", sub["claims"])
+        self.assertEqual(len(sub["photo"]["boxes"]), 4)
+        view = srv.view_for(self.s, self.yossi)["sub"][self.sid]
+        self.assertEqual(view["requests"], {})                           # others' requests are hidden
+
+    def test_tc_srv_16_quiz(self):
+        """TC-SRV-16: quiz key hidden from students; answers only while the question is open, once, in time."""
+        qid = srv.apply_action(self.s, LECTURER, {"type": "createQuiz", "sid": self.sid, "quiz": {"title": "Q", "questions": [
+            {"q": "2+2?", "options": ["3", "4"], "correct": 1, "seconds": 20}]}})
+        view = srv.view_for(self.s, self.dana)["sub"][self.sid]
+        self.assertNotIn("quizKeys", view)
+        self.assertNotIn("correct", json.dumps(view["quizzes"][qid]["questions"]))
+        answer = {"type": "answerQuiz", "sid": self.sid, "qid": qid, "index": 0, "option": 1}
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, answer)                  # still in the lobby
+        st = {"phase": "question", "index": 0, "startedAt": "now", "correct": -1, "starts": [], "top": [], "scores": {}}
+        srv.apply_action(self.s, LECTURER, {"type": "setQuizState", "sid": self.sid, "qid": qid, "state": st})
+        srv.apply_action(self.s, self.dana, answer)
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, answer)                  # once
+        self.s["sub"][self.sid]["quizzes"][qid]["state"]["startedAt"] -= 23_000
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.yossi, answer)                 # too late
+        self.assertEqual(srv.apply_action(self.s, LECTURER, {"type": "quizKey", "sid": self.sid, "qid": qid}), [1])
+        self.assertEqual(len(srv.view_for(self.s, self.yossi)["sub"][self.sid]["quizzes"][qid]["answers"]), 0)
+
     def test_tc_srv_5_vote_once_while_open(self):
         """TC-SRV-5: one vote per student; none after closing."""
         pid = srv.apply_action(self.s, LECTURER, {"type": "createPoll", "sid": self.sid, "question": "q", "options": ["a", "b"]})

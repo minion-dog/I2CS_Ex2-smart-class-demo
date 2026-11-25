@@ -36,6 +36,9 @@ export class FaceView
         this.onChange = opts.onChange || (() => {});
         this.onPick = opts.onPick || (() => {});
         this.onBox = opts.onBox || (() => {});
+        this.onPlace = opts.onPlace || (() => {});
+        this.placing = false;         // pick: "no box on me" - the next tap places my own box
+        this.extra = [];              // boxes drawn on top: my request (pick) / students' requests (watch)
         this.boxes = [];
         this.history = [];
         this.taken = new Set();       // pick: box ids chosen by others
@@ -83,6 +86,26 @@ export class FaceView
     setLabels(labels)
     {
         this.labels = labels;
+        this.draw();
+    }
+
+    /**
+     * Pick mode: the next tap places the student's own box (anywhere, also at the edge).
+     * @param {boolean} on - placing
+     */
+    setPlacing(on)
+    {
+        this.placing = on;
+        this.host.classList.toggle('placing', on);
+    }
+
+    /**
+     * Extra dashed boxes: my requested box (pick) or the students' requests (watch).
+     * @param {{x:number,y:number,w:number,h:number,label?:string,state?:string}[]} list - boxes
+     */
+    setExtra(list)
+    {
+        this.extra = list;
         this.draw();
     }
 
@@ -202,6 +225,13 @@ export class FaceView
                 style: 'left:' + (b.x * 100) + '%;top:' + (b.y * 100) + '%;width:' + (b.w * 100) + '%;height:' + (b.h * 100) + '%'
             }, label ? [el('span', { text: label })] : []));
         });
+        for (const b of this.extra)
+        {
+            items.push(el('div', {
+                class: 'fv-box request ' + (b.state || ''),
+                style: 'left:' + (b.x * 100) + '%;top:' + (b.y * 100) + '%;width:' + (b.w * 100) + '%;height:' + (b.h * 100) + '%'
+            }, b.label ? [el('span', { text: b.label })] : []));
+        }
         fill(this.layer, ...items);
     }
 
@@ -293,6 +323,11 @@ export class FaceView
         const py = (cy - r.top) / r.height;
         if (px < 0 || px > 1 || py < 0 || py > 1)
         {
+            return;
+        }
+        if (this.mode === 'pick' && this.placing)
+        {
+            this.onPlace(px, py);
             return;
         }
         const i = hitTest(this.boxes, px, py);
