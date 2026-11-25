@@ -1,0 +1,270 @@
+/* =====================================================================
+   SmartClass themes: four looks over one stylesheet (docs/DESIGN.md)
+   =====================================================================
+   app.css draws every component from tokens; each theme below sets the
+   tokens and, where the look needs it, a few component treatments.
+   The person picks a theme with the topbar button (kept per browser);
+   with no pick, a phone in dark mode gets "midnight", else "workshop".
+
+   workshop  - neubrutalist classroom: graph paper, ink boxes, hard offset
+               shadows, primary blue / red / yellow, heavy Rubik
+   clay      - soft "plushy" 3D: pastel cream, puffy cards and buttons with
+               inner + outer shadows, Secular One headings
+   glass     - light bento glass: airy blue water light, frosted cards,
+               pill controls, thin large Heebo
+   midnight  - dark mode done right: deep navy (not black), a faint teal
+               aurora, mint actions, crisp hairlines
+   All fonts are self-hosted, SIL Open Font License (vendor/fonts). */
+
+/* ------------------------------------------------------------ fonts */
+@font-face { font-family: "Rubik"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/rubik-hebrew-400.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Rubik"; font-weight: 600; font-display: swap; src: url(../vendor/fonts/rubik-hebrew-600.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Rubik"; font-weight: 800; font-display: swap; src: url(../vendor/fonts/rubik-hebrew-800.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Rubik"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/rubik-latin-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Rubik"; font-weight: 600; font-display: swap; src: url(../vendor/fonts/rubik-latin-600.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Rubik"; font-weight: 800; font-display: swap; src: url(../vendor/fonts/rubik-latin-800.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Secular One"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/secular-one-hebrew-400.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Secular One"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/secular-one-latin-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Heebo"; font-weight: 300; font-display: swap; src: url(../vendor/fonts/heebo-hebrew-300.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Heebo"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/heebo-hebrew-400.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Heebo"; font-weight: 500; font-display: swap; src: url(../vendor/fonts/heebo-hebrew-500.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Heebo"; font-weight: 700; font-display: swap; src: url(../vendor/fonts/heebo-hebrew-700.woff2) format("woff2"); unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Heebo"; font-weight: 300; font-display: swap; src: url(../vendor/fonts/heebo-latin-300.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Heebo"; font-weight: 400; font-display: swap; src: url(../vendor/fonts/heebo-latin-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Heebo"; font-weight: 500; font-display: swap; src: url(../vendor/fonts/heebo-latin-500.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+@font-face { font-family: "Heebo"; font-weight: 700; font-display: swap; src: url(../vendor/fonts/heebo-latin-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+20AC, U+2122, U+2212; }
+
+/* =========================================================== WORKSHOP */
+:root[data-theme="workshop"] {
+    --bg: #efe6d2;
+    --card: #fffaf0;
+    --sunk: #e7dcc4;
+    --text: #151410;
+    --muted: #49443a;
+    --line: #151410;
+    --line-soft: #d3c7ac;
+    --brand: #2346d8;          /* ultramarine: the main action */
+    --brand-ledge: #151410;
+    --brand-ink: #ffffff;
+    --brand-soft: #dde3ff;
+    --red: #e0452b;
+    --yellow: #ffcf33;
+    --accent: #2346d8;
+    --ok: #1f7a3d; --ok-soft: #d7f0dc;
+    --warn: #8a5800; --warn-soft: #fff0c2;
+    --error: #c0301a; --error-soft: #ffe0d9;
+    --manual: #5b3cc4; --manual-soft: #e6dfff;
+    --note: #ffcf33;
+    --chalk: #1b2c7a;
+    --radius: 4px; --radius-card: 6px; --radius-btn: 4px;
+    --font: "Heebo", "Rubik", Arial, sans-serif;
+    --font-display: "Rubik", "Heebo", Arial, sans-serif;
+    --display-weight: 800;
+    --card-border: 3px solid var(--text);
+    --card-shadow: 6px 6px 0 var(--text);
+    --btn-shadow: 4px 4px 0 var(--text);
+    --btn-shadow-press: 1px 1px 0 var(--text);
+    --btn-press-move: translate(3px, 3px);
+    /* graph paper, like an exercise book */
+    --paper-pattern: linear-gradient(color-mix(in srgb, #2346d8 10%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, #2346d8 10%, transparent) 1px, transparent 1px);
+    --paper-size: 24px 24px;
+    --title-mark-w: 14px;
+    --note-tilt: rotate(-.6deg);
+    --tabbar-bg: var(--card);
+    color-scheme: light;
+}
+[data-theme="workshop"] .topbar { border-block-end: 3px solid var(--text); }
+[data-theme="workshop"] .tabs { border-block-end: 3px solid var(--text); }
+[data-theme="workshop"] .tabs button[aria-selected="true"] { background: var(--yellow); color: var(--text); border-block-end-color: var(--text); }
+[data-theme="workshop"] .card h2::before { height: 14px; background: var(--yellow); border: 2px solid var(--text); border-radius: 0; }
+[data-theme="workshop"] .brand-tag { background: var(--red); color: #fff; border: 2px solid var(--text); }
+[data-theme="workshop"] button.secondary, [data-theme="workshop"] .btn.secondary { box-shadow: inset 0 0 0 2px var(--text), 3px 3px 0 var(--text); }
+[data-theme="workshop"] button.secondary:active:not(:disabled) { box-shadow: inset 0 0 0 2px var(--text); }
+[data-theme="workshop"] button { border: 2px solid var(--text); }
+[data-theme="workshop"] .tabs button, [data-theme="workshop"] .reactions .react, [data-theme="workshop"] .zoom-buttons button, [data-theme="workshop"] .fv-zoom button, [data-theme="workshop"] .qz-close { border: 0; }
+[data-theme="workshop"] .tabs button[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--text); }
+[data-theme="workshop"] .stat { border: 3px solid var(--text); box-shadow: 4px 4px 0 var(--text); }
+[data-theme="workshop"] .stat:nth-child(1) { background: var(--yellow); }
+[data-theme="workshop"] .stat:nth-child(2) { background: var(--brand-soft); }
+[data-theme="workshop"] .stat:nth-child(3) { background: var(--error-soft); }
+[data-theme="workshop"] .stat b { color: var(--text) !important; font-family: var(--font-display); font-weight: 800; }
+[data-theme="workshop"] .banner { border: 2px solid var(--text); box-shadow: 4px 4px 0 var(--text); }
+[data-theme="workshop"] .banner::before { display: none; }
+[data-theme="workshop"] input[type=text], [data-theme="workshop"] input[type=search], [data-theme="workshop"] input[type=email], [data-theme="workshop"] textarea, [data-theme="workshop"] select { border: 2px solid var(--text); }
+[data-theme="workshop"] .comment { border: 2px solid var(--text); }
+[data-theme="workshop"] .scanner, [data-theme="workshop"] .qr-wrap canvas { box-shadow: 6px 6px 0 var(--text); border: 3px solid var(--text); }
+
+/* =========================================================== CLAY */
+:root[data-theme="clay"] {
+    --bg: #fbf2ea;
+    --card: #fffdfb;
+    --sunk: #f4e9df;
+    --text: #2e2640;
+    --muted: #675e78;
+    --line: #eadccf;
+    --line-soft: #f1e6dc;
+    --brand: #ff8a5c;          /* warm peach: the main action */
+    --brand-ledge: #e86a3c;
+    --brand-ink: #2b130a;
+    --brand-soft: #ffe3d6;
+    --mint: #bdf0d8; --sky: #cfe6ff; --lilac: #e7dcff; --butter: #fff0b8;
+    --accent: #6a4fd8;
+    --ok: #217a4e; --ok-soft: #d6f5e4;
+    --warn: #8a5a00; --warn-soft: #fff0c4;
+    --error: #b8322a; --error-soft: #ffe1dc;
+    --manual: #6a4fd8; --manual-soft: #ebe3ff;
+    --note: #fff0b8;
+    --chalk: #2e2640;
+    --radius: 16px; --radius-card: 26px; --radius-btn: 18px;
+    --font: "Rubik", "Heebo", Arial, sans-serif;
+    --font-display: "Secular One", "Rubik", Arial, sans-serif;
+    --display-weight: 400;
+    --card-border: 0;
+    --card-shadow: inset -4px -5px 10px rgba(120, 80, 50, .06), inset 4px 4px 8px rgba(255, 255, 255, .95), 10px 14px 28px -12px rgba(140, 90, 60, .30);
+    --btn-shadow: inset -3px -5px 0 rgba(0, 0, 0, .13), inset 3px 3px 0 rgba(255, 255, 255, .35), 0 8px 16px -8px rgba(232, 106, 60, .55);
+    --btn-shadow-press: inset 3px 4px 6px rgba(0, 0, 0, .18);
+    --btn-press-move: scale(.97);
+    /* two soft pastel lights on the paper */
+    --paper-pattern: radial-gradient(40rem 30rem at 100% 0%, rgba(189, 240, 216, .55), transparent 60%), radial-gradient(36rem 28rem at 0% 100%, rgba(231, 220, 255, .6), transparent 60%);
+    --paper-size: 100% 100%;
+    --title-mark-w: 0px;
+    --note-tilt: rotate(-.8deg);
+    --tabbar-bg: rgba(255, 253, 251, .92);
+    color-scheme: light;
+}
+[data-theme="clay"] button { transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s; }
+[data-theme="clay"] button.secondary, [data-theme="clay"] .btn.secondary { background: var(--card); box-shadow: inset -3px -4px 0 rgba(120, 80, 50, .08), 0 6px 14px -8px rgba(140, 90, 60, .35); }
+[data-theme="clay"] .topbar { background: transparent; border: 0; }
+[data-theme="clay"] .tabs { background: transparent; border: 0; gap: 8px; padding-block: 6px; }
+[data-theme="clay"] .tabs button { border: 0; border-radius: 14px; }
+[data-theme="clay"] .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: var(--card-shadow); }
+[data-theme="clay"] .brand-tag { background: var(--brand); color: var(--brand-ink); border-radius: 10px; box-shadow: inset -2px -3px 0 rgba(0, 0, 0, .12); }
+[data-theme="clay"] .stat { border: 0; border-radius: 20px; box-shadow: inset -3px -4px 8px rgba(0, 0, 0, .05), inset 3px 3px 6px rgba(255, 255, 255, .8); }
+[data-theme="clay"] .stat:nth-child(1) { background: var(--mint); }
+[data-theme="clay"] .stat:nth-child(2) { background: var(--lilac); }
+[data-theme="clay"] .stat:nth-child(3) { background: var(--sky); }
+[data-theme="clay"] .stat:nth-child(4) { background: var(--butter); }
+[data-theme="clay"] .stat b { color: var(--text) !important; font-family: var(--font-display); font-weight: 400; }
+[data-theme="clay"] .banner { border-radius: 18px; }
+[data-theme="clay"] .banner::before { display: none; }
+[data-theme="clay"] input[type=text], [data-theme="clay"] input[type=search], [data-theme="clay"] input[type=email], [data-theme="clay"] textarea, [data-theme="clay"] select { border: 0; background: var(--sunk); box-shadow: inset 2px 3px 6px rgba(120, 80, 50, .10); }
+[data-theme="clay"] .comment { border: 0; background: var(--sunk); border-radius: 18px; }
+[data-theme="clay"] .scanner, [data-theme="clay"] .qr-wrap canvas { border-radius: 24px; box-shadow: var(--card-shadow); }
+[data-theme="clay"] .badge { border-radius: 999px; }
+
+/* =========================================================== GLASS */
+:root[data-theme="glass"] {
+    --bg: #eaf2f7;
+    --card: rgba(255, 255, 255, .72);
+    --sunk: rgba(214, 230, 240, .7);
+    --text: #12283a;
+    --muted: #4b6276;
+    --line: rgba(120, 160, 190, .35);
+    --line-soft: rgba(120, 160, 190, .2);
+    --brand: #0b6cb3;          /* deep sea blue */
+    --brand-ledge: #08558d;
+    --brand-ink: #ffffff;
+    --brand-soft: #dceefa;
+    --accent: #0b6cb3;
+    --ok: #13744a; --ok-soft: #d7f2e5;
+    --warn: #7d5500; --warn-soft: #fbefcf;
+    --error: #b3261e; --error-soft: #fbe0dc;
+    --manual: #5a45b8; --manual-soft: #e7e1fb;
+    --note: rgba(255, 244, 196, .85);
+    --chalk: #0c3550;
+    --radius: 14px; --radius-card: 24px; --radius-btn: 999px;
+    --font: "Heebo", Arial, sans-serif;
+    --font-display: "Heebo", Arial, sans-serif;
+    --display-weight: 300;
+    --card-border: 1px solid rgba(255, 255, 255, .85);
+    --card-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 18px 26px 48px -28px rgba(30, 90, 130, .40), 2px 3px 6px -2px rgba(30, 60, 90, .10);
+    --btn-shadow: 0 10px 22px -12px rgba(11, 108, 179, .7), inset 0 1px 0 rgba(255, 255, 255, .25);
+    --btn-shadow-press: 0 4px 10px -6px rgba(11, 108, 179, .7);
+    --btn-press-move: translateY(1px);
+    /* soft water light behind frosted cards */
+    --paper-pattern: radial-gradient(50rem 30rem at 85% -10%, rgba(140, 210, 235, .55), transparent 60%), radial-gradient(40rem 26rem at -10% 40%, rgba(170, 220, 205, .45), transparent 60%), radial-gradient(30rem 22rem at 60% 110%, rgba(150, 190, 240, .40), transparent 60%);
+    --paper-size: 100% 100%;
+    --title-mark-w: 0px;
+    --note-tilt: none;
+    --tabbar-bg: rgba(255, 255, 255, .7);
+    color-scheme: light;
+}
+[data-theme="glass"] .card, [data-theme="glass"] .topbar, [data-theme="glass"] .tabs { -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3); }
+[data-theme="glass"] .topbar, [data-theme="glass"] .tabs { background: rgba(255, 255, 255, .6); border-color: rgba(255, 255, 255, .8); }
+[data-theme="glass"] h1 { font-size: 2.2rem; letter-spacing: -.03em; }
+[data-theme="glass"] .card h2 { font-weight: 400; font-size: 1.3rem; letter-spacing: -.02em; }
+[data-theme="glass"] .tabs button[aria-selected="true"] { color: var(--brand); border-block-end-color: var(--brand); }
+[data-theme="glass"] button.secondary, [data-theme="glass"] .btn.secondary { background: rgba(255, 255, 255, .7); box-shadow: inset 0 0 0 1px var(--line); }
+[data-theme="glass"] .brand-tag { background: var(--brand); color: #fff; border-radius: 999px; padding-inline: 8px; transform: none; }
+[data-theme="glass"] .stat { background: rgba(255, 255, 255, .55); border: 1px solid rgba(255, 255, 255, .85); border-radius: 18px; }
+[data-theme="glass"] .stat b { font-family: var(--font-display); font-weight: 300; font-size: 2.3rem; }
+[data-theme="glass"] .banner { border-radius: 16px; border: 1px solid rgba(255, 220, 120, .6); box-shadow: none; }
+[data-theme="glass"] .banner::before { display: none; }
+[data-theme="glass"] input[type=text], [data-theme="glass"] input[type=search], [data-theme="glass"] input[type=email], [data-theme="glass"] textarea, [data-theme="glass"] select { background: rgba(255, 255, 255, .75); border-color: rgba(120, 160, 190, .35); border-radius: 14px; }
+[data-theme="glass"] .comment { background: rgba(255, 255, 255, .55); border-color: rgba(255, 255, 255, .8); border-radius: 16px; }
+[data-theme="glass"] .scanner, [data-theme="glass"] .qr-wrap canvas { border-radius: 22px; }
+[data-theme="glass"] .badge { border-radius: 999px; }
+
+/* =========================================================== MIDNIGHT */
+:root[data-theme="midnight"] {
+    --bg: #0a1121;
+    --card: #111a2e;
+    --sunk: #18233b;
+    --text: #e6edfb;
+    --muted: #9cadcb;
+    --line: #22304e;
+    --line-soft: #1a2640;
+    --brand: #5eead4;          /* mint: the main action */
+    --brand-ledge: #2bb7a2;
+    --brand-ink: #062824;
+    --brand-soft: rgba(94, 234, 212, .12);
+    --accent: #7cc4ff;
+    --ok: #6ee7a8; --ok-soft: rgba(110, 231, 168, .13);
+    --warn: #f6c860; --warn-soft: rgba(246, 200, 96, .13);
+    --error: #ff8b80; --error-soft: rgba(255, 139, 128, .13);
+    --present: #6ee7a8; --zoom: #7cc4ff;
+    --manual: #b9a5ff; --manual-soft: rgba(185, 165, 255, .14);
+    --note: #172440;
+    --chalk: #070c18;
+    --radius: 10px; --radius-card: 16px; --radius-btn: 10px;
+    --font: "Heebo", Arial, sans-serif;
+    --font-display: "Heebo", Arial, sans-serif;
+    --display-weight: 500;
+    --card-border: 1px solid var(--line);
+    --card-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 24px 48px -28px rgba(0, 0, 0, .7);
+    --btn-shadow: 0 0 0 1px rgba(94, 234, 212, .35), 0 10px 26px -12px rgba(94, 234, 212, .55);
+    --btn-shadow-press: 0 0 0 1px rgba(94, 234, 212, .35);
+    --btn-press-move: translateY(1px);
+    /* a faint teal aurora at the top of the night sky */
+    --paper-pattern: radial-gradient(60rem 26rem at 70% -12%, rgba(45, 212, 191, .16), transparent 65%), radial-gradient(40rem 22rem at 10% -6%, rgba(124, 196, 255, .12), transparent 60%);
+    --paper-size: 100% 100%;
+    --title-mark-w: 0px;
+    --note-tilt: none;
+    --tabbar-bg: rgba(17, 26, 46, .92);
+    color-scheme: dark;
+}
+[data-theme="midnight"] .topbar, [data-theme="midnight"] .tabs { background: rgba(10, 17, 33, .8); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+[data-theme="midnight"] .tabs button[aria-selected="true"] { color: var(--brand); border-block-end-color: var(--brand); }
+[data-theme="midnight"] .brand-tag { background: transparent; color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand); transform: none; }
+[data-theme="midnight"] button.secondary, [data-theme="midnight"] .btn.secondary { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+[data-theme="midnight"] button.secondary:hover { box-shadow: inset 0 0 0 1px var(--muted); }
+[data-theme="midnight"] .stat { background: var(--sunk); border-color: var(--line); }
+[data-theme="midnight"] .stat b { font-weight: 500; }
+[data-theme="midnight"] .banner { border-inline-start: 3px solid var(--warn); box-shadow: none; color: var(--text); }
+[data-theme="midnight"] .banner::before { display: none; }
+[data-theme="midnight"] .qr-wrap canvas { box-shadow: 0 0 0 1px var(--line), 0 30px 60px -30px rgba(94, 234, 212, .35); }
+[data-theme="midnight"] .comment.lecturer { background: var(--brand-soft); }
+
+/* themes with no title mark: no empty slot before the card titles */
+[data-theme="clay"] .card h2::before, [data-theme="glass"] .card h2::before, [data-theme="midnight"] .card h2::before { display: none; }
+
+/* phones: the theme button shows its icon only (the topbar stays on one line) */
+@media (max-width: 700px) {
+    #theme-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .topbar { gap: 8px; padding-inline: 12px; }
+    .topbar button { padding: 0 10px; }
+    [data-theme="clay"] .tabs, [data-theme="glass"] .tabs, [data-theme="midnight"] .tabs { -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2); }
+    [data-theme="clay"] .tabs { background: var(--card); box-shadow: 0 -10px 30px -16px rgba(140, 90, 60, .35); }
+    [data-theme="glass"] .tabs { background: rgba(255, 255, 255, .88); }
+    [data-theme="midnight"] .tabs { background: rgba(13, 21, 38, .96); }
+}

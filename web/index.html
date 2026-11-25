@@ -4,15 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SmartClass</title>
-    <meta name="theme-color" content="#f1efe7" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#17181b" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#efe6d2">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/themes.css">
+    <script src="js/theme.js"></script>
 </head>
 <body>
     <header class="topbar">
         <span class="brand" aria-label="SmartClass">Smart<span class="brand-tag">Class</span></span>
         <span class="who"></span>
+        <button class="secondary small theme-btn" id="theme-btn" type="button" aria-label="עיצוב"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8l-.4-.9c-.5-1 .2-2.3 1.4-2.3H17a4 4 0 0 0 4-4c0-4.9-4-9-9-9z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></svg><span id="theme-name"></span></button>
         <button class="secondary small" id="lang" data-i18n="langSwitch">English</button>
     </header>
     <main>

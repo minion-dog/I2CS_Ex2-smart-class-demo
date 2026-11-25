@@ -47,40 +47,24 @@
     --chalk: #1f3b31;         /* chalkboard: the projector stage */
     --radius: 8px;
     --radius-card: 10px;
+    --radius-btn: 8px;
+    --font-display: var(--font);
+    --display-weight: 700;
+    --card-border: 1px solid var(--line);
+    --card-shadow: none;
+    --btn-shadow: 0 3px 0 var(--brand-ledge);
+    --btn-shadow-press: 0 1px 0 var(--brand-ledge);
+    --btn-press-move: translateY(2px);
+    --paper-pattern: radial-gradient(color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1.2px);
+    --paper-size: 22px 22px;
+    --title-mark-w: 4px;
+    --note-tilt: rotate(-.4deg);
+    --tabbar-bg: var(--card);
     --tap: 44px;
     --font: "Plex Hebrew", "Segoe UI", "Rubik", "Noto Sans Hebrew", Arial, sans-serif;
     --mono: "Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
     color-scheme: light;
     font-size: 16px;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #17181b;
-        --card: #1f2125;
-        --sunk: #2a2c31;
-        --text: #eceae2;
-        --muted: #a9aa9f;
-        --line: #393b41;
-        --line-soft: #2e3035;
-        --brand: #f06a40;
-        --brand-ledge: #a8411f;
-        --brand-ink: #1a0d07;
-        --brand-soft: #3d2219;
-        --accent: #6cc3ae;
-        --ok: #6fd29a;
-        --ok-soft: #1f3a2a;
-        --warn: #f0c25a;
-        --warn-soft: #3a2f16;
-        --error: #ff8a7e;
-        --error-soft: #3d1f1c;
-        --present: #6fd29a;
-        --zoom: #7fb0ff;
-        --manual: #b9a2ff;
-        --manual-soft: #2e2642;
-        --note: #4a4215;
-        color-scheme: dark;
-    }
 }
 
 * { box-sizing: border-box; }
@@ -95,11 +79,12 @@ html, body {
 }
 /* faint notebook dots on the paper */
 body {
-    background-image: radial-gradient(color-mix(in srgb, var(--text) 9%, transparent) 1px, transparent 1.2px);
-    background-size: 22px 22px;
+    background-image: var(--paper-pattern);
+    background-size: var(--paper-size);
     background-attachment: fixed;
 }
-h1, h2, h3 { letter-spacing: -.01em; }
+h1, h2, h3 { letter-spacing: -.01em; font-family: var(--font-display); font-weight: var(--display-weight); }
+html, body { overflow-x: clip; }
 
 /* ---------------------------------------------------------------- layout */
 .topbar {
@@ -155,13 +140,14 @@ main { max-width: 1100px; margin: 0 auto; padding: 16px; }
 
 .card {
     background: var(--card);
-    border: 1px solid var(--line);
+    border: var(--card-border);
     border-radius: var(--radius-card);
+    box-shadow: var(--card-shadow);
     padding: 18px;
 }
 .card h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 /* a short tomato rule before every card title: the system's one decoration */
-.card h2::before { content: ""; width: 4px; height: 1.05em; background: var(--brand); border-radius: 2px; flex: none; }
+.card h2::before { content: ""; width: var(--title-mark-w); height: 1.05em; background: var(--brand); border-radius: 2px; flex: none; }
 .card h3 { margin: 18px 0 8px; font-size: 1rem; font-weight: 600; }
 .card details > summary { cursor: pointer; font-weight: 600; color: var(--text); padding: 6px 0; }
 
@@ -194,16 +180,16 @@ button, .btn {
     min-height: var(--tap);
     padding: 0 18px;
     border: 0;
-    border-radius: var(--radius);
+    border-radius: var(--radius-btn);
     background: var(--brand);
     color: var(--brand-ink);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 3px 0 var(--brand-ledge);
-    transition: transform .08s, box-shadow .08s, background .15s;
+    box-shadow: var(--btn-shadow);
+    transition: transform .08s, box-shadow .08s, background-color .15s;
 }
-button:active:not(:disabled), .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--brand-ledge); }
+button:active:not(:disabled), .btn:active { transform: var(--btn-press-move); box-shadow: var(--btn-shadow-press); }
 button.secondary, .btn.secondary { background: var(--card); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--line), 0 2px 0 var(--line); font-weight: 600; }
 button.secondary:hover, .btn.secondary:hover { box-shadow: inset 0 0 0 1.5px var(--text), 0 2px 0 var(--line); }
 button.secondary:active:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--text); }
@@ -218,7 +204,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .hint { color: var(--muted); font-size: .9rem; }
 /* demo / notices: a sticky note pinned on the paper */
 .banner { position: relative; padding: 12px 16px; border-radius: 3px; background: var(--note); color: var(--text); margin-block-end: 14px;
-    box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 6px 14px -8px rgba(0,0,0,.35); transform: rotate(-.4deg); }
+    box-shadow: 0 1px 0 rgba(0,0,0,.06), 0 6px 14px -8px rgba(0,0,0,.35); transform: var(--note-tilt); }
 .banner::before { content: ""; position: absolute; inset-block-start: -7px; inset-inline-start: 50%; width: 64px; height: 14px; margin-inline-start: -32px;
     background: color-mix(in srgb, var(--card) 70%, transparent); border: 1px solid var(--line-soft); transform: rotate(2deg); }
 .banner.error { background: var(--error-soft); color: var(--error); transform: none; }
@@ -437,3 +423,25 @@ body.quiz-on { overflow: hidden; }
 .scan-result:empty { min-height: 0; margin: 0; }           /* no empty gap before the first scan */
 .qz-fill { min-height: 2.3em; }                            /* 0 votes: the label still has room */
 .card > h1 { font-size: 1.9rem; letter-spacing: -.02em; margin: 4px 0 14px; }
+
+/* ------------------------------------------------ icons, theme button, bottom tab bar (phones) */
+.ico { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tabs button { display: inline-flex; align-items: center; gap: 8px; }
+.theme-btn { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 700px) {
+    /* the tabs move to a bottom bar within thumb reach (icon above label) */
+    .tabs { position: fixed; inset-inline: 0; inset-block-end: 0; z-index: 20; justify-content: space-around; padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+        background: var(--tabbar-bg); border-block-end: 0; border-block-start: var(--card-border); box-shadow: 0 -8px 24px -18px rgba(0,0,0,.4); }
+    .tabs button { flex: 1 1 0; flex-direction: column; gap: 2px; min-height: 56px; padding: 6px 4px; font-size: .78rem; border-block-end: 0; border-radius: var(--radius); }
+    .tabs button[aria-selected="true"] { background: color-mix(in srgb, var(--brand) 14%, transparent); border-block-end: 0; }
+    .tabs button .ico { width: 22px; height: 22px; }
+    main { padding-block-end: 96px; }
+    .topbar .who { display: none; }
+}
+/* cards arrive with a short rise (state, not decoration: a new page of the app) */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+main .card { animation: rise .32s cubic-bezier(.2,.8,.2,1) both; }
+main .grid > .card:nth-child(2) { animation-delay: .04s; }
+main .grid > .card:nth-child(3) { animation-delay: .08s; }
+main .grid > .card:nth-child(4) { animation-delay: .12s; }
+@media (prefers-reduced-motion: reduce) { main .card { animation: none; } }
