@@ -178,7 +178,12 @@ async function onScanned(text)
     const p = decodePayload(text);
     if (p === null)
     {
-        setResult(t('scanBad'), 'error');
+        // A QR was read, but it is not the attendance code: say which, and show what was read,
+        // so a wrong QR (e.g. the site's link) is not mistaken for a broken scanner.
+        const isLink = /^https?:\/\//i.test(String(text));
+        setResult(isLink ? t('scanNotAttendance') : t('scanBad'), 'error');
+        showRead(text);
+        console.warn('scan: not an attendance code:', text);
         return;
     }
     if (navigator.vibrate)
@@ -217,8 +222,24 @@ async function mark(send)
             showWhere();
             return;
         }
-        setResult(t('scanBad'), 'error');
+        // 'bad-code': the code is older than the current + previous one (5 s each), or it is
+        // not a code of this lecture.
+        setResult(e.message === 'bad-code' ? t('scanExpired') : t('scanBad') + ' (' + e.message + ')', 'error');
+        console.warn('scan refused:', e.message);
     }
+}
+
+/**
+ * Shows, small, what the scanner read (only when it was not an attendance code).
+ * @param {string} text - the decoded QR text
+ */
+function showRead(text)
+{
+    const box = $('scan-where');
+    box.className = 'where';
+    const s = String(text);
+    fill(box, el('span', { class: 'muted', dir: 'ltr', text: t('scanRead') + ' ' + (s.length > 60 ? s.slice(0, 60) + '…' : s) }));
+    box.hidden = false;
 }
 
 /** Shows the big "physical attendance" answer under the result. */
