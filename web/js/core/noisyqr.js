@@ -297,25 +297,28 @@ export class ChangeMap
             mean[i] = this.sum[i] / n;
         }
         const t = Math.max(MIN_SIGNAL, ACTIVE_LEVEL * percentile(mean, 0.99));
-        const xs = [];
-        const ys = [];
+        // counts per column and per row (no big lists: this runs often on phones)
+        const xs = new Uint32Array(side);
+        const ys = new Uint32Array(side);
+        let count = 0;
         for (let i = 0; i < this.length; i++)
         {
             if (mean[i] > t)
             {
-                xs.push(i % side);
-                ys.push(Math.floor(i / side));
+                xs[i % side]++;
+                ys[(i / side) | 0]++;
+                count++;
             }
         }
-        if (xs.length < ACTIVE_MIN_PART * this.length)
+        if (count < ACTIVE_MIN_PART * this.length)
         {
             return null;
         }
         // 1st..99th percentile of the positions: a few noisy pixels far away do not stretch the box
-        const x0 = positionPercentile(xs, 0.01, side);
-        const x1 = positionPercentile(xs, 0.99, side);
-        const y0 = positionPercentile(ys, 0.01, side);
-        const y1 = positionPercentile(ys, 0.99, side);
+        const x0 = positionPercentile(xs, count, 0.01);
+        const x1 = positionPercentile(xs, count, 0.99);
+        const y0 = positionPercentile(ys, count, 0.01);
+        const y1 = positionPercentile(ys, count, 0.99);
         return { x0: x0, y0: y0, x1: x1, y1: y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, size: Math.max(x1 - x0, y1 - y0) };
     }
 
@@ -324,9 +327,10 @@ export class ChangeMap
      * much change = white. Steps: find the code's box, stretch (2nd..98th percentile
      * inside the box), blur, Otsu threshold inside the box. Outside the box = black.
      * @param {number} side - width = height in pixels
+     * @param {object|null} [box] - activeBox() when the caller already has it (saves time on phones)
      * @returns {Uint8ClampedArray} 0 or 255 per pixel
      */
-    image(side)
+    image(side, box)
     {
         const n = Math.max(1, this.diffs.length);
         const mean = new Float32Array(this.length);
@@ -334,7 +338,7 @@ export class ChangeMap
         {
             mean[i] = this.sum[i] / n;
         }
-        const inside = this.boxMask(side);
+        const inside = this.boxMask(side, box === undefined ? this.activeBox() : box);
         const values = [];
         for (let i = 0; i < this.length; i++)
         {
@@ -365,12 +369,12 @@ export class ChangeMap
     /**
      * Marks the pixels inside the code's box (a little larger, for the white border).
      * @param {number} side - width = height in pixels
+     * @param {object|null} b - the code's box (activeBox())
      * @returns {Uint8Array} 1 inside, 0 outside (all 1 when no box is found)
      */
-    boxMask(side)
+    boxMask(side, b)
     {
         const mask = new Uint8Array(this.length);
-        const b = this.activeBox();
         if (b === null)
         {
             return mask.fill(1);
@@ -486,22 +490,17 @@ function mix(seed, i, epoch, salt)
  * @returns {number} the percentile
  */
 /**
- * Like percentile(), for pixel positions 0..side-1.
- * @param {number[]} values - positions
+ * Like percentile(), for pixel positions given as counts per position.
+ * @param {Uint32Array} hist - how many pixels at each position 0..side-1
+ * @param {number} count - all pixels
  * @param {number} q - 0..1
- * @param {number} side - largest position + 1
  * @returns {number} the position
  */
-function positionPercentile(values, q, side)
+function positionPercentile(hist, count, q)
 {
-    const hist = new Uint32Array(side);
-    for (const v of values)
-    {
-        hist[v]++;
-    }
-    const target = q * values.length;
+    const target = q * count;
     let acc = 0;
-    for (let v = 0; v < side; v++)
+    for (let v = 0; v < hist.length; v++)
     {
         acc += hist[v];
         if (acc >= target)
@@ -509,7 +508,7 @@ function positionPercentile(values, q, side)
             return v;
         }
     }
-    return side - 1;
+    return hist.length - 1;
 }
 
 /**

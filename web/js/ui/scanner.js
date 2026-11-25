@@ -10,8 +10,11 @@
 // From the back of the class the code is small in the picture. So the scanner
 // looks for WHERE things change, then zooms in on that part of the camera
 // picture (at the camera's full resolution) and starts the map again there.
+//
+// The heavy work (change map + jsQR) runs on a second thread (scan-worker.js),
+// so the camera preview stays smooth on slower phones (real-phone test, 25 Nov 2026).
 
-import { ChangeMap, NOISE } from '../core/noisyqr.js';
+import { ScanEngine } from '../core/scan-engine.js';
 import { boxOnScreen, hintFor, smooth } from '../core/guide.js';
 
 const SIDE = 400;                  // analysed square, in pixels
@@ -47,7 +50,12 @@ export class AveragingScanner
         this.canvas.width = SIDE;
         this.canvas.height = SIDE;
         this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-        this.map = new ChangeMap(SIDE * SIDE, NOISE.FRAMES);
+        this.worker = null;        // the second thread (null = work on this thread)
+        this.engine = null;        // ... or the engine right here
+        this.busy = false;         // a decode request is waiting for its answer
+        this.askedAt = 0;          // frame of the last decode request
+        this.gen = 0;              // +1 whenever the analysed part changes (old answers are ignored)
+        this.resetNext = false;    // the next frame starts a new map
         this.stream = null;
         this.frame = 0;
         this.running = false;
@@ -114,6 +122,7 @@ export class AveragingScanner
         this.video.srcObject = this.stream;
         this.video.setAttribute('playsinline', '');
         await this.video.play();
+        this.startEngine();
         this.running = true;
         this.loop();
     }
@@ -122,6 +131,11 @@ export class AveragingScanner
     stop()
     {
         this.running = false;
+        if (this.worker !== null)
+        {
+            this.worker.terminate();
+            this.worker = null;
+        }
         this.video.style.transform = '';
         if (this.stream)
         {
@@ -154,7 +168,49 @@ export class AveragingScanner
         }
     }
 
-    /** Adds the current camera frame to the change map and tries to decode. */
+    /** Starts the second thread (or, without workers, the engine on this thread). */
+    startEngine()
+    {
+        this.busy = false;
+        this.askedAt = 0;
+        this.frame = 0;
+        this.gen++;
+        this.resetNext = true;
+        try
+        {
+            this.worker = new Worker(new URL('./scan-worker.js', import.meta.url), { type: 'module' });
+            this.worker.onmessage = (e) => this.onAnswer(e.data);
+            this.worker.onerror = () =>
+            {
+                // no module workers here: do the work on this thread
+                this.worker.terminate();
+                this.worker = null;
+                this.useLocalEngine();
+            };
+        }
+        catch (e)
+        {
+            this.worker = null;
+            this.useLocalEngine();
+        }
+    }
+
+    /** The engine on this thread (old browsers): slower preview, same result. */
+    useLocalEngine()
+    {
+        this.busy = false;
+        this.resetNext = true;
+        this.engine = new ScanEngine(SIDE, (rgba, w, h) =>
+        {
+            const r = globalThis.jsQR(rgba, w, h, { inversionAttempts: 'dontInvert' });
+            return r && r.data ? r.data : null;
+        });
+    }
+
+    /**
+     * Sends the current camera frame to the engine; every few frames (when the
+     * engine is free) also asks it to read the code.
+     */
     processFrame()
     {
         const v = this.video;
@@ -165,37 +221,63 @@ export class AveragingScanner
         const c = this.crop;
         this.ctx.drawImage(v, c.x, c.y, c.s, c.s, 0, 0, SIDE, SIDE);
         const rgba = this.ctx.getImageData(0, 0, SIDE, SIDE).data;
-        const grey = new Uint8ClampedArray(SIDE * SIDE);
-        for (let i = 0; i < grey.length; i++)
-        {
-            // integer luma: (299 R + 587 G + 114 B) / 1000
-            grey[i] = (rgba[i * 4] * 299 + rgba[i * 4 + 1] * 587 + rgba[i * 4 + 2] * 114) / 1000;
-        }
-        this.map.push(grey);
         this.frame++;
-        if (this.map.count() >= NOISE.FRAMES && this.frame % DECODE_EVERY === 0)
+        // ask only when the last answer came back: a slow phone never piles up work
+        const decode = !this.busy && this.frame - this.askedAt >= DECODE_EVERY;
+        if (decode)
         {
-            if (this.map.hasSignal())
+            this.busy = true;
+            this.askedAt = this.frame;
+        }
+        const msg = { rgba: rgba, gen: this.gen, reset: this.resetNext, decode: decode };
+        this.resetNext = false;
+        if (this.worker !== null)
+        {
+            this.worker.postMessage(msg, [rgba.buffer]);
+        }
+        else if (this.engine !== null)
+        {
+            const out = this.engine.handle(msg);
+            if (out !== null)
             {
-                this.guide();
-                this.tryDecode();
-                if (this.running)
-                {
-                    this.zoomIfSmall();
-                }
-            }
-            else
-            {
-                this.show(null);
-                this.rounds = 0;
-                this.drawn = null;
-                this.onGuide({ rect: null, hint: 'search' });
-            }
-            if (this.zoomedAt > 0 && performance.now() - this.zoomedAt > GIVE_UP_MS)
-            {
-                this.unzoom();
+                this.onAnswer(out);
             }
         }
+        if (this.zoomedAt > 0 && performance.now() - this.zoomedAt > GIVE_UP_MS)
+        {
+            this.unzoom();
+        }
+    }
+
+    /**
+     * An answer from the engine: move the box, show the map, and finish or zoom in.
+     * @param {{gen:number, ready:boolean, box:object|null, text:string|null, view:Uint8ClampedArray|null}} out - the answer
+     */
+    onAnswer(out)
+    {
+        this.busy = false;
+        if (!this.running || out.gen !== this.gen || !out.ready)
+        {
+            return;                                    // stopped, an old part of the picture, or not enough frames yet
+        }
+        if (out.box === null)
+        {
+            this.show(null);
+            this.rounds = 0;
+            this.drawn = null;
+            this.onGuide({ rect: null, hint: 'search' });
+            return;
+        }
+        this.guide(out.box);
+        this.show(out.view);
+        if (out.text)
+        {
+            this.stop();
+            this.onGuide({ rect: this.drawn, hint: 'done' });            // the box turns green
+            setTimeout(() => this.onText(out.text), DONE_FLASH_MS);
+            return;
+        }
+        this.zoomIfSmall(out.box);
     }
 
     /**
@@ -213,9 +295,8 @@ export class AveragingScanner
      * When the code is small in the picture, zooms in on it: the next frames are taken
      * from just that part of the camera picture, so each square of the code gets more pixels.
      */
-    zoomIfSmall()
+    zoomIfSmall(box)
     {
-        const box = this.map.activeBox();
         if (box === null || box.size >= ZOOM_WHEN * SIDE)
         {
             return;
@@ -237,20 +318,22 @@ export class AveragingScanner
             s: side
         };
         this.zoomedAt = performance.now();
-        this.map.reset();
+        this.restart();
     }
 
-    /** Tells the page where the code is on the preview and what to tell the student. */
-    guide()
+    /** The analysed part changed: start a new map and ignore answers about the old part. */
+    restart()
     {
-        const box = this.map.activeBox();
-        if (box === null)
-        {
-            this.rounds = 0;
-            this.drawn = null;
-            this.onGuide({ rect: null, hint: 'search' });
-            return;
-        }
+        this.gen++;
+        this.resetNext = true;
+    }
+
+    /**
+     * Tells the page where the code is on the preview and what to tell the student.
+     * @param {object} box - the code's box in analysed pixels
+     */
+    guide(box)
+    {
         this.rounds++;
         const v = this.video;
         const c = this.crop;
@@ -263,7 +346,7 @@ export class AveragingScanner
     {
         this.crop = null;
         this.zoomedAt = 0;
-        this.map.reset();
+        this.restart();
     }
 
     /**
@@ -292,27 +375,5 @@ export class AveragingScanner
         }
         this.viewBuffer.getContext('2d').putImageData(new ImageData(rgba, SIDE, SIDE), 0, 0);
         g.drawImage(this.viewBuffer, 0, 0, this.view.width, this.view.height);
-    }
-
-    /** Runs jsQR on the black-and-white change map. */
-    tryDecode()
-    {
-        const bw = this.map.image(SIDE);
-        const rgba = new Uint8ClampedArray(SIDE * SIDE * 4);
-        for (let i = 0; i < bw.length; i++)
-        {
-            rgba[i * 4] = bw[i];
-            rgba[i * 4 + 1] = bw[i];
-            rgba[i * 4 + 2] = bw[i];
-            rgba[i * 4 + 3] = 255;
-        }
-        this.show(rgba);
-        const result = globalThis.jsQR(rgba, SIDE, SIDE, { inversionAttempts: 'dontInvert' });
-        if (result && result.data)
-        {
-            this.stop();
-            this.onGuide({ rect: this.drawn, hint: 'done' });            // the box turns green
-            setTimeout(() => this.onText(result.data), DONE_FLASH_MS);
-        }
     }
 }

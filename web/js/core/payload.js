@@ -45,7 +45,9 @@ export function encodePayload(sessionId, token)
 export function decodePayload(text)
 {
     const parts = String(text).split(CODE.SEPARATOR);
-    const ok = /^[0-9A-Z]+$/;
+    // letters and digits; lower case too: lectures opened by an older version of the site
+    // (ids like 's' + time in base 36) are still open in some browsers (found 25 Nov 2026)
+    const ok = /^[0-9A-Za-z]+$/;
     if (parts.length !== 3 || parts[0] !== CODE.PREFIX || !ok.test(parts[1]) || !ok.test(parts[2]))
     {
         return null;

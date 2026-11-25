@@ -397,3 +397,52 @@ test('TC-QR-11: zoomed in from far with a shaking hand (up to 8 camera px per fr
         }
     }
 });
+
+test('TC-QR-12: the scan engine (the scanner\'s second thread) reads the code from RGBA frames, ignores the old part after a reset', async () =>
+{
+    const { ScanEngine } = await import('../js/core/scan-engine.js');
+    const { frames, side } = film(5, TWO_SECONDS, 0.3);
+    const read = (rgba, w, h) =>
+    {
+        const r = jsQR(rgba, w, h, { inversionAttempts: 'dontInvert' });
+        return r && r.data ? r.data : null;
+    };
+    const rgbaOf = (g) =>
+    {
+        const out = new Uint8ClampedArray(g.length * 4);
+        for (let i = 0; i < g.length; i++)
+        {
+            out[i * 4] = g[i];
+            out[i * 4 + 1] = g[i];
+            out[i * 4 + 2] = g[i];
+            out[i * 4 + 3] = 255;
+        }
+        return out;
+    };
+    const engine = new ScanEngine(side, read);
+    let text = null;
+    let early = null;
+    for (let k = 0; k < frames.length && text === null; k++)
+    {
+        const out = engine.handle({ rgba: rgbaOf(frames[k]), gen: 1, reset: k === 0, decode: k % 3 === 0 });
+        if (k === 3)
+        {
+            early = out;                                   // not enough frames yet
+        }
+        if (out !== null && out.ready && out.text)
+        {
+            text = out.text;
+            assert.ok(out.box !== null && out.view.length === side * side * 4);
+        }
+    }
+    assert.equal(early.ready, false);
+    assert.equal(text, TEXT);
+    // a frozen picture (the same frame again and again) never reads
+    const still = new ScanEngine(side, read);
+    let frozen = null;
+    for (let k = 0; k < 40; k++)
+    {
+        frozen = still.handle({ rgba: rgbaOf(frames[0]), gen: 1, reset: false, decode: true }) || frozen;
+    }
+    assert.equal(frozen.box, null);
+});

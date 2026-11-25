@@ -305,7 +305,8 @@ public class CoreTest
         assertNull(Payload.decode("https://example.com"));
         assertNull(Payload.decode("SC2/ONLYTWO"));
         assertNull(Payload.decode("SC2/A/B/C"));
-        assertNull(Payload.decode("SC2/abc/DEF"));
+        assertNotNull(Payload.decode("SC2/smwltc5it/DEF"));      // a lecture from an older version
+        assertNull(Payload.decode("SC2/a-b/DEF"));
         assertNull(Payload.decode("SC1|A|B"));
     }
 

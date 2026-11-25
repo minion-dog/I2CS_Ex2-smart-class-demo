@@ -127,13 +127,13 @@ public final class Payload
     }
 
     /**
-     * Tells whether a part is non-empty capitals/digits.
+     * Tells whether a part is non-empty letters/digits.
      * @param (String) part The part.
      * @return (boolean) True when it is.
      */
     private static boolean isCode(String part)
     {
-        return part.matches("[0-9A-Z]+");
+        return part.matches("[0-9A-Za-z]+");          // lower case: lectures from an older version
     }
 
     /**

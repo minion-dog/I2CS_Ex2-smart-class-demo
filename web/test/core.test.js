@@ -54,7 +54,8 @@ test('TC-PL-2: foreign QR codes are rejected', () =>
     assert.equal(decodePayload('https://example.com'), null);
     assert.equal(decodePayload('SC2/ONLYTWO'), null);
     assert.equal(decodePayload('SC2/A/B/C'), null);
-    assert.equal(decodePayload('SC2/abc/DEF'), null);           // lower case is not ours
+    assert.deepEqual(decodePayload('SC2/smwltc5it/DEF'), { sessionId: 'smwltc5it', token: 'DEF' });  // a lecture from an older version
+    assert.equal(decodePayload('SC2/a-b/DEF'), null);           // only letters and digits
     assert.equal(decodePayload('SC1|A|B'), null);              // the old format
 });
 

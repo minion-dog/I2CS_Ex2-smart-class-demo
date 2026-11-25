@@ -118,7 +118,7 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 | Suite | Command | Result |
 |---|---|---|
-| Web logic + camera simulation + photo attacks + faces + polls & quizzes + timetable + ZIP + scanning guide + AI Worker | `npm test` | 60 / 60 |
+| Web logic + camera simulation + photo attacks + faces + polls & quizzes + timetable + ZIP + scanning guide + AI Worker | `npm test` | 61 / 61 |
 | Android pure-Java core | `cd android && ./gradlew test` | 20 / 20 |
 | Rules of the local server | `cd server && python -m unittest test_server` | 15 / 15 |
 | Browser, fake camera, both roles | Playwright | see [testing strategy](docs/08_TESTING_STRATEGY.md) |

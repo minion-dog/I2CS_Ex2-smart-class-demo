@@ -37,6 +37,7 @@
 | `core/faces.js` | TC-FACE-1..9 | Overlap, merging two finders, the student's own box and the Gemini check crop (TC-FACE-10), Gemini box parsing, tiles, tapping, adding a box, ids that never change, claims and steps, size-dependent trust. |
 | `core/quiz.js`, `prompts.js` (quiz) | TC-QZ-1..6 | Polls & quizzes as one: correct answer and time optional, 2–6 answers, a quick poll skips the lobby, no-limit points, timer labels; points by speed, quiz checking, answer key kept apart, answer bars, scoreboard with ties, first names only on the projector, timer, reading Gemini's quiz. |
 | `core/schedule.js` | TC-SCH-1..4 | Times, wrong slots dropped, 5 minutes early, once a day, "lecture started" once. |
+| `core/scan-engine.js` + `ui/scan-worker.js` (scanner on a second thread) | TC-QR-12 | The engine reads the code from RGBA frames, says "not ready" before 25 frames, and a frozen picture gives no box. Playwright with the CPU slowed 6x (a mid-range phone): read in 2.2 s instead of 4.8 s, the longest screen freeze 64 ms instead of 496 ms. |
 | `core/guide.js` (scanning guide) | TC-GD-1..3, Java TC-GD-J1 | The found box placed on the preview (crop, zoom, the camera turned 90°, "fill center"), the hint for no code / too small / found / holding still, smooth following. Playwright: a fake camera with a small code → the box appears around it → "hold still" → "✓ read". |
 | `core/archive.js`, `xlsx.js` (zip) | TC-ZIP-1..3 | Safe names, Hebrew CSV for Excel, every folder and file, no ".." paths, the zip read back byte for byte by an independent reader. |
 | `worker/src/index.js` | TC-WRK-1..4 | Lecturer only, key added only by the Worker, other sites / students / expired tokens refused, rate limit, page sends a token not a key. |
@@ -48,7 +49,7 @@
 
 | Suite | Result |
 |---|---|
-| JS unit + simulation (`npm test`) | **60 / 60 pass** |
+| JS unit + simulation (`npm test`) | **61 / 61 pass** |
 | Java core (JUnit) | **20 / 20 pass** (compiled with `-Xlint:all -Werror`) |
 | Server rules (`unittest`) | **15 / 15 pass** (TC-SRV-12 old code refused, 13 one student per face, 14 not-in-photo / new photo / free a face, 15 "no box on me" requests, 16 quiz: key hidden, answers only while open, once, in time; 5 is now a KISS poll: no time limit, answered an hour later, once, closed) |
 | Browser, local server over HTTPS, fake camera | scan without location → in class; second scan → "already"; offline comment sent after the server restarts |
