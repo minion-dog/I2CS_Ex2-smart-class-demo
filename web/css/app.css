@@ -240,8 +240,12 @@ table.sheet td.M { color: var(--manual); font-weight: 700; }
     background: rgba(0,0,0,.7); color: #fff; padding: 0 4px; border-radius: 4px; white-space: nowrap; }
 .fv-edit .fv-box { border-color: #4fc3f7; }
 .fv-pick .fv-box { border-color: #ffd400; }
-.fv-pick .fv-box.taken { border-color: rgba(200,200,200,.6); background: rgba(0,0,0,.45); }
-.fv-pick .fv-box.mine, .fv-watch .fv-box.claimed { border-color: #2ecc71; }
+.fv-pick .fv-box.taken { border-color: #2ecc71; background: rgba(0,0,0,.35); }   /* chosen by someone: green */
+.fv-pick .fv-box.mine { border-color: #2ecc71; border-width: 3px; background: rgba(46,204,113,.18); }
+.fv-pick .fv-box.mine span { background: #2ecc71; color: #04210f; }
+.fv-watch .fv-box.claimed { border-color: #2ecc71; }
+.fv-box.request.old { border-color: #ff9800; }
+.warn-text { color: #ffb74d; font-size: .9rem; margin: .3em 0; }
 .fv-pick .fv-box.selected { border-width: 3px; border-color: #fff; box-shadow: 0 0 0 3px #2b7bff; }
 .fv-watch .fv-box.free { border-color: #ffd400; }
 .fv-zoom { position: absolute; inset-block-start: 8px; inset-inline-end: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }

@@ -21,7 +21,8 @@ import il.ac.ariel.smartclass.core.Faces;
 
 /**
  * The class photo with a box on every face (same as web/js/ui/faceview.js, pick mode).
- * Pinch to zoom, drag to move, tap a face to choose it. Taken faces are grey, mine is green,
+ * Pinch to zoom, drag to move, tap a face to choose it. Faces chosen by others are green (dark),
+ * mine is green and filled (tap another free face to change),
  * the one being confirmed is white.
  */
 public final class FacePickView extends View
@@ -98,7 +99,10 @@ public final class FacePickView extends View
     /** Box outline. */
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    /** Grey fill of taken faces. */
+    /** Light green fill of my face. */
+    private final Paint mineFill = new Paint();
+
+    /** Dark fill of faces chosen by others. */
     private final Paint shade = new Paint();
 
     /** Pinch. */
@@ -116,7 +120,8 @@ public final class FacePickView extends View
         super(c);
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeWidth(3 * getResources().getDisplayMetrics().density);
-        shade.setColor(Color.argb(115, 0, 0, 0));
+        shade.setColor(Color.argb(90, 0, 0, 0));
+        mineFill.setColor(Color.argb(46, 46, 204, 113));
         dashed.setStyle(Paint.Style.STROKE);
         dashed.setStrokeWidth(3 * getResources().getDisplayMetrics().density);
         dashed.setColor(Color.rgb(179, 136, 255));
@@ -327,12 +332,13 @@ public final class FacePickView extends View
             RectF r = screenRect(b);
             if (b.id == mine)
             {
+                c.drawRect(r, mineFill);
                 line.setColor(Color.rgb(46, 204, 113));
             }
             else if (taken.contains(b.id))
             {
                 c.drawRect(r, shade);
-                line.setColor(Color.argb(150, 200, 200, 200));
+                line.setColor(Color.rgb(46, 204, 113));          // chosen by someone: green
             }
             else
             {
@@ -426,7 +432,7 @@ public final class FacePickView extends View
             return;
         }
         int id = boxes.get(i).id;
-        if (!taken.contains(id) || id == mine)
+        if (!taken.contains(id) && id != mine)                    // a free face (also to change mine)
         {
             onPick.onPick(id);
         }

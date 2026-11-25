@@ -511,11 +511,17 @@ public final class Repo
      * @param (String) sid Session.
      * @param (long) v Photo version.
      * @param (long) face Box id or Faces.NOT_FOUND.
+     * @param (long) oldFace My current face in this photo (0 = none); freed when I change my choice.
      * @param (Done&lt;Void&gt;) done Receives an error when refused (e.g. taken).
      */
-    public void chooseFace(String sid, long v, long face, final Done<Void> done)
+    public void chooseFace(String sid, long v, long face, long oldFace, final Done<Void> done)
     {
         WriteBatch batch = db.batch();
+        if (oldFace > 0 && oldFace != face)
+        {
+            // changing my mind: free my previous face in the same write (one person = one face)
+            batch.delete(db.collection("sessions").document(sid).collection("claims").document(Faces.claimId(v, oldFace)));
+        }
         if (face > 0)
         {
             Map<String, Object> claim = new HashMap<String, Object>();

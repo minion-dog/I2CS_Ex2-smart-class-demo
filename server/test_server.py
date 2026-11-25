@@ -94,7 +94,7 @@ class RulesTest(unittest.TestCase):
         return srv.apply_action(self.s, who, {"type": "chooseFace", "sid": self.sid, "v": v, "face": face})
 
     def test_tc_srv_13_one_student_per_face(self):
-        """TC-SRV-13: scan first; a face can be taken once; one choice per photo; others see WHICH, not WHO."""
+        """TC-SRV-13: scan first; a face can be taken once; changing my choice frees my old face; others see WHICH, not WHO."""
         self.photo()
         with self.assertRaises(srv.Denied):
             self.choose(self.dana, 1)                    # did not scan
@@ -103,11 +103,13 @@ class RulesTest(unittest.TestCase):
         self.choose(self.dana, 1)
         with self.assertRaises(srv.Denied):
             self.choose(self.yossi, 1)                   # taken
+        self.choose(self.dana, 2)                        # changed her mind: 1 is free again
+        self.assertEqual(sorted(self.s["sub"][self.sid]["claims"]), ["1_2"])
         with self.assertRaises(srv.Denied):
-            self.choose(self.dana, 2)                    # already chose in this photo
+            self.choose(self.yossi, 2)                   # taken now
         with self.assertRaises(srv.Denied):
             self.choose(self.yossi, 9)                   # no such box
-        self.choose(self.yossi, 2)
+        self.choose(self.yossi, 1)
         claims = srv.view_for(self.s, self.yossi)["sub"][self.sid]["claims"]
         self.assertEqual(sorted(claims), ["1_1", "1_2"])
         self.assertNotIn("uid", json.dumps(claims))

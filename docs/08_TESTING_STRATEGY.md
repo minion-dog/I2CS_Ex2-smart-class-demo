@@ -34,7 +34,7 @@
 | `sheet.js` / `AttendanceSheet` | TC-SH-1, TC-SH-2 | One row per student, one column per lecture, ordered by time. |
 | `xlsx.js` / `Xlsx` | TC-XL-1, TC-XL-2 | Round trip keeps Hebrew and numbers; numeric XML entities decoded. |
 | `prompts.js`, `github.js`, `ai.js`, `gemini.js` | TC-AI-1..7 | Summary prompt in Hebrew; GitHub URLs parsed; README first, build folders skipped; long submissions cut; **peers are anonymous**; summary line extracted; Gemini request shape; the key comes from the store, never typed. |
-| `core/faces.js` | TC-FACE-1..9 | Overlap, merging two finders, the student's own box and the Gemini check crop (TC-FACE-10), Gemini box parsing, tiles, tapping, adding a box, ids that never change, claims and steps, size-dependent trust. |
+| `core/faces.js` | TC-FACE-1..9 | Overlap, merging two finders, the student's own box and the Gemini check crop (TC-FACE-10), Gemini box parsing, tiles, tapping, adding a box, ids that never change, claims and steps, the lecturer's numbers (a student marked by hand who taps his face counts), size-dependent trust. |
 | `core/quiz.js`, `prompts.js` (quiz) | TC-QZ-1..6 | Polls & quizzes as one: correct answer and time optional, 2–6 answers, a quick poll skips the lobby, no-limit points, timer labels; points by speed, quiz checking, answer key kept apart, answer bars, scoreboard with ties, first names only on the projector, timer, reading Gemini's quiz. |
 | `core/schedule.js` | TC-SCH-1..4 | Times, wrong slots dropped, 5 minutes early, once a day, "lecture started" once. |
 | `core/scan-engine.js` + `ui/scan-worker.js` (scanner on a second thread) | TC-QR-12 | The engine reads the code from RGBA frames, says "not ready" before 25 frames, and a frozen picture gives no box. Playwright with the CPU slowed 6x (a mid-range phone): read in 2.2 s instead of 4.8 s, the longest screen freeze 64 ms instead of 496 ms. |
@@ -51,7 +51,7 @@
 |---|---|
 | JS unit + simulation (`npm test`) | **61 / 61 pass** |
 | Java core (JUnit) | **20 / 20 pass** (compiled with `-Xlint:all -Werror`) |
-| Server rules (`unittest`) | **15 / 15 pass** (TC-SRV-12 old code refused, 13 one student per face, 14 not-in-photo / new photo / free a face, 15 "no box on me" requests, 16 quiz: key hidden, answers only while open, once, in time; 5 is now a KISS poll: no time limit, answered an hour later, once, closed) |
+| Server rules (`unittest`) | **15 / 15 pass** (TC-SRV-12 old code refused, 13 one student per face (changing my choice frees my old face), 14 not-in-photo / new photo / free a face, 15 "no box on me" requests, 16 quiz: key hidden, answers only while open, once, in time; 5 is now a KISS poll: no time limit, answered an hour later, once, closed) |
 | Browser, local server over HTTPS, fake camera | scan without location → in class; second scan → "already"; offline comment sent after the server restarts |
 | Browser, demo mode, fake camera, code 15% of the picture, 2× zoom | read in 1.8 s |
 | Far reading (simulated 720p camera, auto-zoom) | smallest readable code: **10%** of the picture height (was 15% before the 25×25 code) |

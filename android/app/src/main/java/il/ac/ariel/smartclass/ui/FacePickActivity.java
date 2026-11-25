@@ -68,6 +68,12 @@ public final class FacePickActivity extends BaseActivity
     /** Taken ids. */
     private Set<Integer> taken = new HashSet<Integer>();
 
+    /** "Your previous choice will be removed" (shown when changing). */
+    private TextView changeNote;
+
+    /** My current face in this photo (0 = none). */
+    private int myFace;
+
     /** The face being confirmed. */
     private int chosen;
 
@@ -101,6 +107,7 @@ public final class FacePickActivity extends BaseActivity
         confirm.addView(cropView, new LinearLayout.LayoutParams(side, side));
         LinearLayout ask = Ui.column(this);
         Ui.title(ask, getString(R.string.is_this_you));
+        changeNote = Ui.text(ask, getString(R.string.change_warn));
         Ui.button(ask, getString(R.string.yes_me), new View.OnClickListener()
         {
             @Override
@@ -265,12 +272,13 @@ public final class FacePickActivity extends BaseActivity
         Long photoV = scanned ? mine.getLong("photoV") : null;
         Faces.Step step = Faces.myStep(scanned, face, photoV, version);
         int myId = step == Faces.Step.DONE && face != null ? face.intValue() : 0;
+        myFace = myId;
         view.setTaken(taken, myId);
         view.setVisibility(version == null ? View.GONE : View.VISIBLE);
         switch (step)
         {
             case DONE:
-                status.setText(getString(R.string.pick_done));
+                status.setText(getString(R.string.pick_done) + " " + getString(R.string.pick_change));
                 break;
             case TOLD:
                 status.setText(getString(R.string.told_lecturer));
@@ -297,6 +305,7 @@ public final class FacePickActivity extends BaseActivity
             return;
         }
         cropView.setImageBitmap(view.crop(id, Ui.dp(this, CROP_DP)));
+        changeNote.setVisibility(myFace > 0 ? View.VISIBLE : View.GONE);
         confirm.setVisibility(View.VISIBLE);
     }
 
@@ -304,13 +313,14 @@ public final class FacePickActivity extends BaseActivity
      * Sends my choice.
      * @param (int) id Box id or Faces.NOT_FOUND.
      */
-    private void choose(int id)
+    private void choose(final int id)
     {
         if (version == null || id == 0)
         {
             return;
         }
-        Repo.get().chooseFace(sid, version, id, new Repo.Done<Void>()
+        final int before = myFace;
+        Repo.get().chooseFace(sid, version, id, before, new Repo.Done<Void>()
         {
             @Override
             public void onDone(@Nullable Void value, @Nullable Exception error)
@@ -319,6 +329,10 @@ public final class FacePickActivity extends BaseActivity
                 if (error != null)
                 {
                     Ui.toast(FacePickActivity.this, getString(R.string.box_taken));
+                }
+                else if (before > 0 && before != id)
+                {
+                    Ui.toast(FacePickActivity.this, getString(R.string.changed));
                 }
             }
         });

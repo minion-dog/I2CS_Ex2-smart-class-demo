@@ -86,6 +86,9 @@ test('TC-FACE-7: claims, the student\'s next step, and the lecturer\'s numbers',
     ];
     assert.deepEqual([...claimsOf(att, 2)], [[1, 'a@x']]);
     assert.deepEqual(photoStats(boxes, att, 2), { faces: 3, confirmed: 1, notFound: 1, waiting: 2, freeFaces: 2 });
+    // a student marked by hand who tapped his face counts as confirmed, not as waiting before that
+    const byHand = att.concat([{ email: 'f@x', status: 'manual', face: 2, photoV: 2 }]);
+    assert.deepEqual(photoStats(boxes, byHand, 2), { faces: 3, confirmed: 2, notFound: 1, waiting: 2, freeFaces: 1 });
     const photo = { v: 2 };
     assert.equal(myStep(null, photo), 'scan');
     assert.equal(myStep(att[2], null), 'nophoto');

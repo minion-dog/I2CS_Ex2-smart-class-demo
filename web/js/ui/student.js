@@ -24,6 +24,7 @@ import { newlyOpened } from '../core/schedule.js';
 // ---------------------------------------------------------------------
 
 const MAX_UPLOAD_BYTES = 500 * 1024;
+const OLD_CHOICE_MS = 5000;     // how long the previous (removed) choice stays shown, dashed
 
 const $ = (id) => document.getElementById(id);
 
@@ -344,7 +345,7 @@ function stopFaces()
     {
         face.stopTaken();
     }
-    Object.assign(face, { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, request: null, placed: null });
+    Object.assign(face, { old: null, sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, request: null, placed: null });
 }
 
 /**
@@ -355,8 +356,11 @@ function drawFaceStep(newPhoto)
 {
     const step = myStep(face.record, face.photo);
     const mine = face.record && face.photo && face.record.photoV === face.photo.v ? face.record.face : 0;
-    $('face-step').hidden = step !== 'pick';
-    if (step === 'pick')
+    // after choosing, the photo stays: my face says "me", others' faces are green, and a
+    // wrong choice can be changed (the old one is removed)
+    $('face-step').hidden = step !== 'pick' && step !== 'done';
+    pickView.meLabel = t('meLabel');
+    if (step === 'pick' || step === 'done')
     {
         pickView.setTaken(face.taken, mine > 0 ? mine : 0);
         if (newPhoto)
@@ -367,7 +371,7 @@ function drawFaceStep(newPhoto)
     const msg = $('face-msg');
     if (step === 'done')
     {
-        msg.textContent = t('pickDone');
+        msg.textContent = t('pickDone') + ' ' + t('pickChange');
         msg.className = 'scan-result ok';
     }
     else if (step === 'told')
@@ -399,9 +403,14 @@ function drawMyRequest(step)
     const r = face.request && face.photo && face.request.v === face.photo.v ? face.request : null;
     const open = r && r.status === 'pending';
     $('face-place').hidden = Boolean(open) || step === 'done';
+    const old = face.old && face.old.until > Date.now() ? [Object.assign({ state: 'old', label: t('prevChoice') }, face.old.box)] : [];
     if (face.placed)
     {
         pickView.setExtra([Object.assign({ state: 'mine' }, face.placed)]);
+    }
+    else if (old.length > 0)
+    {
+        pickView.setExtra(old);
     }
     else if (r && r.status !== 'ok')
     {
@@ -480,6 +489,7 @@ function askIsThisYou(id)
 {
     face.chosen = id;
     pickView.select(id);
+    $('face-change-note').hidden = !(pickView.mine > 0);
     const crop = pickView.crop(id, 280);
     fill($('face-crop'), crop);
     $('face-confirm').hidden = false;
@@ -507,11 +517,21 @@ async function choose(id)
         return;
     }
     $('face-yes').disabled = true;
+    const before = pickView.mine;
     try
     {
         await store.chooseFace(face.sid, face.photo.v, id);
         $('face-confirm').hidden = true;
         pickView.select(0);
+        const oldBox = before > 0 && before !== id ? pickView.boxes.find((b) => b.id === before) : null;
+        if (oldBox)
+        {
+            // show where the old choice was for a few seconds (dashed, "previous choice")
+            face.old = { box: oldBox, until: Date.now() + OLD_CHOICE_MS };
+            toast(t('changed'), 'ok');
+            setTimeout(() => drawFaceStep(false), OLD_CHOICE_MS + 50);
+            drawFaceStep(false);
+        }
         if (navigator.vibrate)
         {
             navigator.vibrate(id > 0 ? [60, 40, 60] : 200);

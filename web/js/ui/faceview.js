@@ -44,6 +44,7 @@ export class FaceView
         this.taken = new Set();       // pick: box ids chosen by others
         this.labels = new Map();      // watch: box id -> name
         this.mine = 0;                // pick: my chosen box id
+        this.meLabel = '';            // pick: the label on my box ("me")
         this.selected = 0;
         this.zoom = 1;
         this.aspect = 1;
@@ -204,6 +205,7 @@ export class FaceView
                 if (b.id === this.mine)
                 {
                     cls += ' mine';
+                    label = this.meLabel || '';
                 }
                 else if (this.taken.has(b.id))
                 {
@@ -348,9 +350,9 @@ export class FaceView
         else if (this.mode === 'pick' && i >= 0)
         {
             const id = this.boxes[i].id;
-            if (!this.taken.has(id) || id === this.mine)
+            if (!this.taken.has(id) && id !== this.mine)
             {
-                this.onPick(id);
+                this.onPick(id);              // a free face (also to change my choice); green = taken
             }
         }
         else if (this.mode === 'watch' && i >= 0)

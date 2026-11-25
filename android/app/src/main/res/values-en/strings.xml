@@ -106,4 +106,7 @@
     <string name="guide_found">Found it! Hold still</string>
     <string name="guide_steady">Reading… one moment</string>
     <string name="guide_done">✓ Read</string>
+    <string name="pick_change">Wrong face? Tap another face to change.</string>
+    <string name="change_warn">Your previous choice (the filled green one) will be removed.</string>
+    <string name="changed">Choice changed. Your previous choice was removed.</string>
 </resources>

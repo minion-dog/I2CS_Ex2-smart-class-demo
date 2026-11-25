@@ -120,6 +120,12 @@ service cloud.firestore {
         allow create: if isLecturer() && onlyKeys(['uid', 'v']);
         allow update: if false;
         allow delete: if isLecturer();
+        // a student who changes his choice frees his own old face, in the same write that
+        // moves his attendance to another face (one person = one face)
+        allow delete: if isStudent()
+          && resource.data.uid == request.auth.uid
+          && claim != string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.photoV)
+                      + '_' + string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.face);
       }
 
       // "There is no box on me": the student asks for a box where he tapped (one open
@@ -157,14 +163,17 @@ service cloud.firestore {
           && request.time < get(/databases/$(db)/documents/sessions/$(s)/codes/$(request.resource.data.token)).data.createdAt
                             + duration.value(12, 's');
 
-        // After scanning, the student chooses their face once per photo (or says
-        // "not in the photo" = -2, and may still choose later). A real box needs
-        // the matching claim in the same write.
+        // After scanning, the student chooses their face (or says "not in the photo" = -2).
+        // He may change his choice; then his old face's claim must be deleted in the
+        // same write, so one person never holds two faces. A real box needs the
+        // matching claim in the same write.
         allow update: if isStudent()
           && email == myEmail()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['face', 'photoV'])
           && request.resource.data.photoV == get(/databases/$(db)/documents/sessions/$(s)/photo/main).data.v
-          && (resource.data.get('photoV', 0) != request.resource.data.photoV || resource.data.get('face', 0) == -2)
+          && (resource.data.get('photoV', 0) != request.resource.data.photoV
+              || resource.data.get('face', 0) <= 0
+              || !existsAfter(/databases/$(db)/documents/sessions/$(s)/claims/$(string(resource.data.photoV) + '_' + string(resource.data.face))))
           && request.resource.data.face is int
           && (request.resource.data.face == -2
               || (request.resource.data.face > 0

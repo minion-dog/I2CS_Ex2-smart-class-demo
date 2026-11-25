@@ -272,11 +272,13 @@ export class FakeStore
         {
             throw new Error('scan-first');
         }
-        if (me.photoV === v && me.face !== FACES.NOT_FOUND)
+        if (me.photoV === v && me.face === face)
         {
-            throw new Error('already');
+            return;                                       // the same face again: nothing to do
         }
         sub.claims = sub.claims || {};
+        // changing my mind: my previous face is freed (one person = one face)
+        const old = me.photoV === v && me.face > 0 ? claimId(v, me.face) : null;
         if (face > 0)
         {
             if (sub.claims[claimId(v, face)])
@@ -284,6 +286,10 @@ export class FakeStore
                 throw new Error('taken');
             }
             sub.claims[claimId(v, face)] = { uid: this.user.uid, v: v };
+        }
+        if (old !== null && sub.claims[old] && sub.claims[old].uid === this.user.uid)
+        {
+            delete sub.claims[old];
         }
         me.face = face;
         me.photoV = v;

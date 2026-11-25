@@ -389,6 +389,17 @@ export class FirebaseStore
         await this.ready;
         const f = this.fs;
         const batch = f.writeBatch(this.db);
+        const mineRef = f.doc(this.db, 'sessions', sid, 'attendance', this.user.email);
+        const me = (await f.getDoc(mineRef)).data() || {};
+        if (me.photoV === v && me.face === face)
+        {
+            return;                                                   // the same face again
+        }
+        if (me.photoV === v && me.face > 0)
+        {
+            // changing my mind: free my previous face in the same write (one person = one face)
+            batch.delete(f.doc(this.db, 'sessions', sid, 'claims', claimId(v, me.face)));
+        }
         if (face > 0)
         {
             const claim = f.doc(this.db, 'sessions', sid, 'claims', claimId(v, face));
@@ -398,7 +409,7 @@ export class FirebaseStore
             }
             batch.set(claim, { uid: this.user.uid, v: v });
         }
-        batch.update(f.doc(this.db, 'sessions', sid, 'attendance', this.user.email), { face: face, photoV: v });
+        batch.update(mineRef, { face: face, photoV: v });
         try
         {
             await batch.commit();

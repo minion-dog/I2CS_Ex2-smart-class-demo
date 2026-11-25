@@ -237,12 +237,16 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         photo = sub.get("photo")
         v, face = int(a["v"]), int(a["face"])
         require(me is not None and photo is not None and photo["v"] == v, "scan-first")
-        require(me.get("photoV") != v or me.get("face") == NOT_FOUND, "already")
+        if me.get("photoV") == v and me.get("face") == face:
+            return None                                               # the same face again
+        claims = sub.setdefault("claims", {})
         if face != NOT_FOUND:
             require(any(b["id"] == face for b in photo["boxes"]), "bad box")
-            claims = sub.setdefault("claims", {})
             require(f"{v}_{face}" not in claims, "taken")            # one student per face
             claims[f"{v}_{face}"] = {"uid": user["uid"], "v": v}
+        old = f"{v}_{me.get('face')}"
+        if me.get("photoV") == v and (me.get("face") or 0) > 0 and claims.get(old, {}).get("uid") == user["uid"]:
+            del claims[old]                                           # changed my mind: my old face is free again
         me["face"], me["photoV"] = face, v
         return None
     if kind == "requestBox":

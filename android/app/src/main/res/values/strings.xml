@@ -108,4 +108,7 @@
     <string name="guide_found">מצאתי! החזיקו יציב</string>
     <string name="guide_steady">קורא… עוד רגע</string>
     <string name="guide_done">✓ נקרא</string>
+    <string name="pick_change">טעית? אפשר ללחוץ על פנים אחרות כדי להחליף.</string>
+    <string name="change_warn">הבחירה הקודמת שלך (הירוקה המלאה) תימחק.</string>
+    <string name="changed">הבחירה הוחלפה. הבחירה הקודמת נמחקה.</string>
 </resources>

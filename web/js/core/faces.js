@@ -287,14 +287,17 @@ export function myStep(record, photo)
 export function photoStats(boxes, attendance, version)
 {
     const ids = new Set(boxes.map((b) => b.id));
-    const scanned = attendance.filter((r) => r.status === 'present');
-    const confirmed = [...claimsOf(scanned, version).keys()].filter((id) => ids.has(id)).length;
-    const notFound = scanned.filter((r) => r.photoV === version && r.face === FACES.NOT_FOUND).length;
+    // a student marked by hand may also tap his face: he counts once he did; "waiting" is
+    // only for students who scanned (one marked by hand may have no phone)
+    const inClass = attendance.filter((r) => r.status === 'present' || r.status === 'manual');
+    const confirmed = [...claimsOf(inClass, version).keys()].filter((id) => ids.has(id)).length;
+    const notFound = inClass.filter((r) => r.photoV === version && r.face === FACES.NOT_FOUND).length;
+    const waiting = attendance.filter((r) => r.status === 'present' && r.photoV !== version).length;
     return {
         faces: boxes.length,
         confirmed: confirmed,
         notFound: notFound,
-        waiting: scanned.length - confirmed - notFound,
+        waiting: waiting,
         freeFaces: Math.max(0, boxes.length - confirmed)
     };
 }
