@@ -99,6 +99,9 @@
 - **Live on the published site (25 Nov 2026, the team's PC):** the real MediaPipe model from the CDN
   found 43 / 43 faces of `web/test/assets/class-sample.jpg` in 2.7 s; Gemini (`gemini-3.5-flash`) found
   43 / 43 in 12 s and `parseGeminiBoxes` read its answer.
+  Gemini wrote 4 valid Hebrew quiz questions from a short lecture text in 11 s (`quizPrompt` →
+  `parseAiQuiz` → `validateQuiz`), and the "no box on me" check answered `person: true` on a face and
+  `person: false` on an empty wall (about 2 s each).
 - **Live quiz (Playwright, a projector tab + a 390 px phone tab):** a 2-question quiz typed in the
   builder; the phone opened it by itself; tapping the right answer gave +981; the answer showed by itself
   when everyone had answered; leaderboard, a wrong answer, podium; no page errors.
