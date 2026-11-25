@@ -22,7 +22,8 @@ in and out of scope.
 |---|---|
 | Session / lecture | One meeting of the class, opened by the lecturer. |
 | Flicker code | Our QR code that cannot be photographed (§3.1). |
-| Token | A random 14-character value inside the code; replaced every 30 s. |
+| Token | A random 14-character value inside the code; replaced every 5 s. |
+| Face box | A rectangle on one face in the class photo, with a number that never changes. |
 | Class list / roster | The Moodle participants export (CSV or XLSX). |
 | Sheet | The attendance spreadsheet: one row per student, one column per lecture. |
 | KISS | Keep It Simple: one question, 2–6 answers, one tap. |
@@ -52,7 +53,7 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | ID | Requirement | Pri |
 |---|---|---|
 | FR-ATT-1 | The lecturer opens a lecture with one button; the screen shows the flicker code full screen on the projector. | M |
-| FR-ATT-2 | The code holds `SC2/<lecture id>/<token>` in capitals and digits (25×25 squares). A new token every **30 s**; the current and the previous token are accepted (up to 60 s). | M |
+| FR-ATT-2 | The code holds `SC2/<lecture id>/<token>` in capitals and digits (25×25 squares). A new token every **5 s**; the current and the previous token are accepted (about 10 s, checked with the server's clock). | M |
 | FR-ATT-3 | **Flicker code:** every square shows a random colour that changes 30 times a second. Dark squares of the QR keep their colour for 8 phases; light squares and the border change every phase. Every single frame is random and every average is grey, so a photo (also HDR/night mode) shows nothing. | M |
 | FR-ATT-4 | The student's scanner films ~0.8 s and builds a **change map** (how much each pixel changes); light squares change, dark squares do not; the map is read as a QR. | M |
 | FR-ATT-5 | The scanner finds where the code is in the picture and zooms in on it automatically; the student can zoom with + / − buttons or by pinching (the camera's own zoom when available). | M |
@@ -61,7 +62,11 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-ATT-8 | One mark per student per lecture; a second scan answers "already marked". | M |
 | FR-ATT-9 | The lecturer sees the list and the counter update live and can add or remove a student by hand ("manual"). | M |
 | FR-ATT-10 | **Sheet:** the lecturer sees one row per student and one column per lecture (V = in class, M = manual) and downloads it as **XLSX** (works offline). | M |
-| FR-ATT-11 | **Head count:** the lecturer uploads a photo of the class; the system counts people (COCO-SSD) and compares with the in-class scans; more scans than people raises a warning; the lecturer can correct the count. | S |
+| FR-ATT-11 | **Class photo:** the lecturer takes one photo; the system puts a box on every face (MediaPipe in the browser + Gemini) and shows the count above the photo. | M |
+| FR-ATT-12 | The lecturer fixes the boxes: tap a box = remove, tap a face without a box = add (sized like its neighbours), undo, retake; zoom with + / − or two fingers. | M |
+| FR-ATT-13 | After scanning, the student sees the photo, taps their own face, sees it enlarged ("is this you?") and confirms. One student per face; a taken face is grey. | M |
+| FR-ATT-14 | "I can't find myself" tells the lecturer at once (a list on the lecturer's screen); the student may still choose later. | M |
+| FR-ATT-15 | The lecturer sees confirmed / waiting / not-in-photo counters and names on the faces, can free a face chosen by mistake, and is warned when there are more scans than faces. A new photo asks everyone again. | S |
 
 ### 3.2 Sign-in and class list
 | ID | Requirement | Pri |
@@ -131,6 +136,8 @@ staff/{uid}                         lecturer accounts
 roster/{email}                      class list: first, last, group, staff
 users/{uid}                         email, name, role
 sessions/{sid}                      title, startedAt, endedAt, summary, headcount
+sessions/{sid}/photo/main           v, image (JPEG data URL < 1 MB), boxes[{id,x,y,w,h}], aspect
+sessions/{sid}/claims/{v_box}       uid, v          (created once = one student per face)
   codes/{token}                     createdAt              (hidden from students)
   attendance/{email}                email, uid, name, status, token, scannedAt
   comments/{cid}                    text, visibility, authorUid, authorName|null, fromLecturer, createdAt
@@ -153,6 +160,8 @@ assignments/{aid}                   title, requirements, due
 | — | The flicker code (§3.1) | A normal QR was photographed and forwarded in our own test. |
 | Push notifications on the phone | In-app notifications while open | Push needs server functions (paid plan). |
 | — | Head count from a class photo, attendance sheet, class-list import | Features of the Ex2 sheet that v1 did not cover. |
+| Head count (number of people) | Face boxes; each student taps their own face | A number cannot show WHO is missing; a face can. |
+| Code every 30 s | Code every 5 s | Sign-in is fast now; the old reason for 30 s is gone. |
 | AI key pasted by the lecturer (Groq) | Gemini with a built-in, private key (Firestore, lecturer-only) | The lecturer should get a working system without knowing what an API key is. |
 
 ## 7. Traceability to the Ex2 sheet

@@ -112,25 +112,47 @@
                         <details><summary data-i18n="transcript"></summary><div id="transcript-box" class="comment"></div></details>
                     </div>
 
-                    <div class="card">
-                        <h2 data-i18n="headcount"></h2>
-                        <label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">
-                            <span data-i18n="uploadPhoto"></span>
+                    <div class="card" id="photo-card">
+                        <h2 data-i18n="classPhoto"></h2>
+                        <p class="hint" data-i18n="photoHint"></p>
+                        <label class="btn" id="photo-take" style="display:inline-flex;align-items:center;margin:0">
+                            <span data-i18n="takePhoto"></span>
                             <input id="photo" type="file" accept="image/*" capture="environment" hidden>
                         </label>
-                        <p class="hint" id="head-status"></p>
-                        <div class="photo-box" id="photo-box"></div>
-                        <div id="head-result" hidden>
+                        <p class="hint" id="face-status" role="status"></p>
+
+                        <!-- step 1: the lecturer checks the boxes -->
+                        <div id="face-edit" hidden>
+                            <p><span class="face-count" id="face-count">0</span><small data-i18n="facesFound"></small></p>
+                            <p class="hint" data-i18n="editHint"></p>
+                            <div id="face-edit-view"></div>
+                            <div class="row">
+                                <button id="face-undo" class="secondary" data-i18n="undo"></button>
+                                <label class="btn secondary" style="display:inline-flex;align-items:center;margin:0">
+                                    <span data-i18n="retakePhoto"></span>
+                                    <input id="photo-again" type="file" accept="image/*" capture="environment" hidden>
+                                </label>
+                                <button id="face-save" data-i18n="savePhoto"></button>
+                            </div>
+                        </div>
+
+                        <!-- step 2: live, who chose which face -->
+                        <div id="face-live" hidden>
                             <div class="stats">
-                                <div class="stat"><b id="head-count">0</b><span data-i18n="peopleInPhoto"></span></div>
-                                <div class="stat present"><b id="head-scans">0</b><span data-i18n="scannedInClass"></span></div>
+                                <div class="stat"><b id="f-faces">0</b><span data-i18n="facesFound"></span></div>
+                                <div class="stat present"><b id="f-confirmed">0</b><span data-i18n="confirmedFaces"></span></div>
+                                <div class="stat"><b id="f-waiting">0</b><span data-i18n="waitingFaces"></span></div>
+                                <div class="stat manual"><b id="f-notfound">0</b><span data-i18n="notInPhoto"></span></div>
                             </div>
                             <p id="head-warning" class="banner error" hidden data-i18n="moreScansThanPeople"></p>
-                            <label for="head-fix" data-i18n="correctCount"></label>
-                            <div class="row">
-                                <input id="head-fix" type="number" min="0" class="grow">
-                                <button id="head-save" data-i18n="save"></button>
+                            <div id="face-watch-view"></div>
+                            <div id="box-info" class="row" hidden>
+                                <span class="grow" id="box-name"></span>
+                                <button id="box-free" class="secondary small" data-i18n="freeBox"></button>
                             </div>
+                            <h3 data-i18n="notInPhoto"></h3>
+                            <ul class="list not-found" id="not-found-list"></ul>
+                            <p><button id="face-reedit" class="secondary small" data-i18n="editBoxes"></button></p>
                         </div>
                     </div>
                 </div>

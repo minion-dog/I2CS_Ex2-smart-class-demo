@@ -84,4 +84,14 @@
     <string name="not_set_up_text">The app works fully once Firebase is added. Until then, test with the website from the local server: run Start LAN Server.bat on the PC and type the address from the black window here (or scan the code on the PC screen with the normal camera).</string>
     <string name="server_address_hint">e.g. 192.168.1.20:8443</string>
     <string name="open_website">Open the website</string>
+    <string name="pick_title">Last step: which one is you?</string>
+    <string name="pick_hint">Zoom with two fingers and tap your face.</string>
+    <string name="is_this_you">Is this you?</string>
+    <string name="yes_me">✓ Yes, that\'s me</string>
+    <string name="not_me">No, choose again</string>
+    <string name="cant_find">I can\'t find myself</string>
+    <string name="pick_done">✓ Attendance confirmed</string>
+    <string name="told_lecturer">The lecturer was told you are not in the photo. You can also go and say so.</string>
+    <string name="wait_photo">The lecturer has not taken the class photo yet. This screen updates when it is up.</string>
+    <string name="box_taken">Someone already chose this face. If it is you, tell the lecturer.</string>
 </resources>

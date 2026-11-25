@@ -34,8 +34,9 @@ The information is in *how fast* each square changes, which only a live film sho
    early; the data layer (Strategy pattern) made that a one-file change.
 
 ## Limitations (honest)
-- A student in the room can **film** the code and replay it live for a friend within 60 seconds;
-  the head count from a class photo is the check against that.
+- A student in the room can **film** the code and replay it live for a friend; the code now lives
+  about 10 seconds, and the friend still has no face of their own in the class photo to confirm.
+- Faces looking down are missed by the in-browser finder; Gemini and one tap by the lecturer cover it.
 - The Android app is built in Android Studio on our PC; our cloud build environment could not reach
   Google's servers, so its pure-Java core is what we test automatically.
 - AI (Gemini) works with a built-in key the lecturer never types; it lives in Firestore

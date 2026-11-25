@@ -1,0 +1,12 @@
+# SmartClass AI Worker - Cloudflare Workers free plan (100,000 requests a day).
+name = "smartclass-ai"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+FIREBASE_PROJECT = "oop-ex2"
+ALLOWED_ORIGINS = "https://minion-dog.github.io,http://localhost:8000,http://127.0.0.1:8000"
+MODEL = "gemini-3.5-flash"
+
+# The key is NOT here. Set it once as a secret:
+#   npx wrangler secret put GEMINI_KEY

@@ -49,6 +49,9 @@ firebase deploy --only hosting,firestore:rules --project <PROJECT_ID>
 
 12. נכנסים לאתר ← **כניסת מרצה** ← לשונית **רשימת כיתה** ← מעלים את `courseid_130158_participants.csv` (או ה־xlsx) מתיקיית ה־Drive של המרצה.
 13. **מפתח ה-AI (פעם אחת, מנהל הקורס):** ב־Firestore יוצרים מסמך `config/ai` עם שדה `geminiKey` = המפתח מ־[aistudio.google.com](https://aistudio.google.com) ← **Get API key**. רק חשבון המרצה יכול לקרוא אותו; המרצה לא מקליד כלום. בהרצה מהמחשב שלנו (בלי Firebase): קובץ `web/js/ai-key.local.js` עם השורה `export const GEMINI_KEY = '...';` (הקובץ ב־.gitignore, לא עולה לגיטהאב).
+13א. **(מומלץ) Cloudflare Worker – המפתח לא מגיע לאף דפדפן:** נרשמים ל־[dash.cloudflare.com](https://dash.cloudflare.com) (חינם), ובתיקייה `worker`:
+    `npx wrangler login` ← `npx wrangler secret put GEMINI_KEY` (מדביקים את המפתח) ← `npx wrangler deploy`.
+    את הכתובת שמודפסת מעתיקים ל־`web/js/ai-config.js` (`AI_PROXY`). פרטים: `worker/README.md`.
 14. בדיקה: פותחים שיעור, ומהטלפון סורקים מהאתר (לשונית **סריקה**).
 
 ## חלק ה׳: האפליקציה (Android Studio)
@@ -73,6 +76,7 @@ firebase deploy --only hosting,firestore:rules --project <PROJECT_ID>
 | כניסה עם Google נכשלת באתר | הדומיין לא מאושר | שלב 11 |
 | כניסה עם Google נכשלת באפליקציה | אין SHA-1 או קובץ json ישן | שלבים 15–16 |
 | כפתורי AI אומרים שה-AI לא הוגדר | אין מפתח מובנה | שלב 13 |
+| אין ריבוע על מישהו בתמונה | פנים למטה / מוסתרות | נוגעים בפנים שלו בתמונה = ריבוע חדש; או שהסטודנט לוחץ "לא מוצא/ת את עצמי" |
 | הסריקה לא קוראת | הקוד קטן מדי בתמונה, או מסך כהה | **מסך מלא** אצל המרצה, **+** זום (או צביטה) בטלפון, להחזיק יציב 2 שניות, בהירות מסך מלאה |
 
 </div>

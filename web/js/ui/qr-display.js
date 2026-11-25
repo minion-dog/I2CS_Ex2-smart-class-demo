@@ -28,7 +28,7 @@ export class NoisyQrDisplay
     }
 
     /**
-     * Changes the text (a new token every 30 s) with a fresh random plan.
+     * Changes the text (a new token every 5 s) with a fresh random plan.
      * @param {string} text - QR payload
      */
     setText(text)

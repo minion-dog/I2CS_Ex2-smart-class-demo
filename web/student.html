@@ -43,6 +43,24 @@
             <p class="center"><button id="scan-stop" class="secondary small" hidden data-i18n="cancel"></button></p>
             <div class="scan-result" id="scan-result" role="status" aria-live="polite"></div>
             <div class="where" id="scan-where" hidden></div>
+            <!-- last step: tap your own face in the class photo -->
+            <div id="face-step" hidden>
+                <h3 id="face-title" data-i18n="pickTitle"></h3>
+                <p class="hint" id="face-hint" data-i18n="pickHint"></p>
+                <div id="face-pick-view"></div>
+                <div id="face-confirm" class="face-confirm" hidden>
+                    <div id="face-crop"></div>
+                    <div>
+                        <p><b data-i18n="isThisYou"></b></p>
+                        <div class="row">
+                            <button id="face-yes" data-i18n="yesMe"></button>
+                            <button id="face-no" class="secondary" data-i18n="notMe"></button>
+                        </div>
+                    </div>
+                </div>
+                <p><button id="face-none" class="secondary small" data-i18n="cantFind"></button></p>
+            </div>
+            <div class="scan-result" id="face-msg" role="status" aria-live="polite"></div>
             <p><button id="scan-start" class="big" data-i18n="startCamera"></button></p>
             <ul class="list" id="my-attendance"></ul>
         </section>

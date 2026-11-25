@@ -77,9 +77,9 @@ test('TC-PL-4: current and previous code are accepted, older are not', () =>
 {
     const t0 = 1_000_000;
     assert.equal(isCurrentCode(t0, t0 + 5_000), true);
-    assert.equal(isCurrentCode(t0, t0 + CODE.ROTATE_MS + 29_000), true);
-    assert.equal(isCurrentCode(t0, t0 + 2 * CODE.ROTATE_MS + 1), false);
-    assert.equal(CODE.ROTATE_MS, 30_000);
+    assert.equal(isCurrentCode(t0, t0 + 2 * CODE.ROTATE_MS), true);           // the previous code still works
+    assert.equal(isCurrentCode(t0, t0 + 2 * CODE.ROTATE_MS + CODE.NETWORK_SLACK_MS + 1), false);
+    assert.equal(CODE.ROTATE_MS, 5_000);
 });
 
 // --------------------------------------------------------------- sheet

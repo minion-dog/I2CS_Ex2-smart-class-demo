@@ -9,6 +9,7 @@
 // this file only calls Firestore the way the rules allow.
 
 import { newSessionId } from '../core/payload.js';
+import { claimId } from '../core/faces.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
@@ -106,6 +107,21 @@ export class FirebaseStore
     {
         await this.ready;
         await this.fa.signOut(this.auth);
+    }
+
+    /**
+     * A fresh sign-in token of the current account, for the AI Worker
+     * (the Worker asks Firestore with it whether this is the lecturer).
+     * @returns {Promise<string>} Firebase ID token
+     */
+    async idToken()
+    {
+        await this.ready;
+        if (!this.auth.currentUser)
+        {
+            throw new Error('not signed in');
+        }
+        return this.auth.currentUser.getIdToken();
     }
 
     /**
@@ -268,7 +284,7 @@ export class FirebaseStore
     {
         await this.ready;
         const f = this.fs;
-        await f.setDoc(f.doc(this.db, 'sessions', sid, 'codes', token), { createdAt: Date.now() });
+        await f.setDoc(f.doc(this.db, 'sessions', sid, 'codes', token), { createdAt: f.serverTimestamp() });   // the rules compare with the server's clock
     }
 
 
@@ -302,6 +318,96 @@ export class FirebaseStore
             email: this.user.email, uid: this.user.uid, name: this.user.name, status: status,
             token: token, scannedAt: Date.now()
         }).catch((e) => console.warn('attendance rejected:', e.code || e.message));
+    }
+
+    // ----------------------------------------------------- class photo
+    /**
+     * Saves the class photo and its face boxes (lecturer). A new photo gets a
+     * new version, so students choose again; editing boxes keeps the version.
+     * @param {string} sid - session
+     * @param {{v:number, image:string, boxes:object[], aspect:number}} photo - photo
+     */
+    async savePhoto(sid, photo)
+    {
+        await this.ready;
+        const f = this.fs;
+        await f.setDoc(f.doc(this.db, 'sessions', sid, 'photo', 'main'), {
+            v: photo.v, image: photo.image, boxes: photo.boxes, aspect: photo.aspect, at: Date.now()
+        });
+    }
+
+    /**
+     * Watches the class photo.
+     * @param {string} sid - session
+     * @param {function(object|null):void} cb - receives the photo or null
+     * @returns {function():void} unsubscribe
+     */
+    watchPhoto(sid, cb)
+    {
+        return this.liveDoc((f) => f.doc(this.db, 'sessions', sid, 'photo', 'main'), (list) => cb(list[0] || null));
+    }
+
+    /**
+     * The student chooses their face (or says "not in the photo"). The claim
+     * document id is version_box, so a second student cannot take the same box:
+     * the rules refuse to create it again.
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {number} face - box id, or FACES.NOT_FOUND
+     */
+    async chooseFace(sid, v, face)
+    {
+        await this.ready;
+        const f = this.fs;
+        const batch = f.writeBatch(this.db);
+        if (face > 0)
+        {
+            const claim = f.doc(this.db, 'sessions', sid, 'claims', claimId(v, face));
+            if ((await f.getDoc(claim)).exists())
+            {
+                throw new Error('taken');
+            }
+            batch.set(claim, { uid: this.user.uid, v: v });
+        }
+        batch.update(f.doc(this.db, 'sessions', sid, 'attendance', this.user.email), { face: face, photoV: v });
+        try
+        {
+            await batch.commit();
+        }
+        catch (e)
+        {
+            throw new Error(e.code === 'permission-denied' ? 'taken' : e.message);
+        }
+    }
+
+    /**
+     * Watches which boxes of a photo version are taken (no names: students only see ids).
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {function(Set<number>):void} cb - receives taken box ids
+     * @returns {function():void} unsubscribe
+     */
+    watchTakenFaces(sid, v, cb)
+    {
+        return this.live((f) => f.query(f.collection(this.db, 'sessions', sid, 'claims'), f.where('v', '==', v)),
+            (list) => cb(new Set(list.map((c) => Number(String(c.id).split('_')[1])))));
+    }
+
+    /**
+     * Frees a box a student chose by mistake (lecturer).
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {number} face - box id
+     * @param {string} email - the student who chose it
+     */
+    async freeFace(sid, v, face, email)
+    {
+        await this.ready;
+        const f = this.fs;
+        const batch = f.writeBatch(this.db);
+        batch.delete(f.doc(this.db, 'sessions', sid, 'claims', claimId(v, face)));
+        batch.update(f.doc(this.db, 'sessions', sid, 'attendance', email), { face: null, photoV: null });
+        await batch.commit();
     }
 
     /**

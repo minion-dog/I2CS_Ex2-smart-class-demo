@@ -50,7 +50,7 @@ export function textOf(data)
 
 /**
  * Asks Gemini.
- * @param {string} key - the API key
+ * @param {string|function} key - the API key, or a sender function
  * @param {{role:string, content:string}[]} messages - the conversation
  * @returns {Promise<string>} the answer
  */
@@ -61,7 +61,7 @@ export async function geminiChat(key, messages)
 
 /**
  * Transcribes audio with Gemini (the audio goes inside the request).
- * @param {string} key - the API key
+ * @param {string|function} key - the API key, or a sender function
  * @param {Blob} audio - a recording
  * @param {string} language - ISO code, 'he' for Hebrew
  * @returns {Promise<string>} the text
@@ -88,18 +88,70 @@ export async function geminiTranscribe(key, audio, language)
 }
 
 /**
- * POSTs to generateContent and turns errors into exceptions with Google's message.
- * @param {string} key - the API key
+ * Asks Gemini about a picture (used to find faces in the class photo).
+ * @param {string|function} key - the API key, or a sender function
+ * @param {string} prompt - what to do
+ * @param {string} base64 - the picture (JPEG, base64 without prefix)
+ * @param {boolean} json - true to ask for a JSON answer
+ * @returns {Promise<string>} the answer text
+ */
+export async function geminiVision(key, prompt, base64, json)
+{
+    return textOf(await call(key, visionBody(prompt, base64, json)));
+}
+
+/**
+ * The request body for a question about a picture.
+ * @param {string} prompt - what to do
+ * @param {string} base64 - JPEG, base64
+ * @param {boolean} json - JSON answer
+ * @returns {object} body
+ */
+export function visionBody(prompt, base64, json)
+{
+    const config = { temperature: 0 };
+    if (json)
+    {
+        config.responseMimeType = 'application/json';
+    }
+    return {
+        contents: [{
+            role: 'user',
+            parts: [{ inline_data: { mime_type: 'image/jpeg', data: base64 } }, { text: prompt }]
+        }],
+        generationConfig: config
+    };
+}
+
+/**
+ * Sends a request to generateContent and turns errors into exceptions with Google's message.
+ * @param {string|function(object):Promise<object>} auth - the API key, or a sender
+ *        function (the Cloudflare Worker route: the key never reaches this browser)
  * @param {object} body - request body
  * @returns {Promise<object>} the response body
  */
-async function call(key, body)
+async function call(auth, body)
 {
+    if (typeof auth === 'function')
+    {
+        return auth(body);
+    }
     const res = await fetch(GEMINI.BASE + GEMINI.MODEL + ':generateContent', {
         method: 'POST',
-        headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json' },
+        headers: { 'x-goog-api-key': auth, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     });
+    return answerOf(res);
+}
+
+/**
+ * Reads a generateContent answer (direct or through the Worker).
+ * @param {Response} res - HTTP response
+ * @returns {Promise<object>} the body
+ * @throws {Error} Google's (or the Worker's) message
+ */
+export async function answerOf(res)
+{
     const data = await res.json().catch(() => ({}));
     if (!res.ok)
     {

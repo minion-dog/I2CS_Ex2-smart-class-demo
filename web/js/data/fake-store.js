@@ -9,7 +9,8 @@
 // State lives in localStorage and every change is broadcast to the other
 // tabs, so a scan in the student tab shows up live in the lecturer tab.
 
-import { newSessionId } from '../core/payload.js';
+import { newSessionId, isCurrentCode } from '../core/payload.js';
+import { FACES, claimId } from '../core/faces.js';
 
 const KEY = 'smartclass-demo-v1';
 const STATUS_PRESENT = 'present';       // scanned the flicker QR
@@ -184,9 +185,10 @@ export class FakeStore
     async markMe(sid, rec)
     {
         const sub = this.state.sub[sid];
-        if (!sub || !sub.codes[rec.token])
+        const code = sub ? sub.codes[rec.token] : null;
+        if (!code || !isCurrentCode(code.createdAt, Date.now()))
         {
-            throw new Error('bad-code');
+            throw new Error('bad-code');            // unknown, or older than the code before the current one
         }
         this.markWith(sub, STATUS_PRESENT, rec.token);
         return STATUS_PRESENT;
@@ -208,6 +210,96 @@ export class FakeStore
         sub.attendance[email] = {
             email: email, uid: this.user.uid, name: this.user.name, status: status, token: token, scannedAt: Date.now()
         };
+        this.commit();
+    }
+
+    // ----------------------------------------------------- class photo
+    /**
+     * Saves the class photo and its boxes (lecturer).
+     * @param {string} sid - session
+     * @param {{v:number, image:string, boxes:object[], aspect:number}} photo - photo
+     */
+    async savePhoto(sid, photo)
+    {
+        const sub = this.state.sub[sid];
+        sub.photo = { v: photo.v, image: photo.image, boxes: photo.boxes, aspect: photo.aspect, at: Date.now() };
+        sub.claims = sub.claims || {};
+        this.commit();
+    }
+
+    /**
+     * Watches the class photo.
+     * @param {string} sid - session
+     * @param {function(object|null):void} cb - receives the photo or null
+     * @returns {function():void} unsubscribe
+     */
+    watchPhoto(sid, cb)
+    {
+        return this.watch(() => (this.state.sub[sid] && this.state.sub[sid].photo) || null, cb);
+    }
+
+    /**
+     * The student chooses their face (the same checks the rules make).
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {number} face - box id, or FACES.NOT_FOUND
+     */
+    async chooseFace(sid, v, face)
+    {
+        const sub = this.state.sub[sid];
+        const me = sub.attendance[this.user.email];
+        if (!me || !sub.photo || sub.photo.v !== v)
+        {
+            throw new Error('scan-first');
+        }
+        if (me.photoV === v && me.face !== FACES.NOT_FOUND)
+        {
+            throw new Error('already');
+        }
+        sub.claims = sub.claims || {};
+        if (face > 0)
+        {
+            if (sub.claims[claimId(v, face)])
+            {
+                throw new Error('taken');
+            }
+            sub.claims[claimId(v, face)] = { uid: this.user.uid, v: v };
+        }
+        me.face = face;
+        me.photoV = v;
+        this.commit();
+    }
+
+    /**
+     * Watches which boxes of a photo version are taken.
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {function(Set<number>):void} cb - receives ids
+     * @returns {function():void} unsubscribe
+     */
+    watchTakenFaces(sid, v, cb)
+    {
+        return this.watch(() => Object.keys((this.state.sub[sid] && this.state.sub[sid].claims) || {})
+            .filter((k) => k.startsWith(v + '_')).map((k) => Number(k.split('_')[1])), (ids) => cb(new Set(ids)));
+    }
+
+    /**
+     * Frees a box chosen by mistake (lecturer).
+     * @param {string} sid - session
+     * @param {number} v - photo version
+     * @param {number} face - box id
+     * @param {string} email - the student
+     */
+    async freeFace(sid, v, face, email)
+    {
+        const sub = this.state.sub[sid];
+        delete (sub.claims || {})[claimId(v, face)];
+        const r = sub.attendance[email];
+        if (r)
+        {
+            r.face = null;
+            r.photoV = null;
+        }
         this.commit();
     }
 

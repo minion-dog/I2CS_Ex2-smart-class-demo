@@ -9,15 +9,17 @@
 //
 // Decision: attendance is PHYSICAL only. Scanning the flicker QR = in class
 // (only someone in the room can film it live). No Zoom attendance, no location.
-// The token changes every 30 s (decision: 15 s was too fast when the
-// phone asks to sign in again). The current AND the previous token are
-// accepted, which gives up to 60 s.
+// The token changes every 5 s (decision 25 Nov 2026: the old 30 s was for
+// slow Moodle sign-ins; signing in is now fast). The current AND the
+// previous token are accepted, about 10 s, so a code sent to a friend
+// outside is useless by the time it arrives.
 
 /** Tuning constants. */
 export const CODE = Object.freeze({
     PREFIX: 'SC2',
     SEPARATOR: '/',
-    ROTATE_MS: 30000,      // a new token every 30 s
+    ROTATE_MS: 5000,       // a new token every 5 s (decision 25 Nov: sign-in is fast, no Moodle wait)
+    NETWORK_SLACK_MS: 2000, // time for the scan to reach the server
     TOKEN_CHARS: 14,       // 14 x 5 bits = 70 random bits, and it lives only 60 s
     SESSION_CHARS: 10,     // 50 random bits per lecture
     // 32 symbols without I, L, O, U (no confusion with 1 and 0)
@@ -96,5 +98,5 @@ function randomCode(length)
  */
 export function isCurrentCode(createdMs, nowMs)
 {
-    return nowMs - createdMs <= 2 * CODE.ROTATE_MS;
+    return nowMs - createdMs <= 2 * CODE.ROTATE_MS + CODE.NETWORK_SLACK_MS;
 }

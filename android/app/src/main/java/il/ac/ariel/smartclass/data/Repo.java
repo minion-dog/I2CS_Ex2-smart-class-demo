@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 
 import il.ac.ariel.smartclass.core.AttendanceSheet;
+import il.ac.ariel.smartclass.core.Faces;
 import il.ac.ariel.smartclass.core.Payload;
 import il.ac.ariel.smartclass.core.SessionInfo;
 import il.ac.ariel.smartclass.core.Student;
@@ -437,7 +438,7 @@ public final class Repo
     public void publishCode(String sid, String token)
     {
         Map<String, Object> m = new HashMap<String, Object>();
-        m.put("createdAt", System.currentTimeMillis());
+        m.put("createdAt", FieldValue.serverTimestamp());     // the rules compare with the server's clock (12 s)
         db.collection("sessions").document(sid).collection("codes").document(token).set(m);
     }
 
@@ -473,6 +474,65 @@ public final class Repo
             public void onComplete(@NonNull Task<DocumentSnapshot> t)
             {
                 done.onDone(t.getResult(), t.getException());
+            }
+        });
+    }
+
+    // ==========================================
+    //               CLASS PHOTO
+    // ==========================================
+
+    /**
+     * Watches the class photo of a lecture (image as a data URL, boxes, version).
+     * @param (String) sid Session.
+     * @param (Listener&lt;DocumentSnapshot&gt;) l Receives the document (exists() may be false).
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenPhoto(String sid, Listener<DocumentSnapshot> l)
+    {
+        return listenDoc(db.collection("sessions").document(sid).collection("photo").document("main"), l);
+    }
+
+    /**
+     * Watches which boxes of a photo version are taken (ids only, never names).
+     * @param (String) sid Session.
+     * @param (long) v Photo version.
+     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives the claims; the id is "v_box".
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenTakenFaces(String sid, long v, Listener<List<DocumentSnapshot>> l)
+    {
+        return listen(db.collection("sessions").document(sid).collection("claims").whereEqualTo("v", v), l);
+    }
+
+    /**
+     * The student chooses their face, or says "not in the photo" (Faces.NOT_FOUND). The claim
+     * and the record are written together; the rules refuse a face that is already taken.
+     * @param (String) sid Session.
+     * @param (long) v Photo version.
+     * @param (long) face Box id or Faces.NOT_FOUND.
+     * @param (Done&lt;Void&gt;) done Receives an error when refused (e.g. taken).
+     */
+    public void chooseFace(String sid, long v, long face, final Done<Void> done)
+    {
+        WriteBatch batch = db.batch();
+        if (face > 0)
+        {
+            Map<String, Object> claim = new HashMap<String, Object>();
+            claim.put("uid", user().getUid());
+            claim.put("v", v);
+            batch.set(db.collection("sessions").document(sid).collection("claims").document(Faces.claimId(v, face)), claim);
+        }
+        Map<String, Object> mine = new HashMap<String, Object>();
+        mine.put("face", face);
+        mine.put("photoV", v);
+        batch.update(attendanceDoc(sid, myEmail()), mine);
+        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>()
+        {
+            @Override
+            public void onComplete(@NonNull Task<Void> t)
+            {
+                done.onDone(null, t.getException());
             }
         });
     }

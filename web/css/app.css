@@ -212,10 +212,30 @@ table.sheet td.V { color: var(--present); font-weight: 700; }
 table.sheet td.Z { color: var(--zoom); font-weight: 700; }
 table.sheet td.M { color: var(--manual); font-weight: 700; }
 
-/* ------------------------------------------------------------ head count */
-.photo-box { position: relative; display: inline-block; max-width: 100%; }
-.photo-box img { max-width: 100%; display: block; border-radius: 8px; }
-.photo-box .box { position: absolute; border: 2px solid #ffd400; border-radius: 4px; }
+/* ------------------------------------------------- class photo with faces */
+.faceview { position: relative; }
+#photo-card { grid-column: 1 / -1; }          /* a class photo needs the whole width */
+.fv-viewport { overflow: hidden; border-radius: 10px; background: #111; touch-action: none; max-height: 70vh; user-select: none; }
+.fv-stage { position: relative; width: 100%; }
+.fv-stage img { display: block; width: 100%; -webkit-user-drag: none; pointer-events: none; }
+.fv-layer { position: absolute; inset: 0; }
+.fv-box { position: absolute; border: 2px solid #ffd400; border-radius: 6px; box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+.fv-box span { position: absolute; inset-block-end: 100%; inset-inline-start: -2px; font-size: .65rem; line-height: 1.2;
+    background: rgba(0,0,0,.7); color: #fff; padding: 0 4px; border-radius: 4px; white-space: nowrap; }
+.fv-edit .fv-box { border-color: #4fc3f7; }
+.fv-pick .fv-box { border-color: #ffd400; }
+.fv-pick .fv-box.taken { border-color: rgba(200,200,200,.6); background: rgba(0,0,0,.45); }
+.fv-pick .fv-box.mine, .fv-watch .fv-box.claimed { border-color: #2ecc71; }
+.fv-pick .fv-box.selected { border-width: 3px; border-color: #fff; box-shadow: 0 0 0 3px #2b7bff; }
+.fv-watch .fv-box.free { border-color: #ffd400; }
+.fv-zoom { position: absolute; inset-block-start: 8px; inset-inline-end: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fv-zoom button { width: 44px; height: 44px; border-radius: 50%; font-size: 1.5rem; line-height: 1; padding: 0; background: rgba(0,0,0,.6); color: #fff; border: 2px solid rgba(255,255,255,.8); }
+.fv-zoom span { color: #fff; background: rgba(0,0,0,.6); border-radius: 8px; padding: 2px 8px; font-variant-numeric: tabular-nums; }
+.face-count { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+.face-count small { font-size: 1rem; font-weight: 600; color: var(--muted); margin-inline-start: 6px; }
+.face-confirm { display: flex; gap: 14px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+.face-crop { width: 140px; height: 140px; border-radius: 12px; border: 3px solid #2b7bff; }
+.not-found li { color: var(--warn); }
 
 #toast {
     position: fixed; inset-inline: 16px; inset-block-end: 16px; margin: auto; max-width: 520px;

@@ -34,7 +34,8 @@
 | `sheet.js` / `AttendanceSheet` | TC-SH-1, TC-SH-2 | One row per student, one column per lecture, ordered by time. |
 | `xlsx.js` / `Xlsx` | TC-XL-1, TC-XL-2 | Round trip keeps Hebrew and numbers; numeric XML entities decoded. |
 | `prompts.js`, `github.js`, `ai.js`, `gemini.js` | TC-AI-1..7 | Summary prompt in Hebrew; GitHub URLs parsed; README first, build folders skipped; long submissions cut; **peers are anonymous**; summary line extracted; Gemini request shape; the key comes from the store, never typed. |
-| `headcount.js` | TC-HC-1, TC-HC-2 | Only confident "person" boxes count; more scans than people is flagged. |
+| `core/faces.js` | TC-FACE-1..9 | Overlap, merging two finders, Gemini box parsing, tiles, tapping, adding a box, ids that never change, claims and steps, size-dependent trust. |
+| `worker/src/index.js` | TC-WRK-1..4 | Lecturer only, key added only by the Worker, other sites / students / expired tokens refused, rate limit, page sends a token not a key. |
 | `polls.js` (`readPollForm`) | TC-POLL-1 (Java) | 2–6 answers. |
 | `i18n.js` | TC-I18N-1 | Hebrew and English have exactly the same keys. |
 | `server.py` (rules) | TC-SRV-1..9, 11 | A real scan = in class; fake code / second scan refused; students cannot do lecturer actions; students never see codes, the class list or others' records; one vote while open; only http(s) links; sign-in rules; full HTTP flow; sign-ins survive a restart; the local AI key file is never served to phones. |
@@ -44,9 +45,9 @@
 
 | Suite | Result |
 |---|---|
-| JS unit + simulation (`npm test`) | **32 / 32 pass** |
-| Java core (JUnit) | **18 / 18 pass** (compiled with `-Xlint:all -Werror`) |
-| Server rules (`unittest`) | **10 / 10 pass** |
+| JS unit + simulation (`npm test`) | **43 / 43 pass** |
+| Java core (JUnit) | **19 / 19 pass** (compiled with `-Xlint:all -Werror`) |
+| Server rules (`unittest`) | **13 / 13 pass** (TC-SRV-12 old code refused, 13 one student per face, 14 not-in-photo / new photo / free a face) |
 | Browser, local server over HTTPS, fake camera | scan without location → in class; second scan → "already"; offline comment sent after the server restarts |
 | Browser, demo mode, fake camera, code 15% of the picture, 2× zoom | read in 1.8 s |
 | Far reading (simulated 720p camera, auto-zoom) | smallest readable code: **10%** of the picture height (was 15% before the 25×25 code) |
@@ -77,7 +78,7 @@
 | 7 | Airplane mode → comment → back online | comment arrives |
 | 8 | Poll with 3 answers, 5 students vote | live counts, one vote each |
 | 9 | Download XLSX | opens in Excel with V marks |
-| 10 | Class photo | head count vs. scans shown |
+| 10 | Class photo | faces boxed; tap removes / adds; students tap their face; counters update |
 
 ## 7. Not covered automatically (and why)
 
@@ -88,5 +89,8 @@
 - **Live Gemini calls:** tested by hand on 25 Nov 2026 through our own modules in a real browser
   (summary 8.6 s, homework review of a real course repository 24 s, audio request accepted); not in the
   automatic suite because they need the private key.
-- **The COCO-SSD model:** an external download; the counting logic is unit tested and the live run is
-  on the demo checklist.
+- **Face finding on the lecturer's real class photos** (p1, p11, p31; kept private, not in the repo):
+  run through our own `facefind.js` in Chromium with the real MediaPipe model. Results: 30, 42 and 39
+  correct boxes with almost no false ones; faces looking down are missed (Gemini + the lecturer's tap).
+- **Lecturer photo editor (Playwright):** tap adds, tap on a box removes, undo, save, re-edit (both
+  the demo photo and a real class photo).

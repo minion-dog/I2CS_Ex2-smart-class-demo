@@ -8,7 +8,7 @@ Volunteers: 3–5 classmates with phones.
 - [ ] AI key: in Firestore `config/ai` (Firebase), or the local file `web/js/ai-key.local.js` on the laptop (never on GitHub).
 - [ ] A test lecture was run once on the classroom projector: scan from the last row works (zoom +).
 - [ ] Phones of the team: signed in as students, camera permission allowed.
-- [ ] A photo of the class from the course folder is on the laptop (for the head count).
+- [ ] A photo of the class from the course folder is on the laptop (for the face boxes).
 - [ ] Backup: the local server (`Start LAN Server.bat`) and the demo mode (`?demo=1`) both work offline.
 
 ## The 10 minutes
@@ -21,7 +21,7 @@ Volunteers: 3–5 classmates with phones.
 | 2:30 | Volunteers **scan live** from the front and the back row (zoom +) | "Our scanner measures *how fast* each square changes. That is the QR." |
 | 3:30 | The lecturer's live list and counter; a second scan → "already marked" | "One mark per student, only from the room. No location needed." |
 | 4:00 | **Sheet** → **Download XLSX** | "The main feature: the attendance spreadsheet, online or offline." |
-| 4:45 | **Head count**: upload the class photo | "The photo count is checked against the scans; more scans than people is flagged." |
+| 4:45 | **Class photo**: take it, remove one wrong box, add one missing face, save; on the phone tap your face → *Is this you?* → Yes | "Every face gets a box; each student confirms himself, one student per face; who is not in the photo tells me at once." |
 | 5:30 | **Comments**: a private anonymous question, a public one; airplane mode → send → back online | "Real time, and offline it waits on the phone." |
 | 6:30 | **Poll**: 3 answers, the class votes, close | "On-the-spot, one tap, live results." |
 | 7:30 | **Summary**: upload a short recording → transcript → summary | "Whisper in Hebrew, then a summary for the students." |

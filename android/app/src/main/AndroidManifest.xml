@@ -22,6 +22,7 @@
         </activity>
         <activity android:name=".ui.LoginActivity" android:exported="false" />
         <activity android:name=".ui.StudentHomeActivity" android:exported="false" />
+        <activity android:name=".ui.FacePickActivity" android:exported="false" android:screenOrientation="portrait" />
         <activity android:name=".ui.ScanActivity" android:exported="false" android:screenOrientation="portrait" />
         <activity android:name=".ui.LectureActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".ui.LecturerHomeActivity" android:exported="false" />

@@ -12,11 +12,15 @@ rules_version = '2';
 //   lecturer = has a document staff/{uid}   (created by hand, see README)
 //   student  = signed in with Google, email verified, email in roster/
 //
-// Attendance with no server (decision): every 30 s the lecturer writes the
-// current code to sessions/{s}/codes/{token}. Students can NEVER read that
-// collection; a student's attendance is accepted only if its token EXISTS
-// there. An offline scan is sent later and still passes, because the code
-// belongs to the same session. Attendance is physical only (no Zoom marks).
+// Attendance with no server (decision): every 5 s the lecturer writes the
+// current code to sessions/{s}/codes/{token} with the SERVER's time.
+// Students can NEVER read that collection; a student's attendance is
+// accepted only if its token exists there AND is at most 12 s old (the
+// current code + the one before it + network time). Physical only.
+//
+// Class photo (decision 25 Nov 2026): after scanning, each student taps
+// their own face. claims/{version_box} can be created once, so two students
+// can never take the same face.
 
 service cloud.firestore {
   match /databases/{db}/documents {
@@ -80,8 +84,30 @@ service cloud.firestore {
 
       // The secret QR codes: write-only for the lecturer, invisible to students.
       match /codes/{token} {
-        allow read, create: if isLecturer();
+        allow read: if isLecturer();
+        allow create: if isLecturer() && request.resource.data.createdAt == request.time;
         allow update, delete: if false;
+      }
+
+      // The class photo with a box on every face (one document, < 1 MB).
+      match /photo/{doc} {
+        allow read: if isLecturer() || isStudent();
+        allow write: if isLecturer();
+      }
+
+      // Who took which face: id = "<photo version>_<box id>", created once.
+      // Students see only WHICH boxes are taken (the uid, never a name).
+      match /claims/{claim} {
+        allow read: if isLecturer() || isStudent();
+        allow create: if isStudent()
+          && onlyKeys(['uid', 'v'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.v == get(/databases/$(db)/documents/sessions/$(s)/photo/main).data.v
+          // written together with my own attendance, which names this same box
+          && claim == string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.photoV)
+                      + '_' + string(getAfter(/databases/$(db)/documents/sessions/$(s)/attendance/$(myEmail())).data.face);
+        allow update: if false;
+        allow delete: if isLecturer();
       }
 
 
@@ -100,7 +126,21 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.token is string
           && request.resource.data.status == 'present'
-          && exists(/databases/$(db)/documents/sessions/$(s)/codes/$(request.resource.data.token));
+          && request.time < get(/databases/$(db)/documents/sessions/$(s)/codes/$(request.resource.data.token)).data.createdAt
+                            + duration.value(12, 's');
+
+        // After scanning, the student chooses their face once per photo (or says
+        // "not in the photo" = -2, and may still choose later). A real box needs
+        // the matching claim in the same write.
+        allow update: if isStudent()
+          && email == myEmail()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['face', 'photoV'])
+          && request.resource.data.photoV == get(/databases/$(db)/documents/sessions/$(s)/photo/main).data.v
+          && (resource.data.get('photoV', 0) != request.resource.data.photoV || resource.data.get('face', 0) == -2)
+          && request.resource.data.face is int
+          && (request.resource.data.face == -2
+              || (request.resource.data.face > 0
+                  && getAfter(/databases/$(db)/documents/sessions/$(s)/claims/$(string(request.resource.data.photoV) + '_' + string(request.resource.data.face))).data.uid == request.auth.uid));
 
         // The lecturer can mark by hand, fix or remove a record.
         allow create, update, delete: if isLecturer();

@@ -2,7 +2,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { summaryPrompt, githubParts, pickRepoFiles, submissionText, reviewPrompt, reviewSummaryLine, LIMITS } from '../js/ai/prompts.js';
-import { peopleOnly, compareWithScans } from '../js/ai/headcount.js';
 import { keysOf } from '../js/ui/i18n.js';
 
 test('TC-AI-1: summary prompt asks for Hebrew by default and contains the transcript', () =>
@@ -60,22 +59,6 @@ test('TC-AI-6: summary line is extracted from a review', () =>
 {
     assert.equal(reviewSummaryLine('...\nSUMMARY: A stack with tests.'), 'A stack with tests.');
     assert.equal(reviewSummaryLine('no line'), 'no line');
-});
-
-test('TC-HC-1: only confident people are counted', () =>
-{
-    const p = [
-        { class: 'person', score: 0.9, bbox: [] },
-        { class: 'person', score: 0.2, bbox: [] },
-        { class: 'chair', score: 0.99, bbox: [] }
-    ];
-    assert.equal(peopleOnly(p, 0.35).length, 1);
-});
-
-test('TC-HC-2: more scans than people is suspicious', () =>
-{
-    assert.deepEqual(compareWithScans(30, 33), { suspicious: true, extra: 3 });
-    assert.deepEqual(compareWithScans(30, 28), { suspicious: false, extra: 0 });
 });
 
 test('TC-I18N-1: Hebrew and English have exactly the same keys', () =>

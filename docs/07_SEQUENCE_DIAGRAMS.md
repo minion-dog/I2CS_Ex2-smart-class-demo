@@ -14,10 +14,10 @@ sequenceDiagram
     S->>F: set sessions/{newSessionId()}
     F-->>S: ok
     S-->>P: sid
-    loop every 30 s
+    loop every 5 s
         P->>P: token = newToken()
         P->>S: publishCode(sid, token)
-        S->>F: set sessions/{sid}/codes/{token} (lecturer only)
+        S->>F: set sessions/{sid}/codes/{token} {createdAt: server time} (lecturer only)
         P->>D: setText(encodePayload(sid, token))
     end
     loop 30 times a second
@@ -201,22 +201,38 @@ sequenceDiagram
     S-->>L: the student sees it (🔔 New grade)
 ```
 
-## SD-9 Head count from a class photo (UC-5)
+## SD-9 Class photo: boxes on faces, each student taps their own (UC-5, UC-12)
 
 ```mermaid
 sequenceDiagram
     actor L as Lecturer
     participant P as lecturer.js
-    participant H as headcount.js
-    participant TF as TF.js COCO-SSD (CDN)
-    L->>P: Upload photo
-    P->>H: detectPeople(img)
-    H->>TF: load once, detect
-    TF-->>H: boxes
-    H->>H: peopleOnly(boxes, MIN_SCORE)
-    P->>H: compareWithScans(people, in-class scans)
-    alt more scans than people
-        P-->>L: warning
+    participant FF as facefind.js
+    participant MP as MediaPipe (browser)
+    participant W as Worker → Gemini
+    participant S as Store / Firestore
+    actor St as Student
+    participant SP as student.js
+    L->>P: Take a class photo
+    P->>FF: findFaces(full photo)
+    par in the browser
+        FF->>MP: detect(whole photo + tiles at 3 sizes)
+        MP-->>FF: raw hits
+        FF->>FF: trustLocal(raw) (size-dependent confidence)
+    and when AI is set up
+        FF->>W: photo + "find every face, box_2d"
+        W-->>FF: JSON boxes
     end
-    L->>P: correct the count → Save
+    FF->>FF: mergeBoxes(all)
+    FF-->>P: boxes → count + editor
+    L->>P: tap = remove / add, Undo, Save
+    P->>S: savePhoto(sid, {v, image, boxes})
+    St->>SP: scan the code (SD-2)
+    SP->>S: watchPhoto(sid) → photo v
+    St->>SP: tap my face → "Is this you?" → Yes
+    SP->>S: batch: create claims/{v_box} + update my attendance {face, photoV}
+    alt the face is already taken
+        S-->>SP: denied → "tell the lecturer"
+    end
+    S-->>P: names on faces, counters, "not in the photo" list
 ```

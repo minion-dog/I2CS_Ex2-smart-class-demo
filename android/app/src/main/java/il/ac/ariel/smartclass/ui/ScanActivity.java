@@ -1,5 +1,6 @@
 package il.ac.ariel.smartclass.ui;
 
+import android.content.Intent;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
@@ -219,10 +220,15 @@ public class ScanActivity extends BaseActivity
                 if (d != null && d.exists())
                 {
                     result.setText(getString(R.string.scan_already));
-                    return;
                 }
-                Repo.get().markMe(p.sessionId(), p.token());
-                result.setText(getString(R.string.scan_ok_in_class));
+                else
+                {
+                    Repo.get().markMe(p.sessionId(), p.token());
+                    result.setText(getString(R.string.scan_ok_in_class));
+                }
+                // last step: tap your own face in the class photo
+                startActivity(new Intent(ScanActivity.this, FacePickActivity.class)
+                        .putExtra(FacePickActivity.EXTRA_SID, p.sessionId()));
             }
         });
     }

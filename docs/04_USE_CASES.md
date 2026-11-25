@@ -13,7 +13,8 @@ flowchart LR
         UC2(UC-2 Run a lecture: show the flicker code)
         UC3(UC-3 Mark attendance by scanning)
         UC4(UC-4 Watch and download the attendance sheet)
-        UC5(UC-5 Check attendance with a class photo)
+        UC5(UC-5 Class photo: fix the face boxes)
+        UC12(UC-12 Tap my face in the class photo)
         UC6(UC-6 Comment during or after a lecture)
         UC7(UC-7 Run a quick poll)
         UC8(UC-8 Record and summarise the lecture)
@@ -22,7 +23,7 @@ flowchart LR
         UC11(UC-11 Sign in)
     end
     L --- UC1 & UC2 & UC4 & UC5 & UC7 & UC8 & UC10 & UC11
-    S --- UC3 & UC6 & UC9 & UC11
+    S --- UC3 & UC6 & UC9 & UC11 & UC12
     L --- UC6
     S --- UC7
     UC8 --- G
@@ -41,7 +42,7 @@ flowchart LR
 
 ## UC-2 Run a lecture
 **Story:** As a lecturer, I want one button that starts the lecture and shows the attendance code, so that I don't waste class time.
-- **Main flow:** 1) *Start lecture*. 2) The system creates the lecture (short id) and the first secret token. 3) The flicker code appears; *Full screen* fills the projector. 4) Every 30 s a new token is published and drawn.
+- **Main flow:** 1) *Start lecture*. 2) The system creates the lecture (short id) and the first secret token. 3) The flicker code appears; *Full screen* fills the projector. 4) Every 5 s a new token is published and drawn.
 - **Alternative:** the network drops → the code keeps the last token and retries every 3 s.
 - **Post:** students can scan. (FR-ATT-1..3)
 
@@ -58,10 +59,11 @@ flowchart LR
 - **Alternative:** offline → the sheet is built from the local copy.
 - (FR-ATT-9, FR-ATT-10)
 
-## UC-5 Check attendance with a class photo
-**Story:** As a lecturer, I want to compare the number of people in the room with the number of scans, so that I notice cheating.
-- **Main flow:** 1) *Upload photo*. 2) The model counts people. 3) The page shows people vs. in-class scans. 4) More scans than people → a warning. 5) The lecturer can correct the count and save it.
-- (FR-ATT-11)
+## UC-5 Class photo: fix the face boxes
+- **Actor:** Lecturer. **Pre:** a lecture is open.
+- **Main flow:** 1) *Take a class photo*. 2) The system finds the faces (MediaPipe in the browser, plus Gemini when AI is set up) and shows a box on each, with the count above. 3) The lecturer taps a wrong box to remove it, taps a face without a box to add one (undo, retake, zoom). 4) *Save and show to students*.
+- **Alternative:** automatic finding fails (no internet) → the lecturer adds the boxes by tapping.
+- **Post:** students who scanned are asked to tap their face; the lecturer sees confirmed / waiting / not-in-photo and the names on the faces. (FR-ATT-11, 12, 15)
 
 ## UC-6 Comment during or after a lecture
 **Story:** As a student, I want to ask a question without speaking up, anonymously if I choose.
@@ -92,6 +94,12 @@ flowchart LR
 **Story:** As a lecturer, I want an AI first review that also compares each student with the class.
 - **Main flow:** 1) Lecturer opens the submissions. 2) *Review all* → for each submission the system reads the repo (README first, up to 25 code files), adds anonymous summaries of the other submissions, and asks the LLM. 3) The lecturer edits the review, gives a grade and feedback. 4) The student sees them and gets a notification.
 - (FR-HW-1, FR-HW-3, FR-HW-4)
+
+## UC-12 Tap my face in the class photo
+- **Actor:** Student. **Pre:** scanned the code (UC-3).
+- **Main flow:** 1) The photo opens (a notification when it arrives later). 2) The student zooms and taps their face. 3) The face is shown enlarged: *Is this you?* 4) *Yes* → attendance confirmed; the face turns grey for everyone else.
+- **Alternatives:** the face is taken → "tell the lecturer"; *I can't find myself* → the lecturer sees the name at once; a new photo → choose again.
+- (FR-ATT-13, FR-ATT-14)
 
 ## UC-11 Sign in
 - **Student:** *Sign in with Google* → the email must be on the class list, otherwise "not on the list".

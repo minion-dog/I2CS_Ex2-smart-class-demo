@@ -132,6 +132,12 @@ classDiagram
         +vote(sid, pid, option)
         +watchPolls(sid, cb) unsubscribe
         +loadAiKey() string
+        +idToken() string
+        +savePhoto(sid, photo)
+        +watchPhoto(sid, cb)
+        +chooseFace(sid, v, face)
+        +watchTakenFaces(sid, v, cb)
+        +freeFace(sid, v, face, email)
         +addTranscript(sid, index, text)
         +createAssignment(a) string
         +submit(aid, s)
@@ -232,13 +238,37 @@ classDiagram
         <<module github.js>>
         +fetchRepoFiles(url) File[]
     }
-    class headcount {
-        <<module headcount.js>>
-        HEAD: MIN_SCORE, TFJS, COCO
-        +detectPeople(img) Box[]
-        +peopleOnly(predictions, minScore)
-        +compareWithScans(people, scannedInClass)
+    class faces {
+        <<module core/faces.js>>
+        FACES: MERGE_IOU, TRUST, NOT_FOUND
+        +mergeBoxes(boxes) Box[]
+        +trustLocal(raw) Box[]
+        +parseGeminiBoxes(text) Box[]
+        +tiles(w, h, side, overlap)
+        +hitTest(boxes, x, y) int
+        +boxAt(boxes, x, y, aspect) Box
+        +withIds(boxes) Box[]
+        +claimsOf(attendance, v) Map
+        +myStep(record, photo) string
+        +photoStats(boxes, attendance, v)
     }
+    class facefind {
+        <<module ai/facefind.js>>
+        +findFaces(canvas, jpeg, status)
+        +findLocal(canvas, status)
+    }
+    class FaceView {
+        -mode: edit|pick|watch
+        -boxes: Box[]
+        +setPhoto(src, boxes, aspect)
+        +setTaken(ids, mine)
+        +setLabels(map)
+        +undo()
+        +crop(id, side) Canvas
+    }
+    facefind ..> faces
+    facefind ..> ai : Gemini boxes
+    FaceView ..> faces : hitTest, boxAt
     class LectureRecorder {
         -store: Store
         -sid: string
@@ -300,6 +330,13 @@ classDiagram
     class AssignmentsActivity
     class Repo { <<singleton>> +get() Repo +createSession(title, done) +publishCode(sid, token) +markMe(sid, token) +loadAiKey(done) }
     class Ai { <<Gemini>> +ready(c) +setKey(c, key) +chat(c, system, user) +transcribe(c, file) }
+    class Faces { <<core>> +hitTest(boxes, x, y) +myStep(scanned, face, photoV, v) +claimId(v, id) }
+    class FacePickActivity
+    class FacePickView
+    BaseActivity <|-- FacePickActivity
+    FacePickActivity *-- FacePickView
+    FacePickView ..> Faces
+    ScanActivity ..> FacePickActivity : after a scan
     LecturerHomeActivity ..> Ai : setKey from Repo
     class ChangeMap
     class FlickerSchedule

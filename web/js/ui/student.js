@@ -2,7 +2,7 @@
 //  student.js - the student's website (phone first)
 // =====================================================================
 // Scan: camera -> flicker QR change map -> in class (physical only, no location) ->
-// attendance (works offline: saved on the phone, sent later).
+// attendance -> last step: tap your own face in the class photo and confirm.
 // Lecture: comments (public/private, anonymous or not), polls, summary
 // and transcript, also for past lectures.
 // Assignments: submit a GitHub link and/or text files, see the review,
@@ -15,6 +15,8 @@ import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
 import { bindPolls, notify } from './polls.js';
 import { decodePayload } from '../core/payload.js';
+import { FACES, myStep } from '../core/faces.js';
+import { FaceView } from './faceview.js';
 
 // ---------------------------------------------------------------------
 //  CONSTANTS & FIELDS
@@ -29,6 +31,8 @@ let sessions = [];
 let scanner = null;
 let lectureWatchers = [];
 const myRecords = new Map();     // session id -> unsubscribe
+const face = { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, told: false };
+const pickView = new FaceView($('face-pick-view'), { mode: 'pick', onPick: askIsThisYou });
 
 // ---------------------------------------------------------------------
 //  ENTRY
@@ -48,6 +52,11 @@ store.watchSessions((list) =>
     sessions = list;
     fillSessionPicker();
     watchMyAttendance();
+    const open = list.find((x) => x.endedAt === null);
+    if (open && face.sid === null)
+    {
+        followFaces(open.id);           // already scanned earlier? the face step comes back
+    }
 });
 
 // ---------------------------------------------------------------------
@@ -170,6 +179,7 @@ async function onScanned(text)
         return;
     }
     await mark(() => store.markMe(p.sessionId, { token: p.token }));
+    followFaces(p.sessionId);
 }
 
 /**
@@ -187,7 +197,13 @@ async function mark(send)
     }
     catch (e)
     {
-        setResult(e.message === 'already' ? t('scanAlready') : t('scanBad'), 'error');
+        if (e.message === 'already')
+        {
+            setResult(t('scanAlready'), 'ok');      // scanned before: go on to the face step
+            showWhere();
+            return;
+        }
+        setResult(t('scanBad'), 'error');
     }
 }
 
@@ -198,6 +214,171 @@ function showWhere()
     box.className = 'where present';
     fill(box, el('b', { text: t('whereClass') }), el('span', { text: t('whyClass') }));
     box.hidden = false;
+}
+
+// ---------------------------------------------------------------------
+//  LAST STEP: tap your own face in the class photo
+// ---------------------------------------------------------------------
+// Decision (ours, 25 Nov 2026): one class photo; each student taps their own
+// face and confirms. One student per face. "I can't find myself" tells the
+// lecturer at once.
+
+/**
+ * Follows the photo and my record of one lecture.
+ * @param {string} sid - session
+ */
+function followFaces(sid)
+{
+    if (face.sid === sid)
+    {
+        return;
+    }
+    stopFaces();
+    face.sid = sid;
+    face.stops.push(store.watchPhoto(sid, (p) =>
+    {
+        const isNew = p && (!face.photo || face.photo.v !== p.v);
+        face.photo = p;
+        if (isNew)
+        {
+            pickView.setPhoto(p.image, p.boxes, p.aspect);
+            watchTaken();
+            face.told = false;
+        }
+        drawFaceStep(isNew);
+    }));
+    face.stops.push(store.watchAttendance(sid, (list) =>
+    {
+        face.record = list[0] || null;
+        drawFaceStep(false);
+    }));
+}
+
+/** Watches which faces of the current photo are taken. */
+function watchTaken()
+{
+    if (face.stopTaken)
+    {
+        face.stopTaken();
+    }
+    face.stopTaken = store.watchTakenFaces(face.sid, face.photo.v, (ids) =>
+    {
+        face.taken = ids;
+        drawFaceStep(false);
+    });
+}
+
+/** Stops following a lecture. */
+function stopFaces()
+{
+    for (const stop of face.stops)
+    {
+        stop();
+    }
+    if (face.stopTaken)
+    {
+        face.stopTaken();
+    }
+    Object.assign(face, { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0 });
+}
+
+/**
+ * Shows what the student still has to do.
+ * @param {boolean} newPhoto - a photo just arrived
+ */
+function drawFaceStep(newPhoto)
+{
+    const step = myStep(face.record, face.photo);
+    const mine = face.record && face.photo && face.record.photoV === face.photo.v ? face.record.face : 0;
+    $('face-step').hidden = step !== 'pick';
+    if (step === 'pick')
+    {
+        pickView.setTaken(face.taken, mine > 0 ? mine : 0);
+        if (newPhoto)
+        {
+            notify(t('newPhoto'));
+        }
+    }
+    const msg = $('face-msg');
+    if (step === 'done')
+    {
+        msg.textContent = t('pickDone');
+        msg.className = 'scan-result ok';
+    }
+    else if (step === 'told')
+    {
+        msg.textContent = t('toldLecturer');
+        msg.className = 'scan-result warn';
+        $('face-step').hidden = false;            // they may still find themselves
+        pickView.setTaken(face.taken, 0);
+    }
+    else if (step === 'nophoto')
+    {
+        msg.textContent = t('waitPhoto');
+        msg.className = 'scan-result';
+    }
+    else
+    {
+        msg.textContent = '';
+        msg.className = 'scan-result';
+    }
+}
+
+/**
+ * A face was tapped: show it big and ask "is this you?".
+ * @param {number} id - box id
+ */
+function askIsThisYou(id)
+{
+    face.chosen = id;
+    pickView.select(id);
+    const crop = pickView.crop(id, 280);
+    fill($('face-crop'), crop);
+    $('face-confirm').hidden = false;
+    $('face-confirm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+$('face-no').onclick = () =>
+{
+    face.chosen = 0;
+    pickView.select(0);
+    $('face-confirm').hidden = true;
+};
+
+$('face-yes').onclick = () => choose(face.chosen);
+$('face-none').onclick = () => choose(FACES.NOT_FOUND);
+
+/**
+ * Sends my choice.
+ * @param {number} id - box id or FACES.NOT_FOUND
+ */
+async function choose(id)
+{
+    if (!face.photo || (id === 0))
+    {
+        return;
+    }
+    $('face-yes').disabled = true;
+    try
+    {
+        await store.chooseFace(face.sid, face.photo.v, id);
+        $('face-confirm').hidden = true;
+        pickView.select(0);
+        if (navigator.vibrate)
+        {
+            navigator.vibrate(id > 0 ? [60, 40, 60] : 200);
+        }
+    }
+    catch (e)
+    {
+        toast(e.message === 'taken' ? t('boxTaken') : t('error') + ': ' + e.message, 'warn');
+        $('face-confirm').hidden = true;
+        pickView.select(0);
+    }
+    finally
+    {
+        $('face-yes').disabled = false;
+    }
 }
 
 /** Shows my attendance in the recent lectures (with "waiting to send"). */

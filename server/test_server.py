@@ -77,6 +77,58 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(lect["sub"][self.sid]["codes"], {})
         self.assertEqual(len(lect["sub"][self.sid]["comments"]), 2)
 
+    def test_tc_srv_12_old_code_is_refused(self):
+        """TC-SRV-12: a code older than the current + previous one (5 s each, + 2 s) is refused."""
+        self.s["sub"][self.sid]["codes"]["tok"]["createdAt"] -= srv.CODE_TTL_MS + 1
+        with self.assertRaises(srv.Denied):
+            self.scan(self.dana)
+        srv.apply_action(self.s, LECTURER, {"type": "publishCode", "sid": self.sid, "token": "tok2"})
+        self.assertEqual(self.scan(self.dana, token="tok2"), "present")
+
+    def photo(self, v=1):
+        boxes = [{"id": i, "x": 0.1 * i, "y": 0.5, "w": 0.05, "h": 0.06} for i in (1, 2, 3)]
+        srv.apply_action(self.s, LECTURER, {"type": "savePhoto", "sid": self.sid, "v": v, "aspect": 1.6,
+                                            "image": "data:image/jpeg;base64,AAAA", "boxes": boxes})
+
+    def choose(self, who, face, v=1):
+        return srv.apply_action(self.s, who, {"type": "chooseFace", "sid": self.sid, "v": v, "face": face})
+
+    def test_tc_srv_13_one_student_per_face(self):
+        """TC-SRV-13: scan first; a face can be taken once; one choice per photo; others see WHICH, not WHO."""
+        self.photo()
+        with self.assertRaises(srv.Denied):
+            self.choose(self.dana, 1)                    # did not scan
+        self.scan(self.dana)
+        self.scan(self.yossi)
+        self.choose(self.dana, 1)
+        with self.assertRaises(srv.Denied):
+            self.choose(self.yossi, 1)                   # taken
+        with self.assertRaises(srv.Denied):
+            self.choose(self.dana, 2)                    # already chose in this photo
+        with self.assertRaises(srv.Denied):
+            self.choose(self.yossi, 9)                   # no such box
+        self.choose(self.yossi, 2)
+        claims = srv.view_for(self.s, self.yossi)["sub"][self.sid]["claims"]
+        self.assertEqual(sorted(claims), ["1_1", "1_2"])
+        self.assertNotIn("uid", json.dumps(claims))
+        with self.assertRaises(srv.Denied):
+            srv.apply_action(self.s, self.dana, {"type": "savePhoto", "sid": self.sid, "v": 2, "aspect": 1,
+                                                 "image": "data:image/jpeg;base64,A", "boxes": []})
+
+    def test_tc_srv_14_not_in_photo_new_photo_and_freeing(self):
+        """TC-SRV-14: "not in the photo" can still choose later; a new photo asks again; the lecturer frees a box."""
+        self.photo()
+        self.scan(self.dana)
+        self.choose(self.dana, srv.NOT_FOUND)
+        self.choose(self.dana, 3)                        # found herself after all
+        self.photo(v=2)
+        self.choose(self.dana, 3, v=2)                   # new photo: choose again
+        srv.apply_action(self.s, LECTURER, {"type": "freeFace", "sid": self.sid, "v": 2, "face": 3, "email": "dana@demo"})
+        me = self.s["sub"][self.sid]["attendance"]["dana@demo"]
+        self.assertIsNone(me["face"])
+        self.scan(self.yossi)
+        self.choose(self.yossi, 3, v=2)                  # the freed box can be taken
+
     def test_tc_srv_5_vote_once_while_open(self):
         """TC-SRV-5: one vote per student; none after closing."""
         pid = srv.apply_action(self.s, LECTURER, {"type": "createPoll", "sid": self.sid, "question": "q", "options": ["a", "b"]})

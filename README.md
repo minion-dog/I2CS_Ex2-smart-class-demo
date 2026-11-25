@@ -19,7 +19,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 |---|---|
 | Phone-first website for students and the lecturer (no install), optional Android app | Integration with Moodle, Zoom or personal-information systems |
 | Automatic, photo-proof **physical attendance** + live/offline **attendance spreadsheet** (main feature) | Attendance for students on Zoom (team decision, see SRS §6) |
-| Head count from a class photo, compared with the scans | Push notifications when the app is closed (paid plan) |
+| Class photo: a box on every face; each student taps their own face after scanning | Push notifications when the app is closed (paid plan) |
 | Real-time / offline comments (public or private, anonymous or named) | Paid services of any kind |
 | On-the-spot KISS polls with live results | |
 | AI lecture summary (Hebrew transcription) | |
@@ -30,7 +30,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 | Feature (Ex2 sheet) | Lecturer | Student | Where in the code |
 |---|---|---|---|
 | ⭐ Automatic attendance (flicker QR, physical only) + the attendance **spreadsheet** (live + XLSX) | show code, live list, sheet | scan | `web/js/core/noisyqr.js`, `payload.js`, `sheet.js`, `xlsx.js` · Android `core/` |
-| Attendance check by a class photo (automatic head count) | ✓ | — | `web/js/ai/headcount.js` |
+| Class photo: faces found (MediaPipe + Gemini), the lecturer fixes the boxes, each student taps their own face and confirms | take photo, fix boxes, see who is who | tap my face | `web/js/core/faces.js`, `web/js/ai/facefind.js`, `web/js/ui/faceview.js` · Android `FacePickActivity` |
 | Comments in real time / offline | ✓ | ✓ | `web/js/ui/comments.js` |
 | KISS polls with live results | create, close | vote once | `web/js/ui/polls.js` |
 | ML summary of the lecture recording | record / upload, summarise | read | `web/js/ui/recorder.js`, `web/js/ai/ai.js`, `gemini.js` |
@@ -108,9 +108,9 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 | Suite | Command | Result |
 |---|---|---|
-| Web logic + camera simulation + photo attacks | `cd web && npm test` | 31 / 31 |
-| Android pure-Java core | `cd android && ./gradlew test` | 18 / 18 |
-| Rules of the local server | `python -m unittest server/test_server.py` | 9 / 9 |
+| Web logic + camera simulation + photo attacks + faces + AI Worker | `npm test` | 43 / 43 |
+| Android pure-Java core | `cd android && ./gradlew test` | 19 / 19 |
+| Rules of the local server | `cd server && python -m unittest test_server` | 13 / 13 |
 | Browser, fake camera, both roles | Playwright | see [testing strategy](docs/08_TESTING_STRATEGY.md) |
 
 ## Repository map
@@ -119,17 +119,19 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 web/          the website (plain HTML/CSS/JS): js/core (logic), js/data (stores), js/ui (pages), js/ai, vendor, test
 android/      native Java app (Android Studio): core, data, ai, ui
 server/       local test server (Python standard library) + tests
+worker/       Cloudflare Worker that holds the Gemini key (no key in any browser)
 docs/         all Ex2 documents, setup guide, AI usage log
 firestore.rules, firebase.json
 ```
 
 ## Honest limitations
 
-- A student in the room could film the code and replay it live for a friend within 60 s; the head
-  count from a class photo catches extra marks.
+- A student in the room could film the code and replay it live for a friend; the code now lives
+  only about 10 s, and the friend would still need a face in the class photo to confirm.
 - The Android app is built in Android Studio; our cloud build environment could not reach Google's
   servers, so only its pure-Java core is tested automatically.
-- AI uses Google Gemini (free tier). The key is built in but private: it lives in Firestore
+- AI uses Google Gemini (free tier). The key is built in but private: best in the Cloudflare Worker
+  (`worker/`, the key never reaches any browser), else in Firestore
   (`config/ai`, readable only by the lecturer) or, on our own PC, in an untracked local file. A
   key written into public website code could be read by anyone, so the public demo site has no AI.
 - No push notifications on the free plan (in-app only, while open). Homework files: text only, ≤ 500 KB.

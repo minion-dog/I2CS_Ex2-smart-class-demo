@@ -56,7 +56,7 @@ public final class QrNoiseView extends View
     // ==========================================
 
     /**
-     * Shows a new text (a new token every 30 s) with a fresh random plan.
+     * Shows a new text (a new token every 5 s) with a fresh random plan.
      * @param (String) text QR payload.
      * @throws (WriterException) When the text cannot be encoded.
      */

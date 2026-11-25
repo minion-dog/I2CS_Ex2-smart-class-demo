@@ -28,7 +28,7 @@ import il.ac.ariel.smartclass.core.Student;
 import il.ac.ariel.smartclass.data.Repo;
 
 /**
- * The lecturer's live lecture: the noisy QR (a new secret code every 30 s), the counters,
+ * The lecturer's live lecture: the noisy QR (a new secret code every 5 s), the counters,
  * the live attendance list with manual marking, and the way to comments/polls/summary.
  */
 public class LiveSessionActivity extends BaseActivity

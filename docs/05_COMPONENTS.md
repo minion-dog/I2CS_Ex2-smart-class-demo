@@ -7,7 +7,7 @@ flowchart TB
         subgraph WEB["Website (web/) — plain HTML/CSS/JS"]
             UI["UI pages<br/>login · lecturer · student<br/>(js/ui)"]
             CORE["Core logic<br/>flicker QR · payload · sheet · XLSX · class list<br/>(js/core)"]
-            AI["AI helpers<br/>Gemini · prompts · GitHub reader · head count<br/>(js/ai)"]
+            AI["AI helpers<br/>Gemini · prompts · GitHub reader · face finder<br/>(js/ai)"]
             DATA["Data layer (Strategy)<br/>FirebaseStore · LanStore · FakeStore<br/>(js/data)"]
         end
         subgraph APP["Android app (android/) — Java"]
@@ -25,7 +25,8 @@ flowchart TB
     subgraph External["External services (free)"]
         GEM["Gemini<br/>speech + LLM"]
         GH["GitHub API"]
-        CDN["jsDelivr CDN<br/>TF.js COCO-SSD"]
+        CDN["jsDelivr CDN<br/>MediaPipe Face Detector"]
+        WRK["Cloudflare Worker<br/>holds the Gemini key"]
     end
     UI --> CORE
     UI --> AI
@@ -35,7 +36,8 @@ flowchart TB
     DATA --> LS
     AUI --> ACORE
     AUI --> AREPO --> FB
-    AI --> GEM
+    AI --> WRK
+    WRK --> GEM
     AI --> GH
     AI --> CDN
 ```
@@ -48,7 +50,7 @@ flowchart TB
 | **Payload** | The QR text `SC2/<lecture>/<token>`, random tokens and lecture ids, "current or previous" rule. | `web/js/core/payload.js` · `Payload.java` | — |
 | **Attendance sheet + XLSX** | Rows × lectures table; reading and writing `.xlsx` without a library. | `web/js/core/sheet.js`, `xlsx.js` · `AttendanceSheet.java`, `Xlsx.java` | — |
 | **Class list** | Parses the Moodle CSV/XLSX export. | `web/js/core/classlist.js` · `ClassList.java` | XLSX |
-| **QR display** | Draws the flicker code 30 times a second; rotates the token every 30 s. | `web/js/ui/qr-display.js` · `QrNoiseView.java`, `LiveSessionActivity.java` | Flicker QR, Payload |
+| **QR display** | Draws the flicker code 30 times a second; rotates the token every 5 s. | `web/js/ui/qr-display.js` · `QrNoiseView.java`, `LiveSessionActivity.java` | Flicker QR, Payload |
 | **Scanner** | Camera → change map → auto-zoom → decode; zoom buttons and pinch; "what the scanner sees". | `web/js/ui/scanner.js` · `QrAnalyzer.java`, `ScanActivity.java` | Flicker QR |
 | **Data layer (Strategy)** | One interface (`signIn…`, `createSession`, `publishCode`, `markMe`, `watch…`, `addComment`, `vote`, `submit`, …) with three implementations. | `web/js/data/store.js` picks one: `firebase-store.js`, `lan-store.js`, `fake-store.js` · `Repo.java` | Firebase SDK / fetch / localStorage |
 | **Security rules** | Every check that matters on the free plan: a student writes only their own record, once, with a real token; codes and the class list are hidden. | `firestore.rules` | Firestore |

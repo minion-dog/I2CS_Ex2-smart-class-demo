@@ -142,6 +142,24 @@ export class LanStore extends FakeStore
     }
 
     /** @override */
+    async savePhoto(sid, photo)
+    {
+        await this.act({ type: 'savePhoto', sid: sid, v: photo.v, image: photo.image, boxes: photo.boxes, aspect: photo.aspect });
+    }
+
+    /** @override */
+    async chooseFace(sid, v, face)
+    {
+        await this.act({ type: 'chooseFace', sid: sid, v: v, face: face });
+    }
+
+    /** @override */
+    async freeFace(sid, v, face, email)
+    {
+        await this.act({ type: 'freeFace', sid: sid, v: v, face: face, email: email });
+    }
+
+    /** @override */
     async addComment(sid, c)
     {
         await this.act({ type: 'addComment', sid: sid, text: c.text, visibility: c.visibility, anonymous: c.anonymous });

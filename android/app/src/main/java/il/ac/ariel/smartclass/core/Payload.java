@@ -8,7 +8,7 @@ import java.security.SecureRandom;
  * ignores every other QR in the room. WHY capitals and digits: the QR stores them in
  * alphanumeric mode, so the code has fewer, bigger squares (25x25) and can be read
  * from the back of the class.
- * The token changes every 30 s; the current AND the previous token are accepted (up to 60 s).
+ * The token changes every 5 s; the current AND the previous token are accepted (about 10 s).
  * Decision: attendance is physical only - a scan of the live flicker code = in class.
  */
 public final class Payload
@@ -18,8 +18,11 @@ public final class Payload
     //             CONSTANTS & FIELDS
     // ==========================================
 
-    /** A new token every 30 s (decision: 15 s was too fast when the phone asks to sign in again). */
-    public static final long ROTATE_MS = 30000;
+    /** A new token every 5 s (decision 25 Nov: signing in is fast, there is no Moodle wait). */
+    public static final long ROTATE_MS = 5000;
+
+    /** Time for a scan to reach the server. */
+    public static final long NETWORK_SLACK_MS = 2000;
 
     /** Format marker. */
     private static final String PREFIX = "SC2";
@@ -141,7 +144,7 @@ public final class Payload
      */
     public static boolean isCurrentCode(long createdMs, long nowMs)
     {
-        return nowMs - createdMs <= 2 * ROTATE_MS;
+        return nowMs - createdMs <= 2 * ROTATE_MS + NETWORK_SLACK_MS;
     }
 
     /**

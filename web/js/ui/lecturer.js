@@ -21,7 +21,9 @@ import { writeXlsx, readXlsx } from '../core/xlsx.js';
 import { initAi, aiReady, chat } from '../ai/ai.js';
 import { summaryPrompt, submissionText, reviewPrompt, reviewSummaryLine } from '../ai/prompts.js';
 import { fetchRepoFiles } from '../ai/github.js';
-import { detectPeople, compareWithScans } from '../ai/headcount.js';
+import { findFaces } from '../ai/facefind.js';
+import { FaceView } from './faceview.js';
+import { FACES, claimsOf, photoStats, compareWithScans, storedSize } from '../core/faces.js';
 
 // ---------------------------------------------------------------------
 //  CONSTANTS & FIELDS
@@ -40,6 +42,10 @@ let countdownTimer = null;
 let recorder = null;
 let attendanceNow = [];
 let dismissedId = null;      // an open session the lecturer closed the view of
+let photo = null;            // the saved class photo of the current session {v, image, boxes, aspect}
+let draft = null;            // the photo being checked {image, aspect, newVersion}
+const editView = new FaceView($('face-edit-view'), { mode: 'edit', onChange: (b) => { $('face-count').textContent = b.length; } });
+const watchView = new FaceView($('face-watch-view'), { mode: 'watch', onBox: showBoxInfo });
 const qr = new NoisyQrDisplay($('qr'), globalThis.qrcode);
 if (store.kind === 'lan')
 {
@@ -92,7 +98,6 @@ store.watchSessions((list) =>
         {
             current = fresh;
             showSummary(fresh.summary);
-            showHeadcount(fresh.headcount);
         }
     }
 });
@@ -173,7 +178,7 @@ function openLive(s)
     stopWatchers.push(bindPolls(store, user, s.id, $('poll-list')));
     stopWatchers.push(store.watchTranscript(s.id, renderTranscript));
     showSummary(s.summary);
-    showHeadcount(s.headcount);
+    stopWatchers.push(store.watchPhoto(s.id, showPhoto));
 }
 
 /** Leaves the live view. */
@@ -188,11 +193,14 @@ function closeLive()
     current = null;
     $('live').hidden = true;
     $('no-session').hidden = false;
-    fill($('photo-box'));
-    $('head-result').hidden = true;
+    photo = null;
+    draft = null;
+    $('face-edit').hidden = true;
+    $('face-live').hidden = true;
+    $('face-status').textContent = '';
 }
 
-/** Shows a new secret code every 30 s (decision: 30 s, current + previous accepted). */
+/** Shows a new secret code every 5 s (decision 25 Nov: current + previous accepted = 10 s). */
 function startQr()
 {
     const sid = current.id;
@@ -261,8 +269,7 @@ function renderAttendance(list)
     fill($('attendance-list'), ...items);
     $('n-present').textContent = counts.present;
     $('n-manual').textContent = counts.manual;
-    $('head-scans').textContent = counts.present;
-    updateHeadWarning();
+    updatePhotoStats();
 }
 
 $('manual-add').onclick = async () =>
@@ -398,8 +405,17 @@ function showSummary(summary)
     }
 }
 
-// --------------------------------------------------------- head count
-$('photo').onchange = async (ev) =>
+// -------------------------------------------------------- class photo
+// Decision (ours, 25 Nov 2026): one photo, a box on every face, the lecturer
+// fixes the boxes, then each student taps their own face after scanning.
+$('photo').onchange = (ev) => takePhoto(ev);
+$('photo-again').onchange = (ev) => takePhoto(ev);
+
+/**
+ * Reads a new photo, finds the faces and opens the box editor.
+ * @param {Event} ev - change of a file input
+ */
+async function takePhoto(ev)
 {
     const file = ev.target.files[0];
     ev.target.value = '';
@@ -407,68 +423,164 @@ $('photo').onchange = async (ev) =>
     {
         return;
     }
-    $('head-status').textContent = t('working');
-    const img = el('img', { alt: '' });
-    img.src = URL.createObjectURL(file);
-    await img.decode();
-    fill($('photo-box'), img);
+    $('face-status').textContent = t('findingFaces');
+    $('face-live').hidden = true;
     try
     {
-        const people = await detectPeople(img);
-        const scale = img.clientWidth / img.naturalWidth;
-        for (const p of people)
-        {
-            const [x, y, w, h] = p.bbox;
-            $('photo-box').append(el('div', {
-                class: 'box',
-                style: 'left:' + (x * scale) + 'px;top:' + (y * scale) + 'px;width:' + (w * scale) + 'px;height:' + (h * scale) + 'px'
-            }));
-        }
-        $('head-count').textContent = people.length;
-        $('head-fix').value = people.length;
-        $('head-result').hidden = false;
-        $('head-status').textContent = '';
-        updateHeadWarning();
+        const { canvas, full, dataUrl } = await shrink(file);
+        draft = { image: dataUrl, aspect: canvas.width / canvas.height, newVersion: true };
+        editView.setPhoto(dataUrl, [], draft.aspect);
+        $('face-count').textContent = '…';
+        $('face-edit').hidden = false;
+        const found = await findFaces(full, dataUrl.split(',')[1], (p) => { $('face-status').textContent = t('findingFaces') + ' ' + p; });
+        editView.setPhoto(dataUrl, found.boxes, draft.aspect);
+        $('face-count').textContent = editView.boxes.length;
+        $('face-status').textContent = t('foundWith') + ': ' + found.used.join(' + ');
     }
     catch (e)
     {
-        $('head-status').textContent = t('error') + ': ' + e.message;
+        $('face-status').textContent = t('autoFailed') + ' (' + e.message + ')';
+        $('face-count').textContent = editView.boxes.length;
     }
-};
+}
 
-$('head-save').onclick = async () =>
+$('face-undo').onclick = () => editView.undo();
+
+$('face-reedit').onclick = () =>
 {
-    const count = Number($('head-fix').value);
-    if (!Number.isFinite(count) || count < 0 || current === null)
+    if (photo === null)
     {
         return;
     }
-    const inPerson = attendanceNow.filter((r) => r.status === STATUS.PRESENT).length;
-    await store.updateSession(current.id, { headcount: { count: count, inPerson: inPerson, at: Date.now() } });
-    $('head-count').textContent = count;
-    updateHeadWarning();
-    toast('✓');
+    draft = { image: photo.image, aspect: photo.aspect, newVersion: false };   // same version: choices stay
+    editView.setPhoto(photo.image, photo.boxes, photo.aspect);
+    $('face-count').textContent = photo.boxes.length;
+    $('face-live').hidden = true;
+    $('face-edit').hidden = false;
+};
+
+$('face-save').onclick = async () =>
+{
+    if (draft === null || current === null)
+    {
+        return;
+    }
+    $('face-save').disabled = true;
+    try
+    {
+        const v = draft.newVersion ? (photo ? photo.v : 0) + 1 : photo.v;
+        await store.savePhoto(current.id, { v: v, image: draft.image, boxes: editView.boxes, aspect: draft.aspect });
+        const inPerson = attendanceNow.filter((r) => r.status === STATUS.PRESENT).length;
+        await store.updateSession(current.id, { headcount: { count: editView.boxes.length, inPerson: inPerson, at: Date.now() } });
+        draft = null;
+        $('face-edit').hidden = true;
+        $('face-status').textContent = '';
+        toast(t('photoSaved'));
+    }
+    catch (e)
+    {
+        toast(t('error') + ': ' + e.message, 'error');
+    }
+    finally
+    {
+        $('face-save').disabled = false;
+    }
 };
 
 /**
- * Shows a saved head count.
- * @param {object|null} h - {count, inPerson}
+ * Shows the saved photo with who chose which face.
+ * @param {object|null} p - photo or null
  */
-function showHeadcount(h)
+function showPhoto(p)
 {
-    $('n-head').textContent = h ? h.count : '–';
-}
-
-/** Warns when there are more in-class scans than people in the photo. */
-function updateHeadWarning()
-{
-    if ($('head-result').hidden)
+    photo = p;
+    if (p === null)
     {
+        $('face-live').hidden = true;
         return;
     }
-    const people = Number($('head-fix').value || $('head-count').textContent);
-    const scans = Number($('head-scans').textContent);
-    $('head-warning').hidden = !compareWithScans(people, scans).suspicious;
+    if (draft === null)
+    {
+        $('face-live').hidden = false;
+    }
+    if (watchView.img.src !== p.image)
+    {
+        watchView.setPhoto(p.image, p.boxes, p.aspect);
+    }
+    updatePhotoStats();
+}
+
+/** Counters, names on the boxes and the "not in the photo" list. */
+function updatePhotoStats()
+{
+    $('n-present').textContent = attendanceNow.filter((r) => r.status === STATUS.PRESENT).length;
+    if (photo === null)
+    {
+        $('n-head').textContent = '–';
+        return;
+    }
+    const st = photoStats(photo.boxes, attendanceNow, photo.v);
+    $('n-head').textContent = st.faces;
+    $('f-faces').textContent = st.faces;
+    $('f-confirmed').textContent = st.confirmed;
+    $('f-waiting').textContent = st.waiting;
+    $('f-notfound').textContent = st.notFound;
+    const labels = new Map();
+    for (const [id, email] of claimsOf(attendanceNow, photo.v))
+    {
+        labels.set(id, displayName(email));
+    }
+    watchView.setLabels(labels);
+    const scans = attendanceNow.filter((r) => r.status === STATUS.PRESENT).length;
+    $('head-warning').hidden = !compareWithScans(st.faces, scans).suspicious;
+    const missing = attendanceNow.filter((r) => r.photoV === photo.v && r.face === FACES.NOT_FOUND);
+    fill($('not-found-list'), ...missing.map((r) => el('li', {}, [el('span', { class: 'grow', text: '⚠ ' + displayName(r.email) })])));
+}
+
+/**
+ * Tapping a box in the live photo: who chose it, and a button to free it.
+ * @param {number} id - box id
+ */
+function showBoxInfo(id)
+{
+    const email = photo ? claimsOf(attendanceNow, photo.v).get(id) : null;
+    if (!email)
+    {
+        $('box-info').hidden = true;
+        return;
+    }
+    $('box-name').textContent = '#' + id + ' · ' + displayName(email);
+    $('box-free').onclick = async () =>
+    {
+        await store.freeFace(current.id, photo.v, id, email);
+        $('box-info').hidden = true;
+    };
+    $('box-info').hidden = false;
+}
+
+/**
+ * Scales the photo down for storing (Firestore keeps documents under 1 MB); the faces are
+ * searched in the full-size photo, where faces at the back still have enough pixels.
+ * @param {File} file - the photo
+ * @returns {Promise<{canvas:HTMLCanvasElement, full:HTMLCanvasElement, dataUrl:string}>} the photo
+ */
+async function shrink(file)
+{
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const size = storedSize(bmp.width, bmp.height);
+    const canvas = el('canvas', { width: size.w, height: size.h });
+    canvas.getContext('2d').drawImage(bmp, 0, 0, size.w, size.h);
+    const k = Math.min(1, FACES.DETECT_MAX_SIDE / Math.max(bmp.width, bmp.height));
+    const full = el('canvas', { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+    full.getContext('2d').drawImage(bmp, 0, 0, full.width, full.height);
+    let q = FACES.PHOTO_QUALITY;
+    let dataUrl = canvas.toDataURL('image/jpeg', q);
+    while (dataUrl.length > 900_000 && q > 0.35)
+    {
+        q -= 0.1;
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+    }
+    return { canvas: canvas, full: full, dataUrl: dataUrl };
 }
 
 // ---------------------------------------------------------------------

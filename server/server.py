@@ -51,7 +51,11 @@ PORT_TRIES = 20                                 # 8443, 8444, ... if the port is
 
 MAX_COMMENT = 2000
 MAX_FILES = 20
-MAX_BODY = 2 * 1024 * 1024      # 2 MB per request (submissions are text files)
+MAX_BODY = 2 * 1024 * 1024      # 2 MB per request (text files; the class photo is about 0.5 MB)
+ROTATE_MS = 5000                # a new QR code every 5 s (the same as CODE.ROTATE_MS in payload.js)
+CODE_TTL_MS = 2 * ROTATE_MS + 2000   # the current code and the one before it, plus network time
+NOT_FOUND = -2                  # "I am not in the photo" (FACES.NOT_FOUND in faces.js)
+MAX_PHOTO = 1_400_000           # characters of the photo data URL
 
 LOCK = threading.Lock()
 STATE: dict[str, Any] = {}
@@ -201,12 +205,47 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         sub = state["sub"][sid]
         token = str(a["token"])
         require(token in sub["codes"], "bad-code")
+        require(now_ms() - sub["codes"][token]["createdAt"] <= CODE_TTL_MS, "bad-code")   # current or previous code only
         require(user["email"] not in sub["attendance"], "already")      # once per lecture
         sub["attendance"][user["email"]] = {
             "email": user["email"], "uid": user["uid"], "name": user["name"], "status": "present",
             "token": token, "scannedAt": int(a.get("at") or now_ms()),
         }
         return "present"
+    # ----- class photo: each student taps their own face
+    if kind == "savePhoto":
+        require(lecturer, "lecturer only")
+        image = str(a["image"])
+        require(image.startswith("data:image/jpeg;base64,") and len(image) <= MAX_PHOTO, "bad photo")
+        boxes = [{"id": int(b["id"]), "x": float(b["x"]), "y": float(b["y"]), "w": float(b["w"]), "h": float(b["h"])}
+                 for b in a["boxes"]]
+        sub = state["sub"][a["sid"]]
+        sub["photo"] = {"v": int(a["v"]), "image": image, "boxes": boxes, "aspect": float(a["aspect"]), "at": now_ms()}
+        sub.setdefault("claims", {})
+        return None
+    if kind == "chooseFace":
+        require(student, "students only")
+        sub = state["sub"][a["sid"]]
+        me = sub["attendance"].get(user["email"])
+        photo = sub.get("photo")
+        v, face = int(a["v"]), int(a["face"])
+        require(me is not None and photo is not None and photo["v"] == v, "scan-first")
+        require(me.get("photoV") != v or me.get("face") == NOT_FOUND, "already")
+        if face != NOT_FOUND:
+            require(any(b["id"] == face for b in photo["boxes"]), "bad box")
+            claims = sub.setdefault("claims", {})
+            require(f"{v}_{face}" not in claims, "taken")            # one student per face
+            claims[f"{v}_{face}"] = {"uid": user["uid"], "v": v}
+        me["face"], me["photoV"] = face, v
+        return None
+    if kind == "freeFace":
+        require(lecturer, "lecturer only")
+        sub = state["sub"][a["sid"]]
+        sub.setdefault("claims", {}).pop(f"{int(a['v'])}_{int(a['face'])}", None)
+        me = sub["attendance"].get(str(a["email"]).lower())
+        if me:
+            me["face"], me["photoV"] = None, None
+        return None
     if kind == "setAttendance":
         require(lecturer, "lecturer only")
         att = state["sub"][a["sid"]]["attendance"]
@@ -330,6 +369,8 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "polls": {pid: {**p, "votes": {k: o for k, o in p["votes"].items() if k == uid}}
                       for pid, p in sub["polls"].items()},
             "transcript": sub["transcript"],
+            "photo": sub.get("photo"),
+            "claims": {k: {"v": c["v"]} for k, c in sub.get("claims", {}).items()},   # which boxes, not who
         }
     for aid, a in state["assignments"].items():
         out["assignments"][aid] = {**a, "submissions": {k: s for k, s in a["submissions"].items() if k == me}}

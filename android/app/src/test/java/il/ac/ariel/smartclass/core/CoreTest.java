@@ -326,8 +326,8 @@ public class CoreTest
     {
         long t0 = 1_000_000L;
         assertTrue(Payload.isCurrentCode(t0, t0 + 5_000));
-        assertTrue(Payload.isCurrentCode(t0, t0 + Payload.ROTATE_MS + 29_000));
-        assertFalse(Payload.isCurrentCode(t0, t0 + 2 * Payload.ROTATE_MS + 1));
+        assertTrue(Payload.isCurrentCode(t0, t0 + 2 * Payload.ROTATE_MS));
+        assertFalse(Payload.isCurrentCode(t0, t0 + 2 * Payload.ROTATE_MS + Payload.NETWORK_SLACK_MS + 1));
     }
 
     // ==========================================
@@ -454,5 +454,29 @@ public class CoreTest
     {
         assertEquals("A stack with tests.", Prompts.reviewSummaryLine("...\nSUMMARY: A stack with tests."));
         assertEquals("no line", Prompts.reviewSummaryLine("no line"));
+    }
+
+    /** Checks the face step: tapping, the next step, claim ids (TC-FACE-J1, same as web TC-FACE-5/7). */
+    @Test
+    public void facesTapAndSteps()
+    {
+        java.util.List<Faces.Box> boxes = java.util.Arrays.asList(
+                new Faces.Box(1, 0.10, 0.10, 0.02, 0.02), new Faces.Box(2, 0.13, 0.10, 0.02, 0.02));
+        assertEquals(0, Faces.hitTest(boxes, 0.11, 0.11));
+        assertEquals(1, Faces.hitTest(boxes, 0.141, 0.11));
+        assertEquals(-1, Faces.hitTest(boxes, 0.6, 0.6));
+        assertEquals(Faces.Step.SCAN, Faces.myStep(false, null, null, 2L));
+        assertEquals(Faces.Step.NO_PHOTO, Faces.myStep(true, null, null, null));
+        assertEquals(Faces.Step.PICK, Faces.myStep(true, 3L, 1L, 2L));
+        assertEquals(Faces.Step.DONE, Faces.myStep(true, 3L, 2L, 2L));
+        assertEquals(Faces.Step.TOLD, Faces.myStep(true, (long) Faces.NOT_FOUND, 2L, 2L));
+        assertEquals("2_7", Faces.claimId(2, 7));
+        java.util.Map<String, Object> m = new java.util.HashMap<String, Object>();
+        m.put("id", 4L);
+        m.put("x", 0.1);
+        m.put("y", 0.2);
+        m.put("w", 0.03);
+        m.put("h", 0.04);
+        assertEquals(4, Faces.fromMaps(java.util.Arrays.asList(m, "junk")).get(0).id);
     }
 }

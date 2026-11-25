@@ -86,4 +86,14 @@
     <string name="not_set_up_text">האפליקציה תעבוד מלאה אחרי שנוסיף את Firebase. בינתיים בודקים באתר דרך השרת המקומי: הפעילו במחשב את Start LAN Server.bat, וכתבו כאן את הכתובת שמופיעה בחלון השחור (או סרקו במצלמה הרגילה את הקוד שעל מסך המחשב).</string>
     <string name="server_address_hint">למשל 192.168.1.20:8443</string>
     <string name="open_website">פתח את האתר</string>
+    <string name="pick_title">שלב אחרון: מי את/ה בתמונה?</string>
+    <string name="pick_hint">מגדילים בשתי אצבעות ולוחצים על הפנים שלך.</string>
+    <string name="is_this_you">זה את/ה?</string>
+    <string name="yes_me">✓ כן, זה אני</string>
+    <string name="not_me">לא, לבחור שוב</string>
+    <string name="cant_find">לא מוצא/ת את עצמי</string>
+    <string name="pick_done">✓ הנוכחות אושרה</string>
+    <string name="told_lecturer">המרצה קיבל/ה הודעה שלא מצאת את עצמך. אפשר גם לגשת אליו/ה.</string>
+    <string name="wait_photo">המרצה עוד לא צילם/ה את הכיתה. המסך יתעדכן כשהתמונה תעלה.</string>
+    <string name="box_taken">מישהו כבר בחר בפנים האלה. אם זה את/ה, ספר/י למרצה.</string>
 </resources>
