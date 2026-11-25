@@ -6,7 +6,7 @@
 // The page only talks to the data layer (store) - never to Firebase
 // directly - so the same page runs on real Firebase and in demo mode.
 
-import { startPage } from './page.js';
+import { startPage, setHero } from './page.js';
 import { el, fill, toast, when, setupTabs, download } from './dom.js';
 import { t, lang } from './i18n.js';
 import { NoisyQrDisplay } from './qr-display.js';
@@ -227,6 +227,7 @@ function openLive(s)
     $('live').hidden = false;
     $('live-title').textContent = s.title + ' · ' + when(s.startedAt);
     const isOpen = s.endedAt === null;
+    setHero(s.title, when(s.startedAt) + (isOpen ? ' · ' + t('heroLive') : ''));
     $('end-session').hidden = !isOpen;
     $('fullscreen').hidden = !isOpen;
     $('qr-wrap').hidden = !isOpen;
@@ -262,6 +263,7 @@ function closeLive()
     current = null;
     $('live').hidden = true;
     $('no-session').hidden = false;
+    setHero(null);
     photo = null;
     draft = null;
     $('face-edit').hidden = true;

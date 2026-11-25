@@ -1,59 +1,72 @@
-# SmartClass design system: four themes
+# SmartClass design system: "soft colours"
 
-Our own visual system for the website (25 Nov 2026). Instead of one look, the site has four
-themes the user can switch live with the palette button in the top bar. The choice is saved in
-the browser (`localStorage` key `smartclass-theme`). With no saved choice, a phone in dark mode
-starts on **midnight**, otherwise on **workshop**. No brand's colours, fonts, logos or layouts
-are copied.
+Our own visual system for the website (25 Nov 2026). We tried several looks (bold "advert" styles,
+a very formal one, four switchable themes) and picked a middle way: friendly enough for students,
+calm enough for a university course. It mixes two of our mockups: the soft colour tints of one
+and the green course band of another. No brand's colours, fonts, logos or layouts are copied.
 
-## How it is built
+## Principles
 
-- `web/css/app.css` holds every component, written only against tokens (colours, borders,
-  shadows, radius, fonts, background pattern).
-- `web/css/themes.css` holds one `[data-theme="…"]` block per theme that sets those tokens, plus
-  a few small per-theme touches.
-- `web/js/theme.js` is a small classic script in `<head>`. It sets the theme before the first
-  paint (no flash) and runs the palette button.
-- Fonts are self-hosted in `web/vendor/fonts` (SIL Open Font License files included), so the site
-  works offline.
+1. **White canvas, one action colour.** The page is white; only the main action of a card uses
+   violet (`--brand`).
+2. **A soft tint per kind of content.** Each kind of card has its own pale colour, so you know what
+   it is before you read it: quiz violet, attendance green, questions blue, notes/recording yellow,
+   "by hand" rose. Cards on a tint drop their frame; items inside them sit on white.
+3. **The course band.** A teal band at the top of every signed-in page: a greeting by time of day
+   and first name, the open lecture's title, and its time with "live now". With no open lecture it
+   says so. On phones it runs edge to edge with rounded bottom corners; on wide screens it is a
+   rounded card. Two faint circles decorate it.
+4. **Friendly type, calm sizes.** Heebo for text, Rubik 600 for titles and big numbers, IBM Plex
+   Mono for times and codes. Normal reading sizes; only the band title and stat numbers are large.
+5. **Rounded and flat.** Cards 22px, buttons 14px, no drop shadows; buttons shrink slightly when
+   pressed.
+6. **Phone first, RTL first.** On phones the tabs are a bottom bar with icons. On screens 1000px
+   and wider they become a side menu on the right (Hebrew), with the open page on a white pill.
+   Logical CSS properties serve RTL and LTR from one stylesheet.
+7. **Accessible.** Text contrast at least 4.5:1 in light and dark, visible focus rings, touch
+   targets at least 44px, the load animation off when the device asks for reduced motion, no
+   decorative emojis in titles or buttons.
 
-Main tokens: `--bg`, `--card`, `--sunk`, `--text`, `--muted`, `--line`, `--brand` (main action),
-`--accent` (focus, progress), `--ok` / `--warn` / `--error` (+ `-soft`), `--card-border`,
-`--card-shadow`, `--btn-shadow`, `--btn-shadow-press`, `--btn-press-move`, `--paper-pattern`,
-`--radius`, `--radius-card`, `--radius-btn`, `--font-display`, `--display-weight`, `--tabbar-bg`.
+## Files
 
-## The four themes
+- `web/css/app.css`: every component, written only against tokens.
+- `web/css/themes.css`: the tokens for light (`soft`) and dark (`night`), the tints, the course
+  band, the bottom bar and the side menu.
+- `web/js/theme.js`: sets light/dark before the first paint; the topbar button switches them and
+  the choice is kept per browser. With no choice the device's own setting decides.
+- `web/js/ui/page.js` `setHero(title, sub)`: fills the course band; `lecturer.js` and `student.js`
+  call it when a lecture opens or closes.
+- Fonts are self-hosted in `web/vendor/fonts` (SIL Open Font License files included).
 
-| Theme | Hebrew | Feel | Background | Main action | Headings |
-|---|---|---|---|---|---|
-| workshop | סדנה | Bold notebook: thick ink frames, hard offset shadows, buttons that press down | Putty `#efe6d2` with graph paper | Ultramarine `#2346d8`, yellow and red accents | Rubik 800 |
-| clay | פלסטלינה | Soft and plushy: puffy cards with inner and outer shadows, pastel stat tiles, springy buttons | Warm `#fbf2ea` with pastel light | Peach `#ff8a5c` | Secular One |
-| glass | זכוכית | Light and airy: frosted cards (`backdrop-filter`), pill buttons, thin large headings | Water light `#eaf2f7` | Sea blue `#0b6cb3` | Heebo 300 |
-| midnight | חצות | Calm dark mode: deep navy, a faint teal glow at the top | Navy `#0a1121` | Mint `#5eead4` | Rubik |
+## Tokens
 
-## Shared rules (all themes)
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--bg` / `--card` | `#ffffff` / `#ffffff` | `#12141b` / `#1a1d27` | Page, cards |
+| `--sunk` | `#f4f5f8` | `#232735` | Inputs, comments |
+| `--text` / `--muted` | `#1b1f2a` / `#5d6472` | `#e9ebf2` / `#a2a8b8` | Text |
+| `--line` | `#e6e8ee` | `#2b3040` | Card frames, dividers |
+| `--brand` | `#5b4bdb` | `#9d92ff` | The one action colour |
+| `--course` | `#0f7b6c` | `#145e54` | The course band |
+| `--t-violet` `--t-green` `--t-blue` `--t-sun` `--t-rose` | pastel | low-alpha washes | Content tints |
+| `--ok` / `--warn` / `--error` / `--manual` | green / amber / red / rose | lighter | States and badges |
 
-1. **One main action per card.** Only the main button uses `--brand`; `.secondary` and
-   `.danger` never compete with it.
-2. **Numbers are typed.** Stats, times, the sheet and the quiz timer use IBM Plex Mono so live
-   numbers do not jump.
-3. **Projector stage.** The quiz and poll stage keeps its own dark stage and answer colours in
-   every theme.
-4. **Phone first.** At ≤700px the tabs become a bottom bar with SVG icons, within thumb reach.
-   Touch targets are at least 44px.
-5. **Hebrew RTL first.** Logical CSS properties (`margin-inline`, `inset-inline`) serve RTL and
-   LTR from one stylesheet; dates are wrapped in an LTR isolate inside Hebrew text.
-6. **Accessible.** Text contrast is at least 4.5:1 in every theme; focus rings are visible; the
-   load animation (cards rising in) is turned off when the phone asks for reduced motion.
-7. **No decorative emojis** in titles or buttons; icons are inline SVG.
+## Where the tints go
+
+| Card | Tint |
+|---|---|
+| Attendance list (lecturer), "present" stat | green |
+| Quiz (lecturer and student) | violet |
+| Comments / questions | blue |
+| Recording and summary, demo note | yellow |
+| Marked by hand | rose |
 
 ## Android
 
-`res/values/themes.xml` and `res/values-night/themes.xml` set the app's light and dark colours;
-the quiz screen uses the projector-stage green.
+`res/values/themes.xml` and `res/values-night/themes.xml` set the app's light and dark colours.
 
 ## Checked
 
-Screenshots of every theme at 390px (phone: login, scan, lecture) and 1440px (lecturer desktop),
-Hebrew RTL. Fixed in this pass: the top bar overflowing on phones (theme name hidden there), and
-content showing through the bottom tab bar (solid tab bars).
+Screenshots at 390px (phone: login, scan, lecture with a comment and reactions) and 1440px
+(lecturer with an open lecture), light and dark, Hebrew RTL. All tests and the Playwright smoke
+tests pass.

@@ -2,15 +2,15 @@
 //  theme.js - picks the look before the page paints (classic script)
 // =====================================================================
 // Loaded in <head> WITHOUT defer, so the theme is set before the first paint
-// (no flash of the wrong colours). The topbar button cycles the four themes;
-// the choice is kept per browser. With no choice: a phone in dark mode gets
-// "midnight", otherwise "workshop".
+// (no flash of the wrong colours). The topbar button switches light ("soft")
+// and dark ("night"); the choice is kept per browser. With no choice the
+// phone's own light/dark setting decides.
 (function ()
 {
-    var THEMES = ['workshop', 'clay', 'glass', 'midnight'];
+    var THEMES = ['soft', 'night'];
     var NAMES = {
-        he: { workshop: 'סדנה', clay: 'פלסטלינה', glass: 'זכוכית', midnight: 'חצות' },
-        en: { workshop: 'Workshop', clay: 'Clay', glass: 'Glass', midnight: 'Midnight' }
+        he: { soft: 'בהיר', night: 'כהה' },
+        en: { soft: 'Light', night: 'Dark' }
     };
     var KEY = 'smartclass-theme';
 
@@ -30,7 +30,7 @@
     function initial()
     {
         var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        return saved() || (dark ? 'midnight' : 'workshop');
+        return saved() || (dark ? 'night' : 'soft');
     }
 
     function apply(t)

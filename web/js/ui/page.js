@@ -50,6 +50,8 @@ export function startPage(role)
                 return;
             }
             document.querySelector('.who').textContent = user.name + ' · ' + user.email;
+            heroUser = user;
+            setHero(null);
             if (!done)
             {
                 done = true;
@@ -57,4 +59,27 @@ export function startPage(role)
             }
         });
     });
+}
+
+let heroUser = null;
+
+/**
+ * Fills the coloured band at the top of the page: a greeting by the time of
+ * day, the open lecture's title (or "no open lecture") and one detail line.
+ * @param {?string} title - the open lecture's title, null when none is open
+ * @param {string} [sub] - a detail line (date, room, "live now")
+ */
+export function setHero(title, sub)
+{
+    const hi = document.getElementById('hero-hi');
+    if (!hi)
+    {
+        return;
+    }
+    const hour = new Date().getHours();
+    const part = hour >= 5 && hour < 12 ? 'greetMorning' : hour < 17 && hour >= 12 ? 'greetNoon' : hour >= 17 && hour < 22 ? 'greetEvening' : 'greetNight';
+    const first = heroUser && heroUser.name ? heroUser.name.split(' ')[0] : '';
+    hi.textContent = t(part) + (first ? ', ' + first : '');
+    document.getElementById('hero-title').textContent = title || t('heroIdle');
+    document.getElementById('hero-sub').textContent = sub || (title ? '' : t('heroIdleSub'));
 }

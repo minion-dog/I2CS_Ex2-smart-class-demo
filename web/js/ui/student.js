@@ -8,7 +8,7 @@
 // Assignments: submit a GitHub link and/or text files, see the review,
 // the grade and the feedback.
 
-import { startPage } from './page.js';
+import { startPage, setHero } from './page.js';
 import { el, fill, toast, when, setupTabs, notify } from './dom.js';
 import { t } from './i18n.js';
 import { AveragingScanner } from './scanner.js';
@@ -655,6 +655,8 @@ function fillSessionPicker()
     {
         showSummary(s.summary);
     }
+    const live = sessions.find((x) => x.endedAt === null);
+    setHero(live ? live.title : null, live ? when(live.startedAt) + ' · ' + t('heroLive') : '');
 }
 
 $('session-pick').onchange = () => openLecture($('session-pick').value);
