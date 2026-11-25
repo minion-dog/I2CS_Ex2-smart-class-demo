@@ -1,74 +1,59 @@
-# SmartClass design system: "paper & chalk"
+# SmartClass design system: four themes
 
-Our own visual system for the website and the Android app (25 Nov 2026). The goal is a tool that
-looks like it belongs in a classroom: warm paper, ink, and a chalkboard for the projector, with one
-loud colour for the main action. We looked at a few well-known product styles for ideas (a calm
-dark tool, a warm cream "notebook" site, a playful learning app), then mixed and changed them into
-our own system. No brand's colours, fonts, logos or layouts are copied.
+Our own visual system for the website (25 Nov 2026). Instead of one look, the site has four
+themes the user can switch live with the palette button in the top bar. The choice is saved in
+the browser (`localStorage` key `smartclass-theme`). With no saved choice, a phone in dark mode
+starts on **midnight**, otherwise on **workshop**. No brand's colours, fonts, logos or layouts
+are copied.
 
-## Principles
+## How it is built
 
-1. **One loud colour.** Tomato (`--brand`) is only for the main action of a card ("Start camera",
-   "Ask now"). Everything else is ink, paper and lines.
-2. **Flat paper, framed cards.** Cards are sheets on the paper: a 1px line, no drop shadow.
-3. **Chunky buttons.** Buttons have a darker "ledge" under them and sink when pressed, a small
-   playful touch that also shows clearly what is tappable.
-4. **Numbers are typed.** Counters, times and the sheet use a typewriter face (IBM Plex Mono), so
-   live numbers do not jump and read as data.
-5. **Chalkboard for the projector.** The quiz and poll stage is chalkboard green with a faint dot
-   grid. The answer colours (red, blue, yellow, green, purple, teal) appear only there.
-6. **Calm, readable, RTL first.** Hebrew is the main language; logical CSS properties
-   (`margin-inline`, `inset-inline`) keep RTL and LTR in one stylesheet. Text contrast is at
-   least 4.5:1 in light and dark.
+- `web/css/app.css` holds every component, written only against tokens (colours, borders,
+  shadows, radius, fonts, background pattern).
+- `web/css/themes.css` holds one `[data-theme="…"]` block per theme that sets those tokens, plus
+  a few small per-theme touches.
+- `web/js/theme.js` is a small classic script in `<head>`. It sets the theme before the first
+  paint (no flash) and runs the palette button.
+- Fonts are self-hosted in `web/vendor/fonts` (SIL Open Font License files included), so the site
+  works offline.
 
-## Tokens (`web/css/app.css`)
+Main tokens: `--bg`, `--card`, `--sunk`, `--text`, `--muted`, `--line`, `--brand` (main action),
+`--accent` (focus, progress), `--ok` / `--warn` / `--error` (+ `-soft`), `--card-border`,
+`--card-shadow`, `--btn-shadow`, `--btn-shadow-press`, `--btn-press-move`, `--paper-pattern`,
+`--radius`, `--radius-card`, `--radius-btn`, `--font-display`, `--display-weight`, `--tabbar-bg`.
 
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| `--bg` | `#f1efe7` | `#17181b` | Paper (with faint notebook dots) |
-| `--card` | `#fffdf8` | `#1f2125` | Cards, inputs |
-| `--sunk` | `#e8e5da` | `#2a2c31` | Wells: bars, table headers |
-| `--text` | `#22241c` | `#eceae2` | Ink |
-| `--muted` | `#5c5e53` | `#a9aa9f` | Secondary text |
-| `--line` | `#d3d0c2` | `#393b41` | Card frames, dividers |
-| `--brand` | `#d9502a` | `#f06a40` | The one loud colour (main action, card-title rule, brand tag) |
-| `--brand-ledge` | `#9c3517` | `#a8411f` | Button ledge |
-| `--accent` | `#2f6f62` | `#6cc3ae` | Focus ring, progress |
-| `--ok` / `--warn` / `--error` | green / amber / red | lighter | States, each with a `-soft` tint for badges |
-| `--note` | `#fff1a8` | `#4a4215` | Sticky notes (demo banner) |
-| `--chalk` | `#1f3b31` | same | Projector stage |
+## The four themes
 
-Radius: 8px buttons and inputs, 10px cards, 4px badges. Touch targets are at least 44px.
+| Theme | Hebrew | Feel | Background | Main action | Headings |
+|---|---|---|---|---|---|
+| workshop | סדנה | Bold notebook: thick ink frames, hard offset shadows, buttons that press down | Putty `#efe6d2` with graph paper | Ultramarine `#2346d8`, yellow and red accents | Rubik 800 |
+| clay | פלסטלינה | Soft and plushy: puffy cards with inner and outer shadows, pastel stat tiles, springy buttons | Warm `#fbf2ea` with pastel light | Peach `#ff8a5c` | Secular One |
+| glass | זכוכית | Light and airy: frosted cards (`backdrop-filter`), pill buttons, thin large headings | Water light `#eaf2f7` | Sea blue `#0b6cb3` | Heebo 300 |
+| midnight | חצות | Calm dark mode: deep navy, a faint teal glow at the top | Navy `#0a1121` | Mint `#5eead4` | Rubik |
 
-## Type
+## Shared rules (all themes)
 
-- **IBM Plex Sans Hebrew** (400/500/600/700) for all text, self-hosted in `web/vendor/fonts`
-  (SIL Open Font License, `OFL-IBM-Plex.txt`). It covers Hebrew and Latin with one voice.
-- **IBM Plex Mono** 500 for numbers: stats, times, the attendance sheet, the quiz timer.
-- Card titles: 1.15rem / 700 with a short tomato rule before them, the system's only decoration.
-
-## Components
-
-| Component | Rule |
-|---|---|
-| Top bar | Paper card, the mark "Smart" + a tomato "Class" stamp (rotated −2°) |
-| Tabs | Ink text, a 3px tomato underline on the open tab |
-| Button | Tomato with a ledge (main); `.secondary` = paper with a line; `.danger` = outlined red (never competes with the main action) |
-| Badge | Tinted background + coloured text (present green, manual purple, waiting amber) |
-| Banner | A sticky note with a strip of tape, slightly rotated |
-| Stat | Framed tile, big mono number, small muted label |
-| Comment | Framed; the lecturer's comment has a tomato edge and tint; private = purple edge |
-| Emoji reactions | Small pills; mine get the tomato tint |
-| Quiz stage | Chalkboard green, paper question card, coloured answer tiles with a ledge |
+1. **One main action per card.** Only the main button uses `--brand`; `.secondary` and
+   `.danger` never compete with it.
+2. **Numbers are typed.** Stats, times, the sheet and the quiz timer use IBM Plex Mono so live
+   numbers do not jump.
+3. **Projector stage.** The quiz and poll stage keeps its own dark stage and answer colours in
+   every theme.
+4. **Phone first.** At ≤700px the tabs become a bottom bar with SVG icons, within thumb reach.
+   Touch targets are at least 44px.
+5. **Hebrew RTL first.** Logical CSS properties (`margin-inline`, `inset-inline`) serve RTL and
+   LTR from one stylesheet; dates are wrapped in an LTR isolate inside Hebrew text.
+6. **Accessible.** Text contrast is at least 4.5:1 in every theme; focus rings are visible; the
+   load animation (cards rising in) is turned off when the phone asks for reduced motion.
+7. **No decorative emojis** in titles or buttons; icons are inline SVG.
 
 ## Android
 
-`res/values/themes.xml` and `res/values-night/themes.xml` use the same colours (tomato primary,
-teal secondary, paper / dark background); the quiz screen uses the chalkboard green.
+`res/values/themes.xml` and `res/values-night/themes.xml` set the app's light and dark colours;
+the quiz screen uses the projector-stage green.
 
 ## Checked
 
-Screenshots at 390px (phone) and 1440px (desktop), light and dark, Hebrew RTL. Removed in this
-pass: decorative emojis in titles and buttons, two loud buttons in one card, a red "end lecture"
-button that looked like the main action, an empty gap above the scan result, dates turning into
-",25.11" inside Hebrew text (now an LTR isolate).
+Screenshots of every theme at 390px (phone: login, scan, lecture) and 1440px (lecturer desktop),
+Hebrew RTL. Fixed in this pass: the top bar overflowing on phones (theme name hidden there), and
+content showing through the bottom tab bar (solid tab bars).
