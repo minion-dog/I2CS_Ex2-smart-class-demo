@@ -94,14 +94,25 @@
                         </div>
                     </div>
 
-                    <div class="card">
-                        <h2 data-i18n="polls"></h2>
-                        <label for="poll-q" data-i18n="pollQuestion"></label>
-                        <input id="poll-q" type="text">
-                        <label for="poll-opts" data-i18n="pollOptions"></label>
-                        <textarea id="poll-opts" rows="3"></textarea>
-                        <p><button id="poll-create" data-i18n="createPoll"></button></p>
-                        <div id="poll-list"></div>
+                    <div class="card" id="quiz-card">
+                        <h2 data-i18n="quizTitle"></h2>
+                        <p class="hint" data-i18n="quizHint"></p>
+                        <div id="quiz-blocks"></div>
+                        <div class="row wrap">
+                            <button id="quiz-now" data-i18n="quizAskNow"></button>
+                            <button id="quiz-add" class="secondary small" data-i18n="quizAdd"></button>
+                            <button id="quiz-save" class="secondary small" data-i18n="quizSave"></button>
+                        </div>
+                        <details>
+                            <summary data-i18n="quizMore"></summary>
+                            <label for="quiz-name" data-i18n="quizName"></label>
+                            <input id="quiz-name" type="text" maxlength="120">
+                            <label for="quiz-topic" data-i18n="quizTopic"></label>
+                            <textarea id="quiz-topic" rows="2"></textarea>
+                            <p><button id="quiz-ai" class="secondary" data-i18n="quizAi"></button></p>
+                        </details>
+                        <h3 data-i18n="quizThisLecture"></h3>
+                        <ul class="list" id="quiz-list"></ul>
                     </div>
 
                     <div class="card">
@@ -119,25 +130,6 @@
                         <h3 data-i18n="summary"></h3>
                         <div id="summary-box" class="comment"><p class="muted" data-i18n="noSummary"></p></div>
                         <details><summary data-i18n="transcript"></summary><div id="transcript-box" class="comment"></div></details>
-                    </div>
-
-                    <div class="card" id="quiz-card">
-                        <h2 data-i18n="quizTitle"></h2>
-                        <p class="hint" data-i18n="quizHint"></p>
-                        <ul class="list" id="quiz-list"></ul>
-                        <details>
-                            <summary data-i18n="quizNew"></summary>
-                            <label for="quiz-name" data-i18n="quizName"></label>
-                            <input id="quiz-name" type="text" maxlength="120">
-                            <label for="quiz-topic" data-i18n="quizTopic"></label>
-                            <textarea id="quiz-topic" rows="2"></textarea>
-                            <p><button id="quiz-ai" class="secondary" data-i18n="quizAi"></button></p>
-                            <div id="quiz-blocks"></div>
-                            <div class="row">
-                                <button id="quiz-add" class="secondary" data-i18n="quizAdd"></button>
-                                <button id="quiz-save" data-i18n="quizSave"></button>
-                            </div>
-                        </details>
                     </div>
 
                     <div class="card" id="photo-card">

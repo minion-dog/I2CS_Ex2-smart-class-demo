@@ -46,15 +46,8 @@
     <string name="anonymous">Anonymous</string>
     <string name="anonymous_name">Anonymous</string>
     <string name="lecturer_name">Lecturer</string>
-    <string name="polls">Polls</string>
-    <string name="poll_question">Question</string>
-    <string name="poll_options">Answers (one per line)</string>
-    <string name="create_poll">Open poll</string>
-    <string name="close_poll">Close</string>
-    <string name="reopen_poll">Reopen</string>
-    <string name="votes">votes</string>
-    <string name="voted">Voted ✓</string>
-    <string name="poll_closed">Poll closed</string>
+    <string name="polls">📊 Polls &amp; quizzes</string>
+    <string name="polls_on_site">The lecturer runs polls and quizzes from the website, on the projector.</string>
     <string name="summary">Summary</string>
     <string name="no_summary">No summary for this lecture yet.</string>
     <string name="transcript">Transcript</string>
@@ -106,4 +99,6 @@
     <string name="quiz_no_answer">No answer in time</string>
     <string name="quiz_score">Your score</string>
     <string name="quiz_late">Time is up</string>
+    <string name="quiz_thanks">Thanks! The answers are saved</string>
+    <string name="quiz_mine">mine</string>
 </resources>

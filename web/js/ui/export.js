@@ -26,25 +26,19 @@ export async function exportEverything(store, sessions, roster)
     const lectures = [];
     for (const s of sessions)
     {
-        const [comments, polls, quizzes, transcript, photo] = await Promise.all([
+        const [comments, quizzes, transcript, photo] = await Promise.all([
             once((cb) => store.watchComments(s.id, cb)),
-            once((cb) => store.watchPolls(s.id, cb)),
             once((cb) => store.watchQuizzes(s.id, cb)),
             once((cb) => store.watchTranscript(s.id, cb)),
             once((cb) => store.watchPhoto(s.id, cb))
         ]);
-        for (const p of polls || [])
-        {
-            const v = await once((cb) => store.watchVotes(s.id, p.id, cb));
-            p.counts = v && v.counts ? v.counts : [];
-        }
         for (const q of quizzes || [])
         {
             q.answers = (await once((cb) => store.watchQuizAnswers(s.id, q.id, cb))) || [];
             q.key = await store.loadQuizKey(s.id, q.id);
         }
         lectures.push({
-            session: s, attendance: attendance[s.id] || {}, comments: comments || [], polls: polls || [],
+            session: s, attendance: attendance[s.id] || {}, comments: comments || [],
             quizzes: quizzes || [], transcript: transcript || [], photo: photo || null
         });
     }

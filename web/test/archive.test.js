@@ -26,7 +26,6 @@ test('TC-ZIP-2: one folder per lecture and per assignment, with every part', () 
             session: { id: 's1', title: 'Intro / week 1', startedAt: T0, summary: '# Summary' },
             attendance: { 'dana@x': { email: 'dana@x', name: 'Dana', status: 'present', scannedAt: T0, face: 2, photoV: 1 } },
             comments: [{ createdAt: T0, visibility: 'public', authorName: null, text: 'Q?' }],
-            polls: [{ question: 'Ready?', options: ['yes', 'no'], counts: [3, 1] }],
             quizzes: [{ title: 'Week 1', questions: [{ q: 'Q', options: ['a', 'b'], seconds: 20 }], key: [1],
                 state: { starts: [0] }, answers: [{ uid: 'u', name: 'Dana', index: 0, option: 1, at: 0 }] }],
             transcript: [{ index: 1, text: 'part two' }, { index: 0, text: 'part one' }],
@@ -38,7 +37,7 @@ test('TC-ZIP-2: one folder per lecture and per assignment, with every part', () 
     });
     const paths = files.map((f) => f.path);
     const L = 'SmartClass-2026-11-25/lectures/01 2026-11-04 Intro _ week 1/';
-    for (const p of ['attendance.csv', 'comments.csv', 'polls.csv', 'quiz-Week 1.csv', 'transcript.txt', 'summary.md', 'class-photo.jpg', 'faces.csv'])
+    for (const p of ['attendance.csv', 'comments.csv', 'polls-and-quizzes.csv', 'quiz-Week 1.csv', 'transcript.txt', 'summary.md', 'class-photo.jpg', 'faces.csv'])
     {
         assert.ok(paths.includes(L + p), 'missing ' + p);
     }
@@ -52,6 +51,7 @@ test('TC-ZIP-2: one folder per lecture and per assignment, with every part', () 
     assert.match(get(L + 'attendance.csv'), /#2/);
     assert.match(get(L + 'faces.csv'), /dana@x/);
     assert.match(get(L + 'quiz-Week 1.csv'), /1,Dana,1000,1,b ✓/);
+    assert.match(get(L + 'polls-and-quizzes.csv'), /Week 1,Q,b,1,✓/);
     assert.deepEqual([...get(L + 'class-photo.jpg')], [0, 1, 2]);
     assert.ok(paths.every((p) => !p.includes('..')), 'no ".." in any path');
 });

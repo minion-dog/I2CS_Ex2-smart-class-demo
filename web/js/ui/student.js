@@ -3,17 +3,16 @@
 // =====================================================================
 // Scan: camera -> flicker QR change map -> in class (physical only, no location) ->
 // attendance -> last step: tap your own face in the class photo and confirm.
-// Lecture: comments (public/private, anonymous or not), polls, summary
+// Lecture: comments (public/private, anonymous or not), polls & quizzes, summary
 // and transcript, also for past lectures.
 // Assignments: submit a GitHub link and/or text files, see the review,
 // the grade and the feedback.
 
 import { startPage } from './page.js';
-import { el, fill, toast, when, setupTabs } from './dom.js';
+import { el, fill, toast, when, setupTabs, notify } from './dom.js';
 import { t } from './i18n.js';
 import { AveragingScanner } from './scanner.js';
 import { bindComments } from './comments.js';
-import { bindPolls, notify } from './polls.js';
 import { decodePayload } from '../core/payload.js';
 import { FACES, myStep, requestedBox } from '../core/faces.js';
 import { FaceView } from './faceview.js';
@@ -36,7 +35,7 @@ const myRecords = new Map();     // session id -> unsubscribe
 const face = { sid: null, photo: null, record: null, taken: new Set(), stops: [], stopTaken: null, chosen: 0, told: false, request: null, placed: null };
 const seenOpen = new Set();
 let firstSessions = true;
-const followQuiz = setupQuizPlay(store, user, $('quiz-play'));
+const followQuiz = setupQuizPlay(store, user, $('quiz-play'), $('quiz-reopen'));
 const pickView = new FaceView($('face-pick-view'), { mode: 'pick', onPick: askIsThisYou, onPlace: placeMyBox });
 
 // ---------------------------------------------------------------------
@@ -589,7 +588,6 @@ function openLecture(sid)
         feed: $('comment-feed'), input: $('comment-text'), send: $('comment-send'),
         visibility: $('comment-visibility'), anonymous: $('comment-anon')
     }));
-    lectureWatchers.push(bindPolls(store, user, sid, $('poll-list')));
     lectureWatchers.push(store.watchTranscript(sid, (pieces) =>
     {
         $('transcript-box').textContent = pieces.map((p) => p.text).join('\n\n');

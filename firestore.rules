@@ -43,7 +43,8 @@ service cloud.firestore {
     function quizOpen(s, q, index) {
       let z = get(/databases/$(db)/documents/sessions/$(s)/quizzes/$(q)).data;
       return z.state.phase == 'question' && z.state.index == index
-        && request.time < z.state.startedAt + duration.value(z.questions[index].seconds + 2, 's');
+        && (z.questions[index].seconds == 0          // no time limit (a poll): open until the lecturer closes it
+            || request.time < z.state.startedAt + duration.value(z.questions[index].seconds + 2, 's'));
     }
     function onlyKeys(keys) {
       return request.resource.data.keys().hasOnly(keys);
@@ -173,7 +174,7 @@ service cloud.firestore {
         allow create, update, delete: if isLecturer();
       }
 
-      // Live quiz (Kahoot style). The answer key is in secret/ (lecturer only) and is
+      // Polls & quizzes (one feature; a poll = no correct answer). The answer key is in secret/ (lecturer only) and is
       // revealed one question at a time through the quiz's state.
       match /quizzes/{q} {
         allow read: if isLecturer() || isStudent();
@@ -192,7 +193,7 @@ service cloud.firestore {
             && a == request.auth.uid + '_' + string(request.resource.data.index)
             && request.resource.data.at == request.time
             && request.resource.data.option is int
-            && request.resource.data.option >= 0 && request.resource.data.option < 4
+            && request.resource.data.option >= 0 && request.resource.data.option < 6
             && quizOpen(s, q, request.resource.data.index);
           allow update, delete: if false;
         }
@@ -214,23 +215,6 @@ service cloud.firestore {
           && request.resource.data.fromLecturer == isLecturer();
         allow delete: if isLecturer();
         allow update: if false;
-      }
-
-      // Polls: the lecturer creates and closes them; one vote per student.
-      match /polls/{p} {
-        allow read: if isLecturer() || isStudent();
-        allow create, update: if isLecturer();
-        match /votes/{uid} {
-          allow read: if isLecturer() || (signedIn() && request.auth.uid == uid);
-          allow create: if isStudent()
-            && request.auth.uid == uid
-            && get(/databases/$(db)/documents/sessions/$(s)/polls/$(p)).data.open == true
-            && onlyKeys(['option', 'votedAt'])
-            && request.resource.data.option is int
-            && request.resource.data.option >= 0
-            && request.resource.data.option < get(/databases/$(db)/documents/sessions/$(s)/polls/$(p)).data.options.size();
-          allow update, delete: if false;
-        }
       }
 
       // Transcript pieces and the summary are written by the lecturer only.

@@ -1,7 +1,7 @@
 // =====================================================================
 //  lecturer.js - the lecturer's website
 // =====================================================================
-// Tabs: live lecture (QR, attendance, comments, polls, transcript, head
+// Tabs: live lecture (QR, attendance, comments, polls & quizzes, transcript, class
 // count), attendance sheet, class list, assignments, settings.
 // The page only talks to the data layer (store) - never to Firebase
 // directly - so the same page runs on real Firebase and in demo mode.
@@ -12,7 +12,6 @@ import { t, lang } from './i18n.js';
 import { NoisyQrDisplay } from './qr-display.js';
 import { showJoinCode } from './join.js';
 import { bindComments } from './comments.js';
-import { bindPolls, readPollForm } from './polls.js';
 import { LectureRecorder, transcribeUpload } from './recorder.js';
 import { encodePayload, newToken, CODE } from '../core/payload.js';
 import { buildAttendanceSheet, STATUS } from '../core/sheet.js';
@@ -54,7 +53,7 @@ const watchView = new FaceView($('face-watch-view'), { mode: 'watch', onBox: sho
 const watchQuizzes = setupQuizHost(store, () => current,
     () => $('transcript-box').textContent || (current && current.summary) || '',
     () => attendanceNow.filter((r) => r.status === STATUS.PRESENT || r.status === STATUS.MANUAL).length,
-    { blocks: $('quiz-blocks'), title: $('quiz-name'), add: $('quiz-add'), save: $('quiz-save'), ai: $('quiz-ai'),
+    { blocks: $('quiz-blocks'), title: $('quiz-name'), add: $('quiz-add'), save: $('quiz-save'), now: $('quiz-now'), ai: $('quiz-ai'),
         topic: $('quiz-topic'), list: $('quiz-list'), stage: $('quiz-stage') });
 const qr = new NoisyQrDisplay($('qr'), globalThis.qrcode);
 if (store.kind === 'lan')
@@ -239,7 +238,6 @@ function openLive(s)
     stopWatchers.push(bindComments(store, user, s.id, {
         feed: $('comment-feed'), input: $('comment-text'), send: $('comment-send')
     }));
-    stopWatchers.push(bindPolls(store, user, s.id, $('poll-list')));
     stopWatchers.push(store.watchTranscript(s.id, renderTranscript));
     showSummary(s.summary);
     stopWatchers.push(store.watchPhoto(s.id, showPhoto));
@@ -354,20 +352,6 @@ $('manual-add').onclick = async () =>
     }
     await store.setAttendance(current.id, match.email, STATUS.MANUAL);
     $('manual-search').value = '';
-};
-
-// ------------------------------------------------------------- polls
-$('poll-create').onclick = async () =>
-{
-    const poll = readPollForm($('poll-q').value, $('poll-opts').value);
-    if (poll === null || current === null)
-    {
-        toast(t('pollOptions'), 'warn');
-        return;
-    }
-    await store.createPoll(current.id, poll.question, poll.options);
-    $('poll-q').value = '';
-    $('poll-opts').value = '';
 };
 
 // -------------------------------------------------------- transcript

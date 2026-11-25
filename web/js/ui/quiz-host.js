@@ -1,51 +1,77 @@
 // =====================================================================
-//  quiz-host.js - the lecturer's live quiz: builder + projector stage
+//  quiz-host.js - the lecturer's polls & quizzes: builder + projector stage
 // =====================================================================
-// Kahoot style (lecturer's request, 25 Nov 2026). The lecturer writes the
-// questions (or lets Gemini write them from the lecture), then runs the quiz
-// on the projector: lobby -> question (timer, live answer count) -> answer
-// bars with the correct one -> top 5 -> ... -> podium.
+// One feature (decision 25 Nov 2026, see core/quiz.js): a question may have a
+// correct answer or not (poll), and a time limit or not. The quick way is the
+// KISS poll of the Ex2 sheet: type a question and answers, "Ask now".
+// The projector shows: (lobby) -> question (timer if any, live count; live
+// bars for a poll question) -> results (bars, the correct answer if any)
+// -> top 5 (only when there are correct answers) -> ... -> podium / thanks.
 
 import { el, fill, toast } from './dom.js';
 import { t, lang } from './i18n.js';
-import { QUIZ, validateQuiz, answerCounts, scoreboard, publishBoard, secondsLeft, parseAiQuiz, toMs } from '../core/quiz.js';
+import {
+    QUIZ, validateQuiz, answerCounts, scoreboard, publishBoard, secondsLeft, timerLabel, parseAiQuiz, toMs,
+    isScored, isQuickPoll, timeKind
+} from '../core/quiz.js';
 import { quizPrompt } from '../ai/prompts.js';
 import { aiReady, chat } from '../ai/ai.js';
 
-/** Builder defaults. */
+/** Builder and stage settings. */
 const HOST = Object.freeze({
-    START_BLOCKS: 1,
     AI_COUNT: 5,
-    TICK_MS: 250
+    TICK_MS: 250,
+    DEFAULT_OPTIONS: 4
 });
 
 /**
- * Sets up the quiz card of the live lecture.
+ * Sets up the polls & quizzes card of the live lecture.
  * @param {object} store - data layer
  * @param {function():object|null} getSession - the current session {id, title}
  * @param {function():string} getMaterial - transcript / summary text of the lecture
- * @param {function():number} getPlayers - how many students scanned (to end a question early)
- * @param {{blocks:Element, title:Element, add:Element, save:Element, ai:Element, topic:Element, list:Element, stage:Element}} ui - elements
+ * @param {function():number} getPlayers - students in class (a timed question ends when all answered)
+ * @param {{blocks:Element, title:Element, add:Element, save:Element, now:Element, ai:Element, topic:Element, list:Element, stage:Element}} ui - elements
  * @returns {function(string):function():void} watch(sid) -> stop
  */
 export function setupQuizHost(store, getSession, getMaterial, getPlayers, ui)
 {
     let quizzes = [];
+    let sidNow = null;
     resetBuilder(ui);
     ui.add.onclick = () => ui.blocks.append(questionBlock(null));
-    ui.save.onclick = async () =>
+
+    /**
+     * Saves the builder's questions.
+     * @returns {Promise<{id:string, quiz:object}|null>} saved quiz, or null when incomplete
+     */
+    const save = async () =>
     {
         const s = getSession();
-        const draft = readBuilder(ui);
-        const v = validateQuiz(draft);
+        const v = validateQuiz(readBuilder(ui));
         if (s === null || !v.ok)
         {
             toast(t('quizInvalid') + (v.error ? ': ' + v.error : ''), 'warn');
-            return;
+            return null;
         }
-        await store.createQuiz(s.id, v.quiz);
+        const id = await store.createQuiz(s.id, v.quiz);
         resetBuilder(ui);
-        toast('✓ ' + t('quizSaved'));
+        return { id: id, quiz: v.quiz };
+    };
+    ui.save.onclick = async () =>
+    {
+        if (await save())
+        {
+            toast('✓ ' + t('quizSaved'));
+        }
+    };
+    ui.now.onclick = async () =>
+    {
+        const saved = await save();                  // KISS: write it and ask it at once
+        if (saved && sidNow)
+        {
+            runStage(store, sidNow, Object.assign({ id: saved.id }, saved.quiz), ui.stage,
+                () => quizzes.find((x) => x.id === saved.id), getPlayers);
+        }
     };
     ui.ai.onclick = async () =>
     {
@@ -89,25 +115,29 @@ export function setupQuizHost(store, getSession, getMaterial, getPlayers, ui)
             ui.ai.textContent = t('quizAi');
         }
     };
-    return (sid) => store.watchQuizzes(sid, (list) =>
+    return (sid) =>
     {
-        quizzes = list;
-        fill(ui.list, ...list.map((q) => el('li', {}, [
-            el('span', { class: 'grow', text: q.title + ' · ' + q.questions.length + ' ' + t('quizQuestions') }),
-            el('span', { class: 'muted', text: q.state.phase === 'end' ? t('quizDone') : '' }),
-            el('button', { class: 'small', text: q.state.phase === 'end' ? t('quizAgain') : '▶ ' + t('quizRun'),
-                onclick: () => runStage(store, sid, q, ui.stage, () => quizzes.find((x) => x.id === q.id), getPlayers) })
-        ])));
-    });
+        sidNow = sid;
+        return store.watchQuizzes(sid, (list) =>
+        {
+            quizzes = list;
+            fill(ui.list, ...list.map((q) => el('li', {}, [
+                el('span', { class: 'grow', dir: 'auto', text: q.title }),
+                el('span', { class: 'muted', text: q.questions.length + ' ' + t('quizQuestions') + (q.state.phase === 'end' ? ' · ' + t('quizDone') : '') }),
+                el('button', { class: 'small', text: q.state.phase === 'end' ? t('quizAgain') : '▶ ' + t('quizRun'),
+                    onclick: () => runStage(store, sid, q, ui.stage, () => quizzes.find((x) => x.id === q.id), getPlayers) })
+            ])));
+        });
+    };
 }
 
 // ---------------------------------------------------------------- stage
 
 /**
- * Runs one quiz on the projector (full screen).
+ * Runs one poll / quiz on the projector (full screen).
  * @param {object} store - data layer
  * @param {string} sid - session
- * @param {object} quiz0 - the quiz
+ * @param {object} quiz0 - the quiz {id, title, questions}
  * @param {Element} stage - the full-screen element
  * @param {function():object} latest - the newest copy of the quiz (live)
  * @param {function():number} getPlayers - students in class
@@ -116,6 +146,7 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
 {
     const key = await store.loadQuizKey(sid, quiz0.id);
     const qs = quiz0.questions;
+    const scored = isScored(key);
     const limits = qs.map((q) => q.seconds * 1000);
     const starts = [];
     let answers = [];
@@ -124,6 +155,7 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
     let timer = null;
     let board = [];
     let phase = 'lobby';
+    const isPoll = (i) => key[i] === QUIZ.NO_ANSWER;
     const stopAnswers = store.watchQuizAnswers(sid, quiz0.id, (list) =>
     {
         answers = list;
@@ -131,9 +163,9 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
         {
             drawQuestion();
             const n = answers.filter((a) => a.index === index).length;
-            if (n > 0 && n >= getPlayers())
+            if (qs[index].seconds > 0 && n > 0 && n >= getPlayers())
             {
-                reveal();                         // everyone answered: no need to wait
+                reveal();                         // timed and everyone answered: no need to wait
             }
         }
     });
@@ -143,9 +175,14 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
     {
         stage.requestFullscreen().catch(() => {});
     }
-    const close = () =>
+    const close = async () =>
     {
         clearInterval(timer);
+        if (phase !== 'end')
+        {
+            phase = 'end';
+            await state({});                      // phones close the question too
+        }
         stopAnswers();
         stage.hidden = true;
         document.body.classList.remove('quiz-on');
@@ -154,9 +191,14 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
             document.exitFullscreen().catch(() => {});
         }
     };
-    const state = (patch) => store.setQuizState(sid, quiz0.id, Object.assign({
-        phase: phase, index: index, startedAt: null, correct: -1, starts: starts, top: [], scores: {}, counts: []
-    }, patch));
+    const state = (patch) =>
+    {
+        const pub = publishBoard(board);
+        return store.setQuizState(sid, quiz0.id, Object.assign({
+            phase: phase, index: index, startedAt: null, correct: -1, starts: starts,
+            top: scored ? pub.top : [], scores: scored ? pub.scores : {}, counts: [], scored: scored
+        }, patch));
+    };
 
     /** Lobby: waiting for the class. */
     const drawLobby = () =>
@@ -169,14 +211,14 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
         ]);
     };
 
-    /** Next question (or the podium after the last). */
+    /** Next question (or the end after the last). */
     async function next()
     {
         index++;
         if (index >= qs.length)
         {
             phase = 'end';
-            await state({ top: publishBoard(board).top, scores: publishBoard(board).scores, correct: -1 });
+            await state({});
             drawEnd();
             return;
         }
@@ -192,15 +234,15 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
                 clearInterval(timer);
                 return;
             }
-            drawQuestion();
-            if (Date.now() - localStart >= limits[index])
+            drawTimer();
+            if (limits[index] > 0 && Date.now() - localStart >= limits[index])
             {
                 reveal();
             }
         }, HOST.TICK_MS);
     }
 
-    /** Time is up (or all answered): bars + correct answer + scores. */
+    /** Time is up, everyone answered, or the lecturer closed it: results. */
     async function reveal()
     {
         if (phase !== 'question')
@@ -211,57 +253,95 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
         clearInterval(timer);
         const q = latest() || quiz0;
         starts[index] = toMs(q.state && q.state.index === index ? q.state.startedAt : null, localStart);
-        await new Promise((r) => setTimeout(r, QUIZ.GRACE_MS));      // late answers still on the way
+        if (limits[index] > 0)
+        {
+            await new Promise((r) => setTimeout(r, QUIZ.GRACE_MS));      // late answers still on the way
+        }
         board = scoreboard(answers, key, starts, limits, index);
-        const pub = publishBoard(board);
         const counts = answerCounts(answers, index, qs[index].options.length);
-        await state({ correct: key[index], top: pub.top, scores: pub.scores, counts: counts });
+        await state({ correct: key[index], counts: counts });
         drawReveal(counts);
     }
 
-    /** One question with the timer. */
+    /** The question: timer (if any), live count, live bars for a poll question. */
     function drawQuestion()
     {
         const q = qs[index];
-        const left = secondsLeft(localStart, q.seconds, Date.now());
         const n = answers.filter((a) => a.index === index).length;
+        const kind = timeKind(q.seconds);
         frame([
             el('div', { class: 'qz-top' }, [
-                el('span', { dir: 'ltr', text: (index + 1) + ' / ' + qs.length }),
-                el('span', { class: 'qz-timer', text: String(left) }),
+                el('span', { dir: 'ltr', text: qs.length > 1 ? (index + 1) + ' / ' + qs.length : '' }),
+                kind.kind === 'none' ? el('span', {}) : el('span', { class: 'qz-timer' + (kind.kind === 'deadline' ? ' wide' : ''), dir: 'ltr' }),
                 el('span', { text: n + ' ' + t('quizAnswers') })
             ]),
             el('div', { class: 'qz-question', dir: 'auto', text: q.q }),
-            el('div', { class: 'qz-grid' }, q.options.map((o, i) => tile(i, o, ''))),
-            el('button', { class: 'qz-skip', text: t('quizShowAnswer'), onclick: reveal })
+            isPoll(index) ? bars(answerCounts(answers, index, q.options.length), -1)
+                : el('div', { class: 'qz-grid' + (q.options.length > 4 ? ' six' : '') }, q.options.map((o, i) => tile(i, o, ''))),
+            el('button', { class: 'qz-skip', text: isPoll(index) ? t('quizClosePoll') : t('quizShowAnswer'), onclick: reveal })
         ]);
+        drawTimer();
+    }
+
+    /** Updates only the timer number. */
+    function drawTimer()
+    {
+        const el2 = stage.querySelector('.qz-timer');
+        if (el2)
+        {
+            el2.textContent = timerLabel(secondsLeft(localStart, qs[index].seconds, Date.now()));
+        }
     }
 
     /**
-     * Bars of answers with the correct one marked.
+     * Results: bars, the correct answer (if any).
      * @param {number[]} counts - per option
      */
     function drawReveal(counts)
     {
         const q = qs[index];
-        const max = Math.max(1, ...counts);
+        const last = index + 1 >= qs.length;
+        let nextButton;
+        if (scored && !isPoll(index))
+        {
+            nextButton = el('button', { class: 'qz-go', text: t('quizBoard'), onclick: drawBoard });
+        }
+        else
+        {
+            nextButton = el('button', { class: 'qz-go', text: last ? t('close') : t('quizNext') + ' ▶', onclick: last ? close : next });
+        }
         frame([
             el('div', { class: 'qz-question', dir: 'auto', text: q.q }),
-            el('div', { class: 'qz-bars' }, counts.map((c, i) => el('div', { class: 'qz-bar' + (i === key[index] ? ' right' : ' wrong') }, [
-                el('div', { class: 'qz-fill', style: 'height:' + (12 + 88 * c / max) + '%;background:' + QUIZ.COLORS[i] }, [el('b', { text: String(c) })]),
-                el('span', { text: QUIZ.SHAPES[i] + (i === key[index] ? ' ✓' : '') })
-            ]))),
-            el('div', { class: 'qz-grid small' }, q.options.map((o, i) => tile(i, o, i === key[index] ? 'right' : 'wrong'))),
-            el('button', { class: 'qz-go', text: t('quizBoard'), onclick: drawBoard })
+            bars(counts, key[index]),
+            isPoll(index) ? null : el('div', { class: 'qz-grid small' }, q.options.map((o, i) => tile(i, o, i === key[index] ? 'right' : 'wrong'))),
+            nextButton
         ]);
     }
 
-    /** Top 5 after a question. */
+    /**
+     * Answer bars with the answer text under each.
+     * @param {number[]} counts - per option
+     * @param {number} right - correct option, or -1 for a poll
+     * @returns {Element} bars
+     */
+    function bars(counts, right)
+    {
+        const q = qs[index];
+        const max = Math.max(1, ...counts);
+        const total = counts.reduce((a, b) => a + b, 0);
+        return el('div', { class: 'qz-bars' }, counts.map((c, i) => el('div', { class: 'qz-bar' + (right < 0 ? '' : (i === right ? ' right' : ' wrong')) }, [
+            el('div', { class: 'qz-fill', style: 'height:' + (8 + 82 * c / max) + '%;background:' + QUIZ.COLORS[i] },
+                [el('b', { text: c + (right < 0 && total ? ' · ' + Math.round(100 * c / total) + '%' : '') })]),
+            el('span', { class: 'qz-label', dir: 'auto', text: QUIZ.SHAPES[i] + ' ' + q.options[i] + (i === right ? ' ✓' : '') })
+        ])));
+    }
+
+    /** Top 5 after a scored question. */
     async function drawBoard()
     {
         phase = 'board';
         const pub = publishBoard(board);
-        await state({ correct: key[index], top: pub.top, scores: pub.scores });
+        await state({ correct: key[index] });
         frame([
             el('div', { class: 'qz-big', text: t('quizLeaders') }),
             el('ol', { class: 'qz-board' }, pub.top.map((r) => el('li', {}, [el('span', { text: r.name }), el('b', { text: String(r.score) })]))),
@@ -269,15 +349,20 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
         ]);
     }
 
-    /** Podium. */
+    /** Podium (scored) or thanks (poll). */
     function drawEnd()
     {
+        if (!scored)
+        {
+            frame([el('div', { class: 'qz-big', text: '✓ ' + t('quizThanks') }), el('button', { class: 'qz-go', text: t('close'), onclick: close })]);
+            return;
+        }
         const top = publishBoard(board).top;
         const place = (i, cls) => el('div', { class: 'qz-place ' + cls }, top[i]
             ? [el('b', { text: top[i].name }), el('span', { text: String(top[i].score) }), el('div', { class: 'qz-step', text: String(i + 1) })]
             : [el('div', { class: 'qz-step', text: String(i + 1) })]);
         frame([
-            el('div', { class: 'qz-big', text: '🏆 ' + quiz0.title }),
+            el('div', { class: 'qz-big', dir: 'auto', text: '🏆 ' + quiz0.title }),
             el('div', { class: 'qz-podium' }, [place(1, 'second'), place(0, 'first'), place(2, 'third')]),
             el('button', { class: 'qz-go', text: t('close'), onclick: close })
         ]);
@@ -285,15 +370,22 @@ async function runStage(store, sid, quiz0, stage, latest, getPlayers)
 
     /**
      * Fills the stage, always with a close button.
-     * @param {Node[]} nodes - content
+     * @param {(Node|null)[]} nodes - content
      */
     function frame(nodes)
     {
         fill(stage, el('button', { class: 'qz-close', text: '✕', 'aria-label': t('close'), onclick: close }), ...nodes);
     }
 
-    await state({});                       // lobby: phones show "get ready"
-    drawLobby();
+    if (isQuickPoll(quiz0, key))
+    {
+        await next();                      // a quick poll opens straight on the phones
+    }
+    else
+    {
+        await state({});                   // lobby: phones show "get ready"
+        drawLobby();
+    }
 }
 
 /**
@@ -313,18 +405,18 @@ function tile(i, text, cls)
 // -------------------------------------------------------------- builder
 
 /**
- * Empties the builder and adds one empty question.
+ * Empties the builder: one question, ready for a quick poll.
  * @param {object} ui - elements
  */
 function resetBuilder(ui)
 {
     ui.title.value = '';
     ui.topic.value = '';
-    fill(ui.blocks, ...Array.from({ length: HOST.START_BLOCKS }, () => questionBlock(null)));
+    fill(ui.blocks, questionBlock(null));
 }
 
 /**
- * One question in the builder: text, 4 answers with "correct" radio, time.
+ * One question: text, up to 6 answers, "correct" (or none = poll), time.
  * @param {{q:string, options:string[], correct:number, seconds:number}|null} q - prefilled (AI) or null
  * @returns {Element} block
  */
@@ -332,20 +424,58 @@ function questionBlock(q)
 {
     const name = 'c' + Math.random().toString(36).slice(2, 8);
     const block = el('div', { class: 'qz-block' });
-    const rows = [0, 1, 2, 3].map((i) => el('label', { class: 'qz-opt' }, [
-        el('input', { type: 'radio', name: name, value: String(i), checked: q ? q.correct === i : i === 0 }),
+    const correct = q ? q.correct : QUIZ.NO_ANSWER;
+    const row = (i) => el('label', { class: 'qz-opt' }, [
+        el('input', { type: 'radio', name: name, value: String(i), checked: correct === i, title: t('quizMarkCorrect') }),
         el('span', { class: 'qz-shape', style: 'background:' + QUIZ.COLORS[i], text: QUIZ.SHAPES[i] }),
         el('input', { type: 'text', class: 'grow', maxlength: '120', value: q && q.options[i] ? q.options[i] : '',
             placeholder: t('quizAnswer') + ' ' + (i + 1) })
-    ]));
-    const seconds = el('select', {}, QUIZ.SECONDS.map((sec) => el('option', { value: String(sec), selected: (q ? q.seconds : QUIZ.DEFAULT_SECONDS) === sec, text: sec + ' ' + t('seconds') })));
+    ]);
+    const shown = Math.max(HOST.DEFAULT_OPTIONS, q ? q.options.length : 0);
+    const opts = el('div', {}, Array.from({ length: shown }, (_, i) => row(i)));
+    const more = el('button', { type: 'button', class: 'secondary small', text: '+ ' + t('quizAnswer'), onclick: () =>
+    {
+        const n = opts.children.length;
+        if (n < QUIZ.MAX_OPTIONS)
+        {
+            opts.append(row(n));
+        }
+        more.hidden = opts.children.length >= QUIZ.MAX_OPTIONS;
+    } });
+    more.hidden = shown >= QUIZ.MAX_OPTIONS;
+    const none = el('label', { class: 'qz-opt muted' }, [
+        el('input', { type: 'radio', name: name, value: '-1', checked: correct === QUIZ.NO_ANSWER }),
+        el('span', { text: t('quizNoCorrect') })
+    ]);
+    const seconds = el('select', { 'aria-label': t('quizTime') }, QUIZ.SECONDS.map((sec) => el('option', {
+        value: String(sec), selected: (q ? q.seconds : QUIZ.DEFAULT_SECONDS) === sec, text: timeText(sec)
+    })));
     fill(block,
         el('textarea', { rows: '2', class: 'qz-q', maxlength: '200', placeholder: t('quizQuestion') }, []),
-        ...rows,
-        el('div', { class: 'row' }, [el('span', { class: 'hint grow', text: t('quizMarkCorrect') }), seconds,
+        opts, more, none,
+        el('div', { class: 'row' }, [el('span', { class: 'hint grow', text: t('quizTime') }), seconds,
             el('button', { type: 'button', class: 'secondary small', text: '🗑', onclick: () => block.remove() })]));
     block.querySelector('.qz-q').value = q ? q.q : '';
     return block;
+}
+
+/**
+ * Label of a time choice.
+ * @param {number} sec - seconds (0 = none)
+ * @returns {string} label
+ */
+function timeText(sec)
+{
+    const k = timeKind(sec);
+    if (k.kind === 'none')
+    {
+        return t('quizNoLimit');
+    }
+    if (k.kind === 'deadline')
+    {
+        return t('quizDeadline') + ' ' + k.minutes + ' ' + t('minutes');
+    }
+    return '⚡ ' + sec + ' ' + t('seconds');
 }
 
 /**
@@ -360,7 +490,7 @@ function readBuilder(ui)
         questions: [...ui.blocks.querySelectorAll('.qz-block')].map((b) =>
         {
             const texts = [...b.querySelectorAll('.qz-opt input[type=text]')].map((i) => i.value);
-            const picked = b.querySelector('.qz-opt input[type=radio]:checked');
+            const picked = b.querySelector('input[type=radio]:checked');
             return { q: b.querySelector('.qz-q').value, options: texts, correct: picked ? Number(picked.value) : -1, seconds: Number(b.querySelector('select').value) };
         })
     };

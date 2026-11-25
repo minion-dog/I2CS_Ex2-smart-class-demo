@@ -35,11 +35,10 @@
 | `xlsx.js` / `Xlsx` | TC-XL-1, TC-XL-2 | Round trip keeps Hebrew and numbers; numeric XML entities decoded. |
 | `prompts.js`, `github.js`, `ai.js`, `gemini.js` | TC-AI-1..7 | Summary prompt in Hebrew; GitHub URLs parsed; README first, build folders skipped; long submissions cut; **peers are anonymous**; summary line extracted; Gemini request shape; the key comes from the store, never typed. |
 | `core/faces.js` | TC-FACE-1..9 | Overlap, merging two finders, the student's own box and the Gemini check crop (TC-FACE-10), Gemini box parsing, tiles, tapping, adding a box, ids that never change, claims and steps, size-dependent trust. |
-| `core/quiz.js`, `prompts.js` (quiz) | TC-QZ-1..5 | Points by speed, quiz checking, answer key kept apart, answer bars, scoreboard with ties, first names only on the projector, timer, reading Gemini's quiz. |
+| `core/quiz.js`, `prompts.js` (quiz) | TC-QZ-1..6 | Polls & quizzes as one: correct answer and time optional, 2–6 answers, a quick poll skips the lobby, no-limit points, timer labels; points by speed, quiz checking, answer key kept apart, answer bars, scoreboard with ties, first names only on the projector, timer, reading Gemini's quiz. |
 | `core/schedule.js` | TC-SCH-1..4 | Times, wrong slots dropped, 5 minutes early, once a day, "lecture started" once. |
 | `core/archive.js`, `xlsx.js` (zip) | TC-ZIP-1..3 | Safe names, Hebrew CSV for Excel, every folder and file, no ".." paths, the zip read back byte for byte by an independent reader. |
 | `worker/src/index.js` | TC-WRK-1..4 | Lecturer only, key added only by the Worker, other sites / students / expired tokens refused, rate limit, page sends a token not a key. |
-| `polls.js` (`readPollForm`) | TC-POLL-1 (Java) | 2–6 answers. |
 | `i18n.js` | TC-I18N-1 | Hebrew and English have exactly the same keys. |
 | `server.py` (rules) | TC-SRV-1..9, 11 | A real scan = in class; fake code / second scan refused; students cannot do lecturer actions; students never see codes, the class list or others' records; one vote while open; only http(s) links; sign-in rules; full HTTP flow; sign-ins survive a restart; the local AI key file is never served to phones. |
 | `FirebaseStore` + `firestore.rules` | browser tests against the real project (§5) and the Rules Playground | The same cases as TC-SRV, on Firebase. |
@@ -48,9 +47,9 @@
 
 | Suite | Result |
 |---|---|
-| JS unit + simulation (`npm test`) | **56 / 56 pass** |
-| Java core (JUnit) | **20 / 20 pass** (compiled with `-Xlint:all -Werror`) |
-| Server rules (`unittest`) | **15 / 15 pass** (TC-SRV-12 old code refused, 13 one student per face, 14 not-in-photo / new photo / free a face, 15 "no box on me" requests, 16 quiz: key hidden, answers only while open, once, in time) |
+| JS unit + simulation (`npm test`) | **57 / 57 pass** |
+| Java core (JUnit) | **19 / 19 pass** (compiled with `-Xlint:all -Werror`) |
+| Server rules (`unittest`) | **15 / 15 pass** (TC-SRV-12 old code refused, 13 one student per face, 14 not-in-photo / new photo / free a face, 15 "no box on me" requests, 16 quiz: key hidden, answers only while open, once, in time; 5 is now a KISS poll: no time limit, answered an hour later, once, closed) |
 | Browser, local server over HTTPS, fake camera | scan without location → in class; second scan → "already"; offline comment sent after the server restarts |
 | Browser, demo mode, fake camera, code 15% of the picture, 2× zoom | read in 1.8 s |
 | Far reading (simulated 720p camera, auto-zoom) | smallest readable code: **10%** of the picture height (was 15% before the 25×25 code) |
@@ -79,7 +78,7 @@
 | 5 | Photograph the screen with the camera app, send it, scan the photo | never marked |
 | 6 | Scan twice | "already marked" |
 | 7 | Airplane mode → comment → back online | comment arrives |
-| 8 | Poll with 3 answers, 5 students vote | live counts, one vote each |
+| 8 | Quick poll: 3 answers, *Ask now*, 5 students answer, close | opens on phones; live bars; one answer each; results with *mine* |
 | 9 | Download XLSX | opens in Excel with V marks |
 | 11 | Live quiz | phones open it; right answer = points; podium |
 | 10 | Class photo | faces boxed; tap removes / adds; students tap their face; counters update |
@@ -102,6 +101,10 @@
   Gemini wrote 4 valid Hebrew quiz questions from a short lecture text in 11 s (`quizPrompt` →
   `parseAiQuiz` → `validateQuiz`), and the "no box on me" check answered `person: true` on a face and
   `person: false` on an empty wall (about 2 s each).
+- **Polls & quizzes merged (Playwright, projector tab + 390 px phone tab):** a KISS poll with *Ask now*
+  opened straight on the phone with no timer, live bars on the projector, results with *mine* on the
+  phone, *Close*; then a 2-question quiz: a 10 s question (timer, ended when all answered, +998) and a
+  no-limit question (stayed open until *Show the answer*, +1000), leaderboard, podium; no page errors.
 - **Live quiz (Playwright, a projector tab + a 390 px phone tab):** a 2-question quiz typed in the
   builder; the phone opened it by itself; tapping the right answer gave +981; the answer showed by itself
   when everyone had answered; leaderboard, a wrong answer, podium; no page errors.

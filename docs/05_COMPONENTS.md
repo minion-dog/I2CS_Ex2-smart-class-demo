@@ -52,7 +52,7 @@ flowchart TB
 | **Class list** | Parses the Moodle CSV/XLSX export. | `web/js/core/classlist.js` · `ClassList.java` | XLSX |
 | **QR display** | Draws the flicker code 30 times a second; rotates the token every 5 s. | `web/js/ui/qr-display.js` · `QrNoiseView.java`, `LiveSessionActivity.java` | Flicker QR, Payload |
 | **Scanner** | Camera → change map → auto-zoom → decode; zoom buttons and pinch; "what the scanner sees". | `web/js/ui/scanner.js` · `QrAnalyzer.java`, `ScanActivity.java` | Flicker QR |
-| **Data layer (Strategy)** | One interface (`signIn…`, `createSession`, `publishCode`, `markMe`, `watch…`, `addComment`, `vote`, `submit`, …) with three implementations. | `web/js/data/store.js` picks one: `firebase-store.js`, `lan-store.js`, `fake-store.js` · `Repo.java` | Firebase SDK / fetch / localStorage |
+| **Data layer (Strategy)** | One interface (`signIn…`, `createSession`, `publishCode`, `markMe`, `watch…`, `addComment`, `answerQuiz`, `submit`, …) with three implementations. | `web/js/data/store.js` picks one: `firebase-store.js`, `lan-store.js`, `fake-store.js` · `Repo.java` | Firebase SDK / fetch / localStorage |
 | **Security rules** | Every check that matters on the free plan: a student writes only their own record, once, with a real token; codes and the class list are hidden. | `firestore.rules` | Firestore |
 | **Local test server** | The same rules in Python for testing on real phones over Wi-Fi before Firebase. | `server/server.py` | Python standard library |
 | **AI** | Transcription and chat (Gemini, built-in key read from Firestore by the lecturer only), summary and review prompts, GitHub repository reader, people detection. | `web/js/ai/*.js` · `android/.../ai/*.java` | Gemini, GitHub API, TF.js |

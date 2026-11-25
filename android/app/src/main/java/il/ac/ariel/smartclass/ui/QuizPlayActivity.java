@@ -181,8 +181,15 @@ public final class QuizPlayActivity extends BaseActivity
             big(getString(R.string.quiz_ready), 20);
             return;
         }
+        boolean scored = Boolean.TRUE.equals(st.get("scored"));
         if ("end".equals(phase))
         {
+            if (!scored)
+            {
+                big("✓ " + title, 30);
+                big(getString(R.string.quiz_thanks), 20);
+                return;
+            }
             big("🏆 " + title, 30);
             big(rank > 0 ? "#" + rank : "", 48);
             big(getString(R.string.quiz_score) + ": " + score, 22);
@@ -199,17 +206,20 @@ public final class QuizPlayActivity extends BaseActivity
         {
             Object at = st.get("startedAt");
             final long start = at instanceof Timestamp ? ((Timestamp) at).toDate().getTime() : System.currentTimeMillis();
-            timer = big(String.valueOf(Quiz.secondsLeft(start, seconds, System.currentTimeMillis())), 40);
             final long secs = seconds;
-            main.post(new Runnable()
+            if (secs > 0)                                   // 0 = no time limit (a poll): no timer
             {
-                @Override
-                public void run()
+                timer = big(Quiz.timerLabel(secs, Quiz.secondsLeft(start, secs, System.currentTimeMillis())), 40);
+                main.post(new Runnable()
                 {
-                    timer.setText(String.valueOf(Quiz.secondsLeft(start, secs, System.currentTimeMillis())));
-                    main.postDelayed(this, TICK_MS);
-                }
-            });
+                    @Override
+                    public void run()
+                    {
+                        timer.setText(Quiz.timerLabel(secs, Quiz.secondsLeft(start, secs, System.currentTimeMillis())));
+                        main.postDelayed(this, TICK_MS);
+                    }
+                });
+            }
             if (chosen.containsKey(index))
             {
                 big("✓ " + getString(R.string.quiz_sent), 30);
@@ -223,6 +233,11 @@ public final class QuizPlayActivity extends BaseActivity
             return;
         }
         long correct = st.get("correct") instanceof Number ? ((Number) st.get("correct")).longValue() : -1;
+        if (correct < 0)
+        {
+            showPollResults(String.valueOf(q.get("q")), options, (List<Object>) st.get("counts"), chosen.get(index));
+            return;
+        }
         boolean mineRight = chosen.containsKey(index) && chosen.get(index) == correct;
         big(chosen.containsKey(index) ? (mineRight ? "✓ " + getString(R.string.quiz_right) : "✗ " + getString(R.string.quiz_wrong))
                 : "⏱ " + getString(R.string.quiz_no_answer), 32);
@@ -235,6 +250,31 @@ public final class QuizPlayActivity extends BaseActivity
         {
             TextView c = big(Quiz.SHAPES[(int) correct] + "  " + options.get((int) correct), 20);
             c.setBackgroundColor(Quiz.COLORS[(int) correct]);
+        }
+    }
+
+    /**
+     * A poll's results on the phone: one bar per answer, my answer marked.
+     * @param (String) question Question.
+     * @param (List&lt;String&gt;) options Answers.
+     * @param (List&lt;Object&gt;) counts Count per answer (from the lecturer's page).
+     * @param (Long) mine My answer, or null.
+     */
+    private void showPollResults(String question, List<String> options, @Nullable List<Object> counts, @Nullable Long mine)
+    {
+        big(question, 18);
+        long total = 0;
+        for (int i = 0; counts != null && i < counts.size(); i++)
+        {
+            total += ((Number) counts.get(i)).longValue();
+        }
+        for (int i = 0; i < options.size(); i++)
+        {
+            long c = counts != null && i < counts.size() ? ((Number) counts.get(i)).longValue() : 0;
+            long pct = total == 0 ? 0 : Math.round(100.0 * c / total);
+            boolean me = mine != null && mine == i;
+            TextView bar = big(Quiz.SHAPES[i] + "  " + options.get(i) + (me ? "  ✓ " + getString(R.string.quiz_mine) : "") + "   " + c + " · " + pct + "%", 16);
+            bar.setBackgroundColor(me ? Quiz.COLORS[i] : (Quiz.COLORS[i] & 0x00FFFFFF) | 0x66000000);
         }
     }
 

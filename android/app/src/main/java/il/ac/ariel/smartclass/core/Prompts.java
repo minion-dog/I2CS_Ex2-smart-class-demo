@@ -143,26 +143,4 @@ public final class Prompts
         return review.substring(0, Math.min(200, review.length()));
     }
 
-    /**
-     * Reads the answers of a new poll: one per line, empty lines ignored, at most six.
-     * @param (String) text The text box content.
-     * @return (List&lt;String&gt;) 2..6 answers, or null when there are fewer than two.
-     */
-    public static List<String> pollOptions(String text)
-    {
-        List<String> out = new ArrayList<String>();
-        for (String line : text.split("\n"))
-        {
-            String s = line.trim();
-            if (!s.isEmpty() && out.size() < MAX_POLL_OPTIONS)
-            {
-                out.add(s);
-            }
-        }
-        if (out.size() < 2)
-        {
-            return null;
-        }
-        return out;
-    }
 }

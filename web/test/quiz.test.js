@@ -1,11 +1,13 @@
 // Tests of the live quiz logic (web/js/core/quiz.js) and the AI quiz prompt.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { QUIZ, points, validateQuiz, splitKey, answerCounts, scoreboard, publishBoard, secondsLeft, parseAiQuiz, toMs } from '../js/core/quiz.js';
+import { QUIZ, points, validateQuiz, splitKey, answerCounts, scoreboard, publishBoard, secondsLeft, parseAiQuiz, toMs, isScored, isQuickPoll, timeKind, timerLabel } from '../js/core/quiz.js';
 import { quizPrompt } from '../js/ai/prompts.js';
 
-test('TC-QZ-1: points: correct = 500..1000, faster = more; wrong or too late = 0', () =>
+test('TC-QZ-1: points: correct = 500..1000, faster = more; no time limit = 1000; wrong or too late = 0', () =>
 {
+    assert.equal(points(true, 3_600_000, 0), 1000, 'no limit: a correct answer an hour later still counts');
+    assert.equal(points(false, 0, 0), 0);
     assert.equal(points(true, 0, 20000), 1000);
     assert.equal(points(true, 10000, 20000), 750);
     assert.equal(points(true, 20000, 20000), 500);
@@ -14,21 +16,44 @@ test('TC-QZ-1: points: correct = 500..1000, faster = more; wrong or too late = 0
     assert.equal(points(false, 0, 20000), 0);
 });
 
-test('TC-QZ-2: a quiz is checked: empty blocks ignored, 2-4 answers, a correct answer, allowed times', () =>
+test('TC-QZ-2: one feature: a correct answer is optional (none = poll), time is optional, 2-6 answers', () =>
 {
     const ok = validateQuiz({ title: ' Week 5 ', questions: [
         { q: 'What is 2+2?', options: ['3', '', '4', '5'], correct: 2, seconds: 30 },
         { q: '', options: ['', '', '', ''], correct: 0 },
+        { q: 'Which topic again?', options: ['A', 'B', 'C', 'D', 'E', 'F'], correct: -1, seconds: 300 },
         { q: 'Capital?', options: ['A', 'B'], correct: 1, seconds: 7 }
     ] });
     assert.ok(ok.ok);
-    assert.equal(ok.quiz.questions.length, 2);
+    assert.equal(ok.quiz.questions.length, 3);
     assert.deepEqual(ok.quiz.questions[0], { q: 'What is 2+2?', options: ['3', '4', '5'], correct: 1, seconds: 30 });
-    assert.equal(ok.quiz.questions[1].seconds, QUIZ.DEFAULT_SECONDS, 'a strange time falls back to 20 s');
-    assert.match(validateQuiz({ questions: [{ q: 'x', options: ['a'], correct: 0 }] }).error, /2-4/);
-    assert.match(validateQuiz({ questions: [{ q: 'x', options: ['a', 'b'], correct: 3 }] }).error, /correct/);
+    assert.deepEqual(ok.quiz.questions[1], { q: 'Which topic again?', options: ['A', 'B', 'C', 'D', 'E', 'F'], correct: QUIZ.NO_ANSWER, seconds: 300 });
+    assert.equal(ok.quiz.questions[2].seconds, 0, 'a strange time falls back to no limit');
+    const poll = validateQuiz({ title: '', questions: [{ q: 'Pizza or falafel?', options: ['pizza', 'falafel'] }] });
+    assert.equal(poll.quiz.title, 'Pizza or falafel?', 'a quick poll is named after its question');
+    assert.deepEqual([poll.quiz.questions[0].correct, poll.quiz.questions[0].seconds], [-1, 0]);
+    assert.match(validateQuiz({ questions: [{ q: 'x', options: ['a'] }] }).error, /2-6/);
+    assert.match(validateQuiz({ questions: [{ q: 'x', options: ['1', '2', '3', '4', '5', '6', '7'] }] }).error, /2-6/);
     assert.match(validateQuiz({ questions: [{ q: '', options: ['a', 'b'], correct: 0 }] }).error, /no question/);
     assert.match(validateQuiz({ questions: [] }).error, /no questions/);
+});
+
+test('TC-QZ-6: poll or quiz: scoring, quick poll without a lobby, time kinds and labels', () =>
+{
+    assert.equal(isScored([-1, -1]), false);
+    assert.equal(isScored([-1, 2]), true);
+    assert.equal(isQuickPoll({ questions: [{}] }, [-1]), true);
+    assert.equal(isQuickPoll({ questions: [{}, {}] }, [-1, -1]), false);
+    assert.equal(isQuickPoll({ questions: [{}] }, [0]), false);
+    assert.deepEqual(timeKind(0), { kind: 'none', minutes: 0 });
+    assert.deepEqual(timeKind(20), { kind: 'speed', minutes: 0 });
+    assert.deepEqual(timeKind(300), { kind: 'deadline', minutes: 5 });
+    assert.equal(secondsLeft(0, 0, 999999), Infinity);
+    assert.equal(timerLabel(Infinity), '');
+    assert.equal(timerLabel(299), '4:59');
+    assert.equal(timerLabel(45), '45');
+    const board = scoreboard([{ uid: 'a', name: 'A', index: 0, option: 1, at: 50 }], [-1], [0], [0], 0);
+    assert.equal(board[0].score, 0, 'a poll question gives no points');
 });
 
 test('TC-QZ-3: the answer key is kept apart from what students can read', () =>

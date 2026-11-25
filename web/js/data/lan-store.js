@@ -7,10 +7,10 @@
 // user only what they may see. This class keeps the same methods as the
 // other two stores (Strategy pattern), so the pages do not change.
 //
-// It reuses the demo store's "views" (who sees which comments, vote counts,
+// It reuses the demo store's "views" (who sees which comments, quiz answers,
 // ...) on the state the server sends, and replaces how changes are saved:
 // every change is an action POSTed to the server. Offline (phone lost
-// Wi-Fi), scans, comments, votes and submissions wait in a queue on the
+// Wi-Fi), scans, comments, quiz answers and submissions wait in a queue on the
 // phone, show as "waiting to send", and are sent when the server is back.
 
 import { FakeStore } from './fake-store.js';
@@ -18,7 +18,7 @@ import { FakeStore } from './fake-store.js';
 const POLL_MS = 1000;                       // how often to ask the server for news
 const TOKEN_KEY = 'smartclass-lan-token';
 const QUEUE_KEY = 'smartclass-lan-queue';
-const OFFLINE_OK = new Set(['markMe', 'addComment', 'vote', 'submit']);
+const OFFLINE_OK = new Set(['markMe', 'addComment', 'answerQuiz', 'submit']);
 
 /** A Store backed by the local server. */
 export class LanStore extends FakeStore
@@ -205,24 +205,6 @@ export class LanStore extends FakeStore
     async addComment(sid, c)
     {
         await this.act({ type: 'addComment', sid: sid, text: c.text, visibility: c.visibility, anonymous: c.anonymous });
-    }
-
-    /** @override */
-    async createPoll(sid, question, options)
-    {
-        return this.act({ type: 'createPoll', sid: sid, question: question, options: options });
-    }
-
-    /** @override */
-    async setPollOpen(sid, pid, open)
-    {
-        await this.act({ type: 'setPollOpen', sid: sid, pid: pid, open: open });
-    }
-
-    /** @override */
-    async vote(sid, pid, option)
-    {
-        await this.act({ type: 'vote', sid: sid, pid: pid, option: option });
     }
 
     /** @override */
@@ -459,10 +441,6 @@ export class LanStore extends FakeStore
                 id: 'pending-' + sub.comments.length, text: a.text, visibility: a.visibility, authorUid: this.user.uid,
                 authorName: a.anonymous ? null : this.user.name, fromLecturer: false, createdAt: Date.now(), pending: true
             });
-        }
-        else if (a.type === 'vote' && sub && sub.polls[a.pid])
-        {
-            sub.polls[a.pid].votes[this.user.uid] = a.option;
         }
     }
 }

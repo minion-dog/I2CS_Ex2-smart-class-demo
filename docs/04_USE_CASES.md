@@ -15,11 +15,11 @@ flowchart LR
         UC4(UC-4 Watch and download the attendance sheet)
         UC5(UC-5 Class photo: fix the face boxes)
         UC12(UC-12 Tap my face in the class photo)
-        UC13(UC-13 Play a live quiz)
+        UC13(UC-13 Run a quiz: correct answers, time, points)
         UC14(UC-14 Download everything as ZIP)
         UC15(UC-15 Lectures open by the timetable)
         UC6(UC-6 Comment during or after a lecture)
-        UC7(UC-7 Run a quick poll)
+        UC7(UC-7 Ask a quick poll)
         UC8(UC-8 Record and summarise the lecture)
         UC9(UC-9 Submit homework)
         UC10(UC-10 Review and grade homework)
@@ -76,10 +76,10 @@ flowchart LR
 - **Alternatives:** offline → waits and is sent later; a past lecture → the comment is added to that lecture.
 - (FR-COM-1..6)
 
-## UC-7 Run a quick poll
+## UC-7 Ask a quick poll (KISS)
 **Story:** As a lecturer, I want to ask the class a question and see the answers immediately.
-- **Main flow:** 1) Lecturer writes a question and 2–6 answers → *Create*. 2) Students get a notification and vote once. 3) Results update live. 4) Lecturer closes the poll.
-- **Alternative:** fewer than 2 or more than 6 answers → the form refuses.
+- **Main flow:** 1) Polls & quizzes card: type a question and 2–6 answers → *Ask now*. 2) It opens on every phone (🔔) and on the projector with live bars. 3) Students tap one answer, once. 4) *Close and show results* → phones show the bars with *mine* marked.
+- **Alternatives:** fewer than 2 answers → refused; a student closed the panel → *answer* button in the Lecture tab; a correct answer or a time can be added → UC-13.
 - (FR-POLL-1..3)
 
 ## UC-8 Record and summarise the lecture
@@ -107,9 +107,9 @@ flowchart LR
 - **No box on me:** the student taps where he sits (also at the edge of the photo) → *Send* → "checking". Gemini looks at that part of the photo: a person → the box is added and the attendance confirmed; no → "not approved", and the lecturer can still approve.
 - (FR-ATT-13, FR-ATT-14, FR-ATT-16)
 
-## UC-13 Play a live quiz (Kahoot style)
-- **Actors:** Lecturer, Students, Gemini (optional).
-- **Main flow:** 1) The lecturer writes the questions (or *✨ Write questions with AI* from the transcript or a topic) and saves. 2) *Run* → the projector shows the lobby; the phones open the quiz by themselves. 3) *Start* → a question with a countdown; students tap one of four coloured buttons. 4) Time up or everyone answered → answer bars and the correct answer; each phone shows right / wrong and the points. 5) *Leaderboard* (top 5) → *Next* … → podium.
+## UC-13 Run a quiz: correct answers, time, points (Kahoot style)
+- **Actors:** Lecturer, Students, Gemini (optional). The same feature as UC-7, with correct answers and/or time.
+- **Main flow:** 1) The lecturer writes the questions, marks the correct answers and a time (or *✨ AI writes questions* from the transcript or a topic) and saves. 2) *Run* → the projector shows the lobby; the phones open the quiz by themselves. 3) *Start* → a question with its timer (if any); students tap one of the coloured buttons. 4) Time up or everyone answered → answer bars and the correct answer; each phone shows right / wrong and the points. 5) *Leaderboard* (top 5) → *Next* … → podium.
 - **Alternative:** an answer after the time → "time is up" (refused by the rules).
 - (FR-QZ-1..5)
 

@@ -21,10 +21,10 @@ Volunteers: 3–5 classmates with phones.
 | 2:30 | Volunteers **scan live** from the front and the back row (zoom +) | "Our scanner measures *how fast* each square changes. That is the QR." |
 | 3:30 | The lecturer's live list and counter; a second scan → "already marked" | "One mark per student, only from the room. No location needed." |
 | 4:00 | **Sheet** → **Download XLSX** | "The main feature: the attendance spreadsheet, online or offline." |
-| 5:30 | **Live quiz**: ✨ AI writes 3 questions from today's transcript → Run → the class answers on phones | "Like Kahoot: faster right answers get more points; the answers stay secret until each reveal." |
+| 5:30 | **Quiz mode** (same feature): ✨ AI writes 3 questions from today's transcript, with correct answers and 20 s → Run | "Mark a correct answer and a time and the poll becomes a Kahoot-style quiz: faster right answers get more points." |
 | 4:45 | **Class photo**: take it, remove one wrong box, add one missing face, save; on the phone tap your face → *Is this you?* → Yes | "Every face gets a box; each student confirms himself, one student per face; who is not in the photo tells me at once." |
 | 5:30 | **Comments**: a private anonymous question, a public one; airplane mode → send → back online | "Real time, and offline it waits on the phone." |
-| 6:30 | **Poll**: 3 answers, the class votes, close | "On-the-spot, one tap, live results." |
+| 6:30 | **Quick poll**: question + 3 answers → *Ask now*, the class answers, *Close* | "KISS: one tap, it opens on every phone, live results." |
 | 7:30 | **Summary**: upload a short recording → transcript → summary | "Whisper in Hebrew, then a summary for the students." |
 | 8:30 | **Homework**: a sample repository from the course list → AI review → grade | "The review also compares with the rest of the class, anonymously." |
 | 9:30 | Wrap up: repository, documents, tests (31 + 18 + 9) | "All design documents are in the repository." |

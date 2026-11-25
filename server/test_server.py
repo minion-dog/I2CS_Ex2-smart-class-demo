@@ -176,17 +176,22 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(srv.apply_action(self.s, LECTURER, {"type": "quizKey", "sid": self.sid, "qid": qid}), [1])
         self.assertEqual(len(srv.view_for(self.s, self.yossi)["sub"][self.sid]["quizzes"][qid]["answers"]), 0)
 
-    def test_tc_srv_5_vote_once_while_open(self):
-        """TC-SRV-5: one vote per student; none after closing."""
-        pid = srv.apply_action(self.s, LECTURER, {"type": "createPoll", "sid": self.sid, "question": "q", "options": ["a", "b"]})
-        srv.apply_action(self.s, self.dana, {"type": "vote", "sid": self.sid, "pid": pid, "option": 1})
+    def test_tc_srv_5_poll_is_a_quiz_question_without_answer_or_time(self):
+        """TC-SRV-5: a KISS poll (no correct answer, no time): answered late is fine, once, only while open."""
+        qid = srv.apply_action(self.s, LECTURER, {"type": "createQuiz", "sid": self.sid, "quiz": {"title": "q", "questions": [
+            {"q": "Ready?", "options": ["yes", "no", "a bit", "x", "y", "z"], "correct": -1, "seconds": 0}]}})
+        st = {"phase": "question", "index": 0, "startedAt": "now", "correct": -1, "starts": [], "top": [], "scores": {}, "counts": []}
+        srv.apply_action(self.s, LECTURER, {"type": "setQuizState", "sid": self.sid, "qid": qid, "state": st})
+        self.s["sub"][self.sid]["quizzes"][qid]["state"]["startedAt"] -= 3_600_000      # an hour later: no limit
+        answer = {"type": "answerQuiz", "sid": self.sid, "qid": qid, "index": 0, "option": 5}
+        srv.apply_action(self.s, self.dana, answer)
         with self.assertRaises(srv.Denied):
-            srv.apply_action(self.s, self.dana, {"type": "vote", "sid": self.sid, "pid": pid, "option": 0})
-        srv.apply_action(self.s, LECTURER, {"type": "setPollOpen", "sid": self.sid, "pid": pid, "open": False})
+            srv.apply_action(self.s, self.dana, answer)                     # once
+        self.assertEqual(srv.apply_action(self.s, LECTURER, {"type": "quizKey", "sid": self.sid, "qid": qid}), [-1])
+        st["phase"] = "end"
+        srv.apply_action(self.s, LECTURER, {"type": "setQuizState", "sid": self.sid, "qid": qid, "state": st})
         with self.assertRaises(srv.Denied):
-            srv.apply_action(self.s, self.yossi, {"type": "vote", "sid": self.sid, "pid": pid, "option": 0})
-        v = srv.view_for(self.s, self.yossi)
-        self.assertEqual(v["sub"][self.sid]["polls"][pid]["votes"], {})
+            srv.apply_action(self.s, self.yossi, answer)                    # closed
 
     def test_tc_srv_6_submission_links_must_be_http(self):
         """TC-SRV-6: no javascript: links in submissions."""

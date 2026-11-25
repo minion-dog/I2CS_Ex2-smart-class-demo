@@ -15,7 +15,7 @@ fake (a photographed QR code is forwarded to friends at home).
 1. Make attendance automatic for students in the room and impossible to forward by photo.
 2. Give the lecturer a live and downloadable **attendance spreadsheet** (the main feature).
 3. Let students comment and ask questions in real time, also offline.
-4. Let the lecturer run quick (KISS) polls.
+4. Let the lecturer run quick (KISS) polls; the same feature can mark correct answers and a time (quiz mode).
 5. Produce an AI summary of a recorded lecture (Hebrew).
 6. Give an AI review of homework that compares each submission with the other students' work.
 7. Let the lecturer take one photo of the class; each student confirms attendance by tapping their own face in it.
@@ -26,7 +26,7 @@ fake (a photographed QR code is forwarded to friends at home).
 | Item | Description |
 |---|---|
 | Student web app | Phone-first website (no install): scan, comments, polls, homework, own attendance. |
-| Lecturer web app | Website: class list import, live lecture (flicker QR, live attendance, comments, polls, recording and summary, class photo with face boxes), spreadsheet, homework review. |
+| Lecturer web app | Website: class list import, live lecture (flicker QR, live attendance, comments, polls & quizzes, recording and summary, class photo with face boxes), spreadsheet, homework review. |
 | Android app | Native Java app with the same features for students and lecturers (an extra, not required by the sheet). |
 | Data | Firebase Auth + Firestore (free plan) with security rules; a local Python server and an in-browser demo store for testing without Firebase. |
 | AI | Google Gemini (free tier): Hebrew transcription, summaries and reviews, with a built-in key the lecturer never types; MediaPipe face boxes for the class photo. |

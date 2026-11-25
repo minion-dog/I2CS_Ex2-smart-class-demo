@@ -126,25 +126,26 @@ sequenceDiagram
     F-->>LP: live update
 ```
 
-## SD-6 Quick poll (UC-7)
+## SD-6 Quick poll, KISS (UC-7)
 
 ```mermaid
 sequenceDiagram
     actor L as Lecturer
-    actor St as Student
-    participant LP as polls.js (lecturer)
-    participant S as Store
-    participant SP as polls.js (student)
-    L->>LP: question + 2–6 answers → Create
-    LP->>S: createPoll(sid, q, options)
-    S-->>SP: watchPolls: a new open poll
-    SP-->>St: 🔔 A new poll in the lecture
-    St->>SP: tap an answer
-    SP->>S: vote(sid, pid, option)
-    S->>S: rules: open, once per student
-    S-->>LP: watchVotes: live counts
-    L->>LP: Close
-    LP->>S: setPollOpen(sid, pid, false)
+    participant H as quiz-host.js
+    participant S as Store / Firestore + rules
+    participant P as quiz-play.js (phones)
+    actor St as Students
+    L->>H: question + 2–6 answers → Ask now
+    H->>S: createQuiz(1 question, key [-1], no time)
+    H->>S: setQuizState {phase: question, startedAt: server time}
+    S-->>P: open question → full screen, 🔔
+    St->>P: tap an answer
+    P->>S: create answers/{uid_0}
+    Note over S: rules: open, once, no time limit
+    S-->>H: live bars (count, %)
+    L->>H: Close and show results
+    H->>S: setQuizState {phase: reveal, counts}
+    S-->>P: result bars, "mine" marked
 ```
 
 ## SD-7 Recording and AI summary (UC-8)
@@ -237,7 +238,7 @@ sequenceDiagram
     S-->>P: names on faces, counters, "not in the photo" list
 ```
 
-## SD-10 Live quiz, Kahoot style (UC-13)
+## SD-10 Quiz with correct answers and time, Kahoot style (UC-13)
 
 ```mermaid
 sequenceDiagram

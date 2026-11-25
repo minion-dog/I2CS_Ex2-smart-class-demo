@@ -46,15 +46,8 @@
     <string name="anonymous">אנונימי</string>
     <string name="anonymous_name">אנונימי</string>
     <string name="lecturer_name">המרצה</string>
-    <string name="polls">סקרים</string>
-    <string name="poll_question">שאלה</string>
-    <string name="poll_options">תשובות (שורה לכל תשובה)</string>
-    <string name="create_poll">פתח סקר</string>
-    <string name="close_poll">סגור</string>
-    <string name="reopen_poll">פתח שוב</string>
-    <string name="votes">קולות</string>
-    <string name="voted">הצבעת ✓</string>
-    <string name="poll_closed">הסקר נסגר</string>
+    <string name="polls">📊 סקרים וחידונים</string>
+    <string name="polls_on_site">המרצה מפעיל/ה סקרים וחידונים מהאתר, על המקרן.</string>
     <string name="summary">סיכום</string>
     <string name="no_summary">עוד אין סיכום לשיעור הזה.</string>
     <string name="transcript">תמלול</string>
@@ -108,4 +101,6 @@
     <string name="quiz_no_answer">לא ענית בזמן</string>
     <string name="quiz_score">הניקוד שלך</string>
     <string name="quiz_late">הזמן נגמר</string>
+    <string name="quiz_thanks">תודה! התשובות נשמרו</string>
+    <string name="quiz_mine">שלי</string>
 </resources>

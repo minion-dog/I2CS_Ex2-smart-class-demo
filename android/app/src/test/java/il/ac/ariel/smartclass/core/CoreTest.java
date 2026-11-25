@@ -439,15 +439,6 @@ public class CoreTest
         assertNull(Prompts.githubParts("https://gitlab.com/a/b"));
     }
 
-    /** Checks the poll form: at least two answers, at most six (TC-POLL-1). */
-    @Test
-    public void pollFormNeedsTwoToSixAnswers()
-    {
-        assertNull(Prompts.pollOptions("only one"));
-        assertEquals(3, Prompts.pollOptions("a\n\nb\n c ").size());
-        assertEquals(6, Prompts.pollOptions("1\n2\n3\n4\n5\n6\n7\n8").size());
-    }
-
     /** Checks that the review summary line is extracted (TC-AI-6). */
     @Test
     public void reviewSummaryLine()
@@ -491,6 +482,10 @@ public class CoreTest
         assertEquals(0, Quiz.points(false, 0, 20000));
         assertEquals(15, Quiz.secondsLeft(0, 20, 5500));
         assertEquals(0, Quiz.secondsLeft(0, 20, 25000));
+        assertEquals(1000, Quiz.points(true, 3_600_000, 0));
+        assertEquals("", Quiz.timerLabel(0, 0));
+        assertEquals("4:59", Quiz.timerLabel(300, 299));
+        assertEquals("45", Quiz.timerLabel(20, 45));
         assertTrue(Quiz.isLive("question"));
         assertFalse(Quiz.isLive("draft"));
     }

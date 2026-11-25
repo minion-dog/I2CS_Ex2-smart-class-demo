@@ -6,7 +6,7 @@ Then open the address it prints, on the PC (lecturer) and on phones (students).
 What it does:
   * serves the website (the web/ folder) over HTTPS - phones only allow the camera
     on secure sites, so plain http would not work for scanning;
-  * keeps the shared data (class list, lectures, attendance, comments, polls,
+  * keeps the shared data (class list, lectures, attendance, comments, polls & quizzes,
     transcript, assignments) in memory and in server/data.json;
   * checks everything itself, like the Firestore rules do on the real system:
     a scan needs a real code of that lecture and counts once per student
@@ -187,7 +187,7 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
             "id": sid, "title": str(a["title"])[:200], "startedAt": now_ms(), "endedAt": None,
             "summary": None, "headcount": None,
         }
-        state["sub"][sid] = {"codes": {}, "attendance": {}, "comments": [], "polls": {}, "transcript": {}}
+        state["sub"][sid] = {"codes": {}, "attendance": {}, "comments": [], "transcript": {}}
         return sid
     if kind == "updateSession":
         require(lecturer, "lecturer only")
@@ -288,9 +288,10 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         quiz = a["quiz"]
         questions = []
         for x in quiz["questions"][:30]:
-            options = [str(o)[:200] for o in x["options"]][:4]
-            require(2 <= len(options) <= 4 and 0 <= int(x["correct"]) < len(options), "bad question")
-            questions.append({"q": str(x["q"])[:200], "options": options, "seconds": int(x.get("seconds") or 20)})
+            options = [str(o)[:200] for o in x["options"]][:6]
+            correct = int(x.get("correct", -1))
+            require(2 <= len(options) <= 6 and -1 <= correct < len(options), "bad question")   # -1 = a poll question
+            questions.append({"q": str(x["q"])[:200], "options": options, "seconds": max(0, int(x.get("seconds") or 0))})
         require(questions, "no questions")
         sub = state["sub"][a["sid"]]
         qid = new_id("q")
@@ -298,7 +299,7 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
             "id": qid, "title": str(quiz.get("title") or "Quiz")[:200], "questions": questions, "createdAt": now_ms(),
             "state": {"phase": "draft", "index": -1, "startedAt": None, "correct": -1, "starts": [], "top": [], "scores": {}, "counts": []},
             "answers": {}}
-        sub.setdefault("quizKeys", {})[qid] = [int(x["correct"]) for x in quiz["questions"][:30]]
+        sub.setdefault("quizKeys", {})[qid] = [int(x.get("correct", -1)) for x in quiz["questions"][:30]]
         return qid
     if kind == "quizKey":
         require(lecturer, "lecturer only")
@@ -317,7 +318,8 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         st, index, option = q["state"], int(a["index"]), int(a["option"])
         aid = f"{user['uid']}_{index}"
         require(st["phase"] == "question" and st["index"] == index, "closed")
-        require(now_ms() <= st["startedAt"] + q["questions"][index]["seconds"] * 1000 + 2000, "closed")   # timed by the server
+        seconds = q["questions"][index]["seconds"]
+        require(seconds == 0 or now_ms() <= st["startedAt"] + seconds * 1000 + 2000, "closed")   # timed by the server; 0 = no limit
         require(0 <= option < len(q["questions"][index]["options"]), "bad option")
         require(aid not in q["answers"], "already")                                                       # once per question
         q["answers"][aid] = {"uid": user["uid"], "name": user["name"], "index": index, "option": option, "at": now_ms()}
@@ -345,31 +347,6 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
             "authorName": None if a.get("anonymous") else user["name"],
             "fromLecturer": lecturer, "createdAt": now_ms(),
         })
-        return None
-
-    # ----- polls
-    if kind == "createPoll":
-        require(lecturer, "lecturer only")
-        options = [str(o)[:200] for o in a["options"]][:6]
-        require(len(options) >= 2, "two answers at least")
-        pid = new_id("p")
-        state["sub"][a["sid"]]["polls"][pid] = {
-            "id": pid, "question": str(a["question"])[:500], "options": options,
-            "open": True, "createdAt": now_ms(), "votes": {},
-        }
-        return pid
-    if kind == "setPollOpen":
-        require(lecturer, "lecturer only")
-        state["sub"][a["sid"]]["polls"][a["pid"]]["open"] = bool(a["open"])
-        return None
-    if kind == "vote":
-        require(student, "students only")
-        poll = state["sub"][a["sid"]]["polls"][a["pid"]]
-        require(poll["open"], "closed")
-        require(user["uid"] not in poll["votes"], "already")
-        option = int(a["option"])
-        require(0 <= option < len(poll["options"]), "bad option")
-        poll["votes"][user["uid"]] = option
         return None
 
     # ----- transcript
@@ -426,7 +403,7 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
     """Returns the part of the database this user may see.
 
     Lecturer: everything except the secret codes. Student: no class list, no codes,
-    only their own attendance, public + own comments, only their own votes and
+    only their own attendance, public + own comments, only their own quiz answers and
     submissions.
     """
     if user["role"] == "lecturer":
@@ -443,8 +420,6 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "codes": {},
             "attendance": {k: r for k, r in sub["attendance"].items() if k == me},
             "comments": [c for c in sub["comments"] if c["visibility"] == "public" or c["authorUid"] == uid],
-            "polls": {pid: {**p, "votes": {k: o for k, o in p["votes"].items() if k == uid}}
-                      for pid, p in sub["polls"].items()},
             "transcript": sub["transcript"],
             "photo": sub.get("photo"),
             "claims": {k: {"v": c["v"]} for k, c in sub.get("claims", {}).items()},   # which boxes, not who

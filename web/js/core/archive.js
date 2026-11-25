@@ -7,13 +7,14 @@
 //
 //   SmartClass-2026-11-25/
 //     README.txt, class-list.csv, attendance.xlsx (added by the page)
-//     lectures/01 2026-11-04 Intro/  attendance.csv comments.csv polls.csv
-//                                    quiz-<name>.csv transcript.txt summary.md
+//     lectures/01 2026-11-04 Intro/  attendance.csv comments.csv
+//                                    polls-and-quizzes.csv (answer counts), quiz-<name>.csv (players)
+//                                    transcript.txt summary.md
 //                                    class-photo.jpg faces.csv
 //     assignments/Ex2/  requirements.md grades.csv
 //                       <email>/ link.txt review.md feedback.md files/...
 
-import { scoreboard } from './quiz.js';
+import { scoreboard, answerCounts, isScored } from './quiz.js';
 import { claimsOf } from './faces.js';
 
 /** Limits of names in the zip. */
@@ -68,7 +69,7 @@ export function dataUrlBytes(dataUrl)
 
 /**
  * Builds every file of the archive.
- * @param {object} d - collected data: {date, roster[], lectures[{session, attendance{}, comments[], polls[{question, options, counts}],
+ * @param {object} d - collected data: {date, roster[], lectures[{session, attendance{}, comments[],
  *        quizzes[{title, questions, state, answers, key}], transcript[], photo}], assignments[{assignment, submissions[]}]}
  * @returns {{path:string, data:(string|Uint8Array)}[]} files (paths inside the zip)
  */
@@ -78,7 +79,7 @@ export function buildArchive(d)
     const files = [];
     const add = (path, data) => files.push({ path: root + path, data: data });
     add('README.txt', 'SmartClass export ' + d.date + '\r\n'
-        + 'lectures/: one folder per lecture (attendance, comments, polls, quizzes, transcript, summary, class photo)\r\n'
+        + 'lectures/: one folder per lecture (attendance, comments, polls & quizzes, transcript, summary, class photo)\r\n'
         + 'assignments/: one folder per assignment (requirements, grades, each student\'s link, files, AI review, feedback)\r\n');
     add('class-list.csv', csv([['first', 'last', 'id', 'email', 'group', 'staff']].concat(
         d.roster.map((r) => [r.first, r.last, r.id, r.email, r.group, r.staff ? 'yes' : '']))));
@@ -92,11 +93,16 @@ export function buildArchive(d)
             att.map((r) => [r.email, r.name || '', r.status, isoTime(r.scannedAt), faceText(r, L.photo)]))));
         add(dir + 'comments.csv', csv([['time', 'visibility', 'from', 'text']].concat(
             (L.comments || []).map((c) => [isoTime(c.createdAt), c.visibility, c.fromLecturer ? 'lecturer' : (c.authorName || 'anonymous'), c.text]))));
-        add(dir + 'polls.csv', csv([['question', 'answer', 'votes']].concat(
-            (L.polls || []).flatMap((p) => p.options.map((o, k) => [p.question, o, (p.counts || [])[k] || 0])))));
+        add(dir + 'polls-and-quizzes.csv', csv([['poll / quiz', 'question', 'answer', 'count', 'correct']].concat(
+            (L.quizzes || []).flatMap((q) => q.questions.flatMap((x, i) => x.options.map((o, k) => [
+                q.title, x.q, o, answerCounts(q.answers || [], i, x.options.length)[k], (q.key || [])[i] === k ? '✓' : ''
+            ]))))));
         for (const q of L.quizzes || [])
         {
-            add(dir + 'quiz-' + safeName(q.title) + '.csv', quizCsv(q));
+            if (isScored(q.key || []))
+            {
+                add(dir + 'quiz-' + safeName(q.title) + '.csv', quizCsv(q));     // players and points
+            }
         }
         if ((L.transcript || []).length > 0)
         {

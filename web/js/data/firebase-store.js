@@ -2,7 +2,7 @@
 //  firebase-store.js - the real data layer (Firebase Auth + Firestore)
 // =====================================================================
 // Same methods as fake-store.js. Firestore's persistent local cache keeps
-// working offline: a scan, comment or vote made without internet is saved
+// working offline: a scan, comment or answer made without internet is saved
 // on the device and sent automatically when the connection returns
 // (decision Q6: "offline = save and send later").
 // The security rules (firestore.rules) are what really protect the data;
@@ -616,35 +616,6 @@ export class FirebaseStore
         };
     }
 
-    // ----------------------------------------------------------- polls
-    /**
-     * Creates and opens a poll (lecturer).
-     * @param {string} sid - session
-     * @param {string} question - the question
-     * @param {string[]} options - answers
-     * @returns {Promise<string>} poll id
-     */
-    async createPoll(sid, question, options)
-    {
-        await this.ready;
-        const f = this.fs;
-        const ref = await f.addDoc(f.collection(this.db, 'sessions', sid, 'polls'),
-            { question: question, options: options, open: true, createdAt: Date.now() });
-        return ref.id;
-    }
-
-    /**
-     * Opens or closes a poll (lecturer).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {boolean} open - new state
-     */
-    async setPollOpen(sid, pid, open)
-    {
-        await this.ready;
-        await this.fs.updateDoc(this.fs.doc(this.db, 'sessions', sid, 'polls', pid), { open: open });
-    }
-
     // -------------------------------------------------- live quiz (Kahoot style)
     /**
      * Creates a quiz (lecturer). The answer key goes to a lecturer-only document.
@@ -740,60 +711,6 @@ export class FirebaseStore
             return this.live(col, fix);
         }
         return this.live((f) => f.query(col(f), f.where('uid', '==', this.user.uid)), fix);
-    }
-
-    /**
-     * Watches the polls of a session, newest first.
-     * @param {string} sid - session
-     * @param {function(object[]):void} cb - receives polls
-     * @returns {function():void} unsubscribe
-     */
-    watchPolls(sid, cb)
-    {
-        return this.live((f) => f.query(f.collection(this.db, 'sessions', sid, 'polls'), f.orderBy('createdAt', 'desc')), cb);
-    }
-
-    /**
-     * Votes once (student; works offline).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {number} option - answer index
-     */
-    async vote(sid, pid, option)
-    {
-        await this.ready;
-        const f = this.fs;
-        f.setDoc(f.doc(this.db, 'sessions', sid, 'polls', pid, 'votes', this.user.uid),
-            { option: option, votedAt: Date.now() })
-            .catch((e) => console.warn('vote rejected:', e.code || e.message));
-    }
-
-    /**
-     * Watches vote counts (lecturer) or the user's own vote (student).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {function({counts:(number[]|null), mine:(number|null)}):void} cb - receives results
-     * @returns {function():void} unsubscribe
-     */
-    watchVotes(sid, pid, cb)
-    {
-        const votes = (f) => f.collection(this.db, 'sessions', sid, 'polls', pid, 'votes');
-        if (this.user.role === 'lecturer')
-        {
-            return this.live(votes, (list) =>
-            {
-                const counts = [];
-                for (const v of list)
-                {
-                    counts[v.option] = (counts[v.option] || 0) + 1;
-                }
-                cb({ counts: counts, mine: null });
-            });
-        }
-        return this.liveDoc((f) => f.doc(this.db, 'sessions', sid, 'polls', pid, 'votes', this.user.uid), (list) =>
-        {
-            cb({ counts: null, mine: list.length > 0 ? list[0].option : null });
-        });
     }
 
     // ------------------------------------------------------ transcript

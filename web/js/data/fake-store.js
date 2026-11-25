@@ -157,7 +157,7 @@ export class FakeStore
             id: id, title: title, startedAt: Date.now(), endedAt: null,
             summary: null, headcount: null
         };
-        this.state.sub[id] = { codes: {}, attendance: {}, comments: [], polls: {}, transcript: {} };
+        this.state.sub[id] = { codes: {}, attendance: {}, comments: [], transcript: {} };
         this.commit();
         return id;
     }
@@ -466,34 +466,6 @@ export class FakeStore
         return this.watch(() => this.visibleComments(sid), cb);
     }
 
-    // ----------------------------------------------------------- polls
-    /**
-     * Creates and opens a poll (lecturer).
-     * @param {string} sid - session
-     * @param {string} question - the question
-     * @param {string[]} options - 2..6 answers
-     * @returns {Promise<string>} poll id
-     */
-    async createPoll(sid, question, options)
-    {
-        const id = 'p' + Date.now().toString(36);
-        this.state.sub[sid].polls[id] = { id: id, question: question, options: options, open: true, createdAt: Date.now(), votes: {} };
-        this.commit();
-        return id;
-    }
-
-    /**
-     * Opens or closes a poll (lecturer).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {boolean} open - new state
-     */
-    async setPollOpen(sid, pid, open)
-    {
-        this.state.sub[sid].polls[pid].open = open;
-        this.commit();
-    }
-
     // -------------------------------------------------- live quiz (Kahoot style)
     /**
      * Creates a quiz (lecturer); the key is kept apart (students never get it).
@@ -567,8 +539,9 @@ export class FakeStore
         const q = this.state.sub[sid].quizzes[qid];
         const st = q.state;
         const id = this.user.uid + '_' + index;
+        const seconds = q.questions[index].seconds;
         if (st.phase !== 'question' || st.index !== index || q.answers[id]
-            || Date.now() > st.startedAt + q.questions[index].seconds * 1000 + QUIZ.GRACE_MS)
+            || (seconds > 0 && Date.now() > st.startedAt + seconds * 1000 + QUIZ.GRACE_MS))
         {
             throw new Error('closed');
         }
@@ -591,50 +564,6 @@ export class FakeStore
             const all = Object.values((q && q.answers) || {});
             return this.user.role === 'lecturer' ? all : all.filter((a) => a.uid === this.user.uid);
         }, cb);
-    }
-
-    /**
-     * Watches the polls of a session (without the votes).
-     * @param {string} sid - session
-     * @param {function(object[]):void} cb - receives polls, newest first
-     * @returns {function():void} unsubscribe
-     */
-    watchPolls(sid, cb)
-    {
-        return this.watch(() => this.pollList(sid), cb);
-    }
-
-    /**
-     * Votes once (student).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {number} option - index of the answer
-     */
-    async vote(sid, pid, option)
-    {
-        const poll = this.state.sub[sid].polls[pid];
-        if (!poll.open)
-        {
-            throw new Error('closed');
-        }
-        if (poll.votes[this.user.uid] !== undefined)
-        {
-            throw new Error('already');
-        }
-        poll.votes[this.user.uid] = option;
-        this.commit();
-    }
-
-    /**
-     * Watches the vote counts (lecturer) or the user's own vote (student).
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @param {function({counts:number[], mine:(number|null)}):void} cb - receives results
-     * @returns {function():void} unsubscribe
-     */
-    watchVotes(sid, pid, cb)
-    {
-        return this.watch(() => this.voteSummary(sid, pid), cb);
     }
 
     // ------------------------------------------------------ transcript
@@ -823,39 +752,6 @@ export class FakeStore
     }
 
     /**
-     * Polls without their votes, newest first.
-     * @param {string} sid - session
-     * @returns {object[]} polls
-     */
-    pollList(sid)
-    {
-        const polls = Object.values(((this.state.sub[sid] || {}).polls) || {});
-        return polls.map(stripVotes).sort(newestCreated);
-    }
-
-    /**
-     * Vote counts (lecturer) or the user's own vote.
-     * @param {string} sid - session
-     * @param {string} pid - poll
-     * @returns {{counts:(number[]|null), mine:(number|null)}} summary
-     */
-    voteSummary(sid, pid)
-    {
-        const poll = this.state.sub[sid].polls[pid];
-        const mine = this.user && poll.votes[this.user.uid] !== undefined ? poll.votes[this.user.uid] : null;
-        if (!this.user || this.user.role !== 'lecturer')
-        {
-            return { counts: null, mine: mine };
-        }
-        const counts = new Array(poll.options.length).fill(0);
-        for (const v of Object.values(poll.votes))
-        {
-            counts[v]++;
-        }
-        return { counts: counts, mine: mine };
-    }
-
-    /**
      * Submissions the signed-in user may see.
      * @param {string} aid - assignment
      * @returns {object[]} submissions
@@ -909,18 +805,6 @@ function emptyState()
 function clone(v)
 {
     return v === undefined ? v : JSON.parse(JSON.stringify(v));
-}
-
-/**
- * Copies a poll without its votes.
- * @param {object} p - poll
- * @returns {object} copy
- */
-function stripVotes(p)
-{
-    const c = Object.assign({}, p);
-    delete c.votes;
-    return c;
 }
 
 /**

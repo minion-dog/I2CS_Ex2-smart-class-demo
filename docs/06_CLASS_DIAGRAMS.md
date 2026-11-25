@@ -127,10 +127,10 @@ classDiagram
         +loadAttendance(ids) object
         +addComment(sid, c)
         +watchComments(sid, cb) unsubscribe
-        +createPoll(sid, question, options) string
-        +setPollOpen(sid, pid, open)
-        +vote(sid, pid, option)
-        +watchPolls(sid, cb) unsubscribe
+        +createQuiz(sid, quiz) string
+        +setQuizState(sid, qid, state)
+        +answerQuiz(sid, qid, index, option)
+        +watchQuizzes(sid, cb) unsubscribe
         +loadAiKey() string
         +idToken() string
         +savePhoto(sid, photo)
@@ -321,17 +321,18 @@ classDiagram
     class lecturer_js { <<page lecturer.html>> -openLive(session) -renderAttendance(list) -showJoin() }
     class student_js { <<page student.html>> -onScanned(text) -mark(send) -showWhere() -applyZoom(f) }
     class comments_js { <<module comments.js>> +bindComments(store, user, sid, ui) }
-    class polls_js { <<module polls.js>> +bindPolls(store, user, sid, box) +readPollForm(q, opts) +notify(text) }
+    class quiz_host_js { <<module quiz-host.js>> +setupQuizHost(store, ...) -runStage(quiz) }
+    class quiz_play_js { <<module quiz-play.js>> +setupQuizPlay(store, user, panel, reopen) }
     class i18n_js { <<module i18n.js>> +t(key) +lang() +applyLanguage(root) +toggleLanguage() }
-    class dom_js { <<module dom.js>> +el(tag, attrs, children) +fill(parent, ...) +toast(text) +watchConnection(text) }
+    class dom_js { <<module dom.js>> +el(tag, attrs, children) +fill(parent, ...) +toast(text) +notify(text) +watchConnection(text) }
     lecturer_js ..> page_js
     student_js ..> page_js
     lecturer_js ..> NoisyQrDisplay
     student_js ..> AveragingScanner
     lecturer_js ..> comments_js
     student_js ..> comments_js
-    lecturer_js ..> polls_js
-    student_js ..> polls_js
+    lecturer_js ..> quiz_host_js
+    student_js ..> quiz_play_js
     page_js ..> i18n_js
     page_js ..> dom_js
 ```

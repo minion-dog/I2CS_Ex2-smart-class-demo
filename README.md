@@ -21,7 +21,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 | Automatic, photo-proof **physical attendance** + live/offline **attendance spreadsheet** (main feature) | Attendance for students on Zoom (team decision, see SRS §6) |
 | Class photo: a box on every face; each student taps their own face after scanning | Push notifications when the app is closed (paid plan) |
 | Real-time / offline comments (public or private, anonymous or named) | Paid services of any kind |
-| On-the-spot KISS polls with live results | |
+| On-the-spot KISS polls (+ quiz mode) with live results | |
 | AI lecture summary (Hebrew transcription) | |
 | AI homework review that compares each student with the class | |
 
@@ -32,8 +32,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 | ⭐ Automatic attendance (flicker QR, physical only) + the attendance **spreadsheet** (live + XLSX) | show code, live list, sheet | scan | `web/js/core/noisyqr.js`, `payload.js`, `sheet.js`, `xlsx.js` · Android `core/` |
 | Class photo: faces found (MediaPipe + Gemini), the lecturer fixes the boxes, each student taps their own face and confirms | take photo, fix boxes, see who is who | tap my face | `web/js/core/faces.js`, `web/js/ai/facefind.js`, `web/js/ui/faceview.js` · Android `FacePickActivity` |
 | Comments in real time / offline | ✓ | ✓ | `web/js/ui/comments.js` |
-| KISS polls with live results | create, close | vote once | `web/js/ui/polls.js` |
-| 🎮 Live quiz like Kahoot (AI can write the questions) | build, run on the projector | 4 coloured buttons, points by speed | `web/js/core/quiz.js`, `ui/quiz-host.js`, `ui/quiz-play.js` · Android `QuizPlayActivity` |
+| 📊 Polls & quizzes, one feature: a KISS poll (*Ask now*), or add correct answers and a time for a Kahoot-style quiz; AI can write the questions | ask, live bars, close | coloured buttons, once | `web/js/core/quiz.js`, `ui/quiz-host.js`, `ui/quiz-play.js` · Android `QuizPlayActivity` |
 | Lectures open by the timetable + "lecture started" | weekly times | notified | `web/js/core/schedule.js` |
 | Everything as one organised ZIP | ✓ | — | `web/js/core/archive.js`, `ui/export.js` |
 | ML summary of the lecture recording | record / upload, summarise | read | `web/js/ui/recorder.js`, `web/js/ai/ai.js`, `gemini.js` |
@@ -90,7 +89,7 @@ is needed.
 - **Free Firebase plan, no server code.** [`firestore.rules`](firestore.rules) is the server: a
   student marks only themselves, only once, only with a real code of that lecture; codes, the class
   list and other students' records are hidden.
-- **Offline:** scans, comments, votes and submissions are saved on the phone and sent later.
+- **Offline:** scans, comments, poll answers and submissions are saved on the phone and sent later.
 - **One data interface, three implementations (Strategy):** Firebase; a local Python server for
   testing on real phones (`?lan=1`); an in-browser demo (`?demo=1`).
 - **Same algorithms in JS and Java,** with the same test names.
@@ -111,8 +110,8 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 | Suite | Command | Result |
 |---|---|---|
-| Web logic + camera simulation + photo attacks + faces + quiz + timetable + ZIP + AI Worker | `npm test` | 56 / 56 |
-| Android pure-Java core | `cd android && ./gradlew test` | 20 / 20 |
+| Web logic + camera simulation + photo attacks + faces + polls & quizzes + timetable + ZIP + AI Worker | `npm test` | 57 / 57 |
+| Android pure-Java core | `cd android && ./gradlew test` | 19 / 19 |
 | Rules of the local server | `cd server && python -m unittest test_server` | 15 / 15 |
 | Browser, fake camera, both roles | Playwright | see [testing strategy](docs/08_TESTING_STRATEGY.md) |
 

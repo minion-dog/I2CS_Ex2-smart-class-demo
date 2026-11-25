@@ -1,8 +1,9 @@
 package il.ac.ariel.smartclass.core;
 
 /**
- * The live quiz, Kahoot style (same rules as web/js/core/quiz.js). A correct answer gives
- * 500-1000 points: faster = more. The phone shows four coloured buttons with shapes.
+ * Polls & quizzes, one feature (same rules as web/js/core/quiz.js). A question may have a
+ * correct answer or not (a poll), and a time limit or not. A correct answer gives 500-1000
+ * points (faster = more) when timed, 1000 when not. The phone shows 2-6 coloured buttons.
  */
 public final class Quiz
 {
@@ -20,11 +21,14 @@ public final class Quiz
     /** Network time after the timer ends. */
     public static final long GRACE_MS = 2000;
 
-    /** Button colours (red, blue, yellow, green). */
-    public static final int[] COLORS = {0xFFE21B3C, 0xFF1368CE, 0xFFD89E00, 0xFF26890C};
+    /** Button colours (red, blue, yellow, green, purple, teal). */
+    public static final int[] COLORS = {0xFFE21B3C, 0xFF1368CE, 0xFFD89E00, 0xFF26890C, 0xFF864CBF, 0xFF0A8F8F};
 
     /** Button shapes. */
-    public static final String[] SHAPES = {"▲", "◆", "●", "■"};
+    public static final String[] SHAPES = {"▲", "◆", "●", "■", "★", "⬟"};
+
+    /** No correct answer (a poll question). */
+    public static final int NO_ANSWER = -1;
 
     /** Not instantiable. */
     private Quiz()
@@ -44,9 +48,13 @@ public final class Quiz
      */
     public static int points(boolean correct, long elapsedMs, long limitMs)
     {
-        if (!correct || elapsedMs > limitMs + GRACE_MS)
+        if (!correct || (limitMs > 0 && elapsedMs > limitMs + GRACE_MS))
         {
             return 0;
+        }
+        if (limitMs <= 0)
+        {
+            return MAX_POINTS;                       // no time limit: a correct answer gets the full points
         }
         double part = Math.min(1.0, Math.max(0.0, elapsedMs / (double) limitMs));
         return (int) Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * part);
@@ -62,6 +70,21 @@ public final class Quiz
     public static long secondsLeft(long startedAt, long seconds, long now)
     {
         return Math.max(0, (long) Math.ceil((startedAt + seconds * 1000 - now) / 1000.0));
+    }
+
+    /**
+     * The timer text: "45", "4:59", or "" without a limit.
+     * @param (long) seconds Question time (0 = no limit).
+     * @param (long) left Seconds left.
+     * @return (String) Label.
+     */
+    public static String timerLabel(long seconds, long left)
+    {
+        if (seconds <= 0)
+        {
+            return "";
+        }
+        return left >= 60 ? (left / 60) + ":" + String.format(java.util.Locale.ROOT, "%02d", left % 60) : String.valueOf(left);
     }
 
     /**

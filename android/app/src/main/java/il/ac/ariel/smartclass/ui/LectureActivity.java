@@ -2,6 +2,7 @@ package il.ac.ariel.smartclass.ui;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -22,7 +23,6 @@ import androidx.core.content.ContextCompat;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -36,11 +36,12 @@ import il.ac.ariel.smartclass.R;
 import il.ac.ariel.smartclass.ai.Ai;
 import il.ac.ariel.smartclass.ai.LectureRecorder;
 import il.ac.ariel.smartclass.core.Prompts;
+import il.ac.ariel.smartclass.core.Quiz;
 import il.ac.ariel.smartclass.data.Repo;
 
 /**
- * One lecture, for both roles: comments (public/private, anonymous or with a name), polls,
- * summary and transcript. The lecturer also creates polls, records the lecture (Whisper
+ * One lecture, for both roles: comments (public/private, anonymous or with a name), polls & quizzes,
+ * summary and transcript. The lecturer also records the lecture (Whisper
  * transcription in Hebrew) and makes the AI summary.
  */
 public class LectureActivity extends BaseActivity
@@ -71,9 +72,6 @@ public class LectureActivity extends BaseActivity
     private TextView summaryView;
     private TextView transcriptView;
     private TextView recStatus;
-
-    /** Per-poll vote listeners, removed when the poll list changes. */
-    private final Map<String, ListenerRegistration> voteListeners = new HashMap<String, ListenerRegistration>();
 
     /** Lecturer: the recorder while recording. */
     private LectureRecorder recorder;
@@ -115,10 +113,6 @@ public class LectureActivity extends BaseActivity
         if (recorder != null)
         {
             recorder.stop();
-        }
-        for (ListenerRegistration r : voteListeners.values())
-        {
-            r.remove();
         }
         worker.shutdown();
         super.onDestroy();
@@ -183,7 +177,8 @@ public class LectureActivity extends BaseActivity
     }
 
     /**
-     * Adds the polls (lecturer: a form to open one).
+     * Polls & quizzes of this lecture (one feature; the lecturer runs them from the website on
+     * the projector). A student taps an open one to answer it; it also opens by itself.
      * @param (LinearLayout) col Screen column.
      */
     private void buildPolls(LinearLayout col)
@@ -191,28 +186,10 @@ public class LectureActivity extends BaseActivity
         Ui.title(col, getString(R.string.polls));
         if (Repo.get().isLecturer())
         {
-            final EditText q = Ui.field(col, getString(R.string.poll_question));
-            final EditText opts = Ui.area(col, getString(R.string.poll_options), 3);
-            Ui.button(col, getString(R.string.create_poll), new View.OnClickListener()
-            {
-                @Override
-                public void onClick(View v)
-                {
-                    List<String> options = Prompts.pollOptions(opts.getText().toString());
-                    String question = q.getText().toString().trim();
-                    if (options == null || question.isEmpty())
-                    {
-                        Ui.toast(LectureActivity.this, getString(R.string.poll_options));
-                        return;
-                    }
-                    Repo.get().createPoll(sid, question, options);
-                    q.setText("");
-                    opts.setText("");
-                }
-            });
+            Ui.text(col, getString(R.string.polls_on_site));
         }
         pollBox = Ui.box(col);
-        keep(Repo.get().listenPolls(sid, new Repo.Listener<List<DocumentSnapshot>>()
+        keep(Repo.get().listenQuizzes(sid, new Repo.Listener<List<DocumentSnapshot>>()
         {
             @Override
             public void onChange(List<DocumentSnapshot> list)
@@ -328,126 +305,34 @@ public class LectureActivity extends BaseActivity
     }
 
     /**
-     * Draws the polls: results for the lecturer, vote buttons for students.
-     * @param (List&lt;DocumentSnapshot&gt;) list Polls, newest first.
+     * Lists the polls & quizzes; an open one gets an "answer" button (students).
+     * @param (List&lt;DocumentSnapshot&gt;) list Quizzes, newest first.
      */
+    @SuppressWarnings("unchecked")
     private void showPolls(List<DocumentSnapshot> list)
     {
-        for (ListenerRegistration r : voteListeners.values())
-        {
-            r.remove();
-        }
-        voteListeners.clear();
         pollBox.removeAllViews();
-        for (final DocumentSnapshot p : list)
+        for (final DocumentSnapshot q : list)
         {
-            final LinearLayout card = Ui.box(pollBox);
-            if (Repo.get().isLecturer())
+            Map<String, Object> st = (Map<String, Object>) q.get("state");
+            String phase = st == null ? "" : String.valueOf(st.get("phase"));
+            boolean open = Quiz.isLive(phase) && !"end".equals(phase);
+            if (open && !Repo.get().isLecturer())
             {
-                voteListeners.put(p.getId(), Repo.get().listenVotes(sid, p.getId(), new Repo.Listener<List<DocumentSnapshot>>()
+                Ui.button(pollBox, "📊 " + Repo.str(q, "title"), new View.OnClickListener()
                 {
                     @Override
-                    public void onChange(List<DocumentSnapshot> votes)
+                    public void onClick(View v)
                     {
-                        drawResults(card, p, votes);
+                        startActivity(new Intent(LectureActivity.this, QuizPlayActivity.class)
+                                .putExtra(QuizPlayActivity.EXTRA_SID, sid).putExtra(QuizPlayActivity.EXTRA_QID, q.getId()));
                     }
-                }));
+                });
             }
             else
             {
-                voteListeners.put(p.getId(), Repo.get().listenMyVote(sid, p.getId(), new Repo.Listener<DocumentSnapshot>()
-                {
-                    @Override
-                    public void onChange(DocumentSnapshot mine)
-                    {
-                        drawVote(card, p, mine);
-                    }
-                }));
+                Ui.text(pollBox, Repo.str(q, "title") + (open ? " ●" : ""));
             }
-        }
-    }
-
-    /**
-     * Draws a poll's live results (lecturer).
-     * @param (LinearLayout) card Container.
-     * @param (DocumentSnapshot) p Poll.
-     * @param (List&lt;DocumentSnapshot&gt;) votes Votes.
-     */
-    private void drawResults(LinearLayout card, final DocumentSnapshot p, List<DocumentSnapshot> votes)
-    {
-        card.removeAllViews();
-        List<String> options = options(p);
-        int[] counts = new int[options.size()];
-        for (DocumentSnapshot v : votes)
-        {
-            int k = (int) Repo.num(v, "option");
-            if (k >= 0 && k < counts.length)
-            {
-                counts[k]++;
-            }
-        }
-        Ui.text(card, "❓ " + Repo.str(p, "question"));
-        for (int i = 0; i < options.size(); i++)
-        {
-            int pct = 0;
-            if (!votes.isEmpty())
-            {
-                pct = Math.round(100f * counts[i] / votes.size());
-            }
-            Ui.text(card, String.format(Locale.ROOT, "%s · %d (%d%%)", options.get(i), counts[i], pct));
-        }
-        final boolean open = Boolean.TRUE.equals(p.getBoolean("open"));
-        String label = getString(R.string.reopen_poll);
-        if (open)
-        {
-            label = getString(R.string.close_poll);
-        }
-        Ui.button(card, votes.size() + " " + getString(R.string.votes) + " · " + label, new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View v)
-            {
-                Repo.get().setPollOpen(sid, p.getId(), !open);
-            }
-        });
-    }
-
-    /**
-     * Draws the vote buttons, or "voted" (student).
-     * @param (LinearLayout) card Container.
-     * @param (DocumentSnapshot) p Poll.
-     * @param (DocumentSnapshot) mine The student's vote document.
-     */
-    private void drawVote(LinearLayout card, final DocumentSnapshot p, DocumentSnapshot mine)
-    {
-        card.removeAllViews();
-        final List<String> options = options(p);
-        Ui.text(card, "❓ " + Repo.str(p, "question"));
-        if (mine.exists())
-        {
-            int k = (int) Repo.num(mine, "option");
-            if (k >= 0 && k < options.size())
-            {
-                Ui.text(card, getString(R.string.voted) + " · " + options.get(k));
-            }
-            return;
-        }
-        if (!Boolean.TRUE.equals(p.getBoolean("open")))
-        {
-            Ui.text(card, getString(R.string.poll_closed));
-            return;
-        }
-        for (int i = 0; i < options.size(); i++)
-        {
-            final int choice = i;
-            Ui.button(card, options.get(i), new View.OnClickListener()
-            {
-                @Override
-                public void onClick(View v)
-                {
-                    Repo.get().vote(sid, p.getId(), choice);
-                }
-            });
         }
     }
 
@@ -551,25 +436,5 @@ public class LectureActivity extends BaseActivity
                 });
             }
         });
-    }
-
-    // ==========================================
-    //             LOW-LEVEL HELPERS
-    // ==========================================
-
-    /**
-     * Reads a poll's answers.
-     * @param (DocumentSnapshot) p Poll.
-     * @return (List&lt;String&gt;) Answers.
-     */
-    @SuppressWarnings("unchecked")
-    private static List<String> options(DocumentSnapshot p)
-    {
-        Object o = p.get("options");
-        if (o instanceof List)
-        {
-            return (List<String>) o;
-        }
-        return new java.util.ArrayList<String>();
     }
 }

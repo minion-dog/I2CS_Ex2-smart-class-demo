@@ -43,7 +43,7 @@ import il.ac.ariel.smartclass.core.Student;
  * The app's only door to Firebase (the same collections and fields as the website's
  * web/js/data/firebase-store.js, so the app and the site share one database).
  *
- * Firestore on Android keeps an offline cache by default: a scan, comment, vote or
+ * Firestore on Android keeps an offline cache by default: a scan, comment, quiz answer or
  * submission made without internet is saved on the phone and sent automatically when the
  * connection returns (decision Q6). The security rules (firestore.rules) are what really
  * protect the data; this class only makes the calls the rules allow.
@@ -806,84 +806,6 @@ public final class Repo
     //                   POLLS
     // ==========================================
 
-    /**
-     * Creates and opens a poll (lecturer).
-     * @param (String) sid Session.
-     * @param (String) question Question.
-     * @param (List&lt;String&gt;) options 2..6 answers.
-     */
-    public void createPoll(String sid, String question, List<String> options)
-    {
-        Map<String, Object> m = new HashMap<String, Object>();
-        m.put("question", question);
-        m.put("options", options);
-        m.put("open", true);
-        m.put("createdAt", System.currentTimeMillis());
-        db.collection("sessions").document(sid).collection("polls").add(m);
-    }
-
-    /**
-     * Opens or closes a poll (lecturer).
-     * @param (String) sid Session.
-     * @param (String) pid Poll.
-     * @param (boolean) open New state.
-     */
-    public void setPollOpen(String sid, String pid, boolean open)
-    {
-        Map<String, Object> m = new HashMap<String, Object>();
-        m.put("open", open);
-        pollDoc(sid, pid).update(m);
-    }
-
-    /**
-     * Watches the polls of a session, newest first.
-     * @param (String) sid Session.
-     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives polls.
-     * @return (ListenerRegistration) Stop handle.
-     */
-    public ListenerRegistration listenPolls(String sid, Listener<List<DocumentSnapshot>> l)
-    {
-        return listen(db.collection("sessions").document(sid).collection("polls").orderBy("createdAt", Query.Direction.DESCENDING), l);
-    }
-
-    /**
-     * Votes once (student; works offline).
-     * @param (String) sid Session.
-     * @param (String) pid Poll.
-     * @param (int) option Answer index.
-     */
-    public void vote(String sid, String pid, int option)
-    {
-        Map<String, Object> m = new HashMap<String, Object>();
-        m.put("option", option);
-        m.put("votedAt", System.currentTimeMillis());
-        pollDoc(sid, pid).collection("votes").document(user().getUid()).set(m);
-    }
-
-    /**
-     * Watches all votes of a poll (lecturer).
-     * @param (String) sid Session.
-     * @param (String) pid Poll.
-     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives votes.
-     * @return (ListenerRegistration) Stop handle.
-     */
-    public ListenerRegistration listenVotes(String sid, String pid, Listener<List<DocumentSnapshot>> l)
-    {
-        return listen(pollDoc(sid, pid).collection("votes"), l);
-    }
-
-    /**
-     * Watches the student's own vote.
-     * @param (String) sid Session.
-     * @param (String) pid Poll.
-     * @param (Listener&lt;DocumentSnapshot&gt;) l Receives the vote document.
-     * @return (ListenerRegistration) Stop handle.
-     */
-    public ListenerRegistration listenMyVote(String sid, String pid, Listener<DocumentSnapshot> l)
-    {
-        return listenDoc(pollDoc(sid, pid).collection("votes").document(user().getUid()), l);
-    }
-
     // ==========================================
     //                TRANSCRIPT
     // ==========================================
@@ -1079,17 +1001,6 @@ public final class Repo
     private DocumentReference attendanceDoc(String sid, String email)
     {
         return db.collection("sessions").document(sid).collection("attendance").document(email);
-    }
-
-    /**
-     * Returns a poll document.
-     * @param (String) sid Session.
-     * @param (String) pid Poll.
-     * @return (DocumentReference) Reference.
-     */
-    private DocumentReference pollDoc(String sid, String pid)
-    {
-        return db.collection("sessions").document(sid).collection("polls").document(pid);
     }
 
     /**

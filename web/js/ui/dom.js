@@ -168,3 +168,16 @@ export function download(data, name, type)
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/**
+ * Shows an in-app notification: a toast and a short vibration (no push on the free plan).
+ * @param {string} text - message
+ */
+export function notify(text)
+{
+    toast('🔔 ' + text);
+    if (navigator.vibrate)
+    {
+        navigator.vibrate([60, 60, 60]);
+    }
+}

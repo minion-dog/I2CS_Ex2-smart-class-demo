@@ -89,17 +89,21 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-COM-5 | The lecturer can write comments. | S |
 | FR-COM-6 | Offline comments are saved on the phone and sent later. | M |
 
-### 3.4 Polls
+### 3.4 Polls & quizzes (one feature)
+Decision (ours, 25 Nov 2026): the sheet asks for *on-the-spot (KISS) polls*; the lecturer also talked
+about something interactive like Kahoot. One feature with two switches covers both: a **correct answer
+is optional** (none = a poll) and the **time is optional**.
+
 | ID | Requirement | Pri |
 |---|---|---|
-| FR-POLL-1 | The lecturer creates a poll on the spot: one question, 2–6 answers. | M |
-| FR-POLL-2 | Students vote once per poll, while it is open. | M |
-| FR-POLL-3 | The lecturer sees results live and closes the poll. | M |
-| FR-QZ-1 | **Live quiz like Kahoot** (lecturer's request in class): the lecturer writes questions with 2–4 answers, marks the correct one and a time (10/20/30/60 s), or **lets Gemini write them** from the lecture transcript or a topic. | S |
-| FR-QZ-2 | The projector shows the lobby, then each question with a countdown, four coloured answers with shapes, and how many answered; the answer shows by itself when time is up or everyone answered. | S |
-| FR-QZ-3 | Phones open the quiz by themselves and show four big coloured buttons; one answer per question, accepted only while the question is open (timed by the server). | S |
-| FR-QZ-4 | Points: a correct answer gives 500–1000, faster = more. After each question: answer bars with the correct one, my result and score on the phone, the top 5 on the projector; at the end a podium. | S |
-| FR-QZ-5 | The correct answers are kept in a lecturer-only document until each is revealed. | M |
+| FR-POLL-1 | **KISS poll:** the lecturer types a question and 2–6 answers and presses *Ask now*; it opens straight on every phone and on the projector. No correct answer, no time limit by default. | M |
+| FR-POLL-2 | Students answer once per question, while it is open; a question without a time limit stays open until the lecturer closes it. | M |
+| FR-POLL-3 | The lecturer sees the bars (count and %) live and closes it; phones then show the results with *mine* marked. | M |
+| FR-QZ-1 | Optional per question: mark a **correct answer**, and a **time**: none, ⚡ 10/20/30/60 s (speed), or a deadline of 2/5/10 minutes. Several questions in a row; *save for later* or *ask now*. **Gemini can write the questions** from the lecture transcript or a topic. | S |
+| FR-QZ-2 | The projector shows a lobby (when there is more than one question or a correct answer), each question with the timer if any and the answer count; a timed question ends by itself when time is up or everyone answered. | S |
+| FR-QZ-3 | Phones open it by themselves with big coloured buttons (shapes for colour-blind students); the student can close it and reopen it from the Lecture tab. | S |
+| FR-QZ-4 | With correct answers: 500–1000 points (faster = more when timed, 1000 when not), right / wrong and the points on the phone, the top 5 after each question, a podium at the end. Without: no points, only the bars. | S |
+| FR-QZ-5 | The correct answers are kept in a lecturer-only document until each is revealed; answers are timed with the server's clock. | M |
 
 ### 3.5 Lecture recording and AI summary
 | ID | Requirement | Pri |
@@ -120,8 +124,8 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | ID | Requirement | Pri |
 |---|---|---|
 | FR-GEN-1 | Hebrew UI (right to left) with an English switch on every page. | M |
-| FR-GEN-2 | Offline: scans, comments, votes and submissions wait on the device and are sent automatically; the page shows "waiting to send". | M |
-| FR-GEN-3 | In-app notifications while the app is open (new poll, new grade, new quiz, lecture started, class photo up). | C |
+| FR-GEN-2 | Offline: scans, comments, poll answers and submissions wait on the device and are sent automatically; the page shows "waiting to send". | M |
+| FR-GEN-3 | In-app notifications while the app is open (new poll or quiz question, new grade, lecture started, class photo up). | C |
 | FR-GEN-4 | **Everything as one ZIP** (our idea in the first SRS): one folder per lecture (attendance, comments, polls, quiz results, transcript, summary, class photo with names) and per assignment (requirements, grades, each student's link, files, AI review, feedback), plus the class list and the attendance XLSX. | S |
 
 ## 4. Non-functional requirements
@@ -148,15 +152,13 @@ sessions/{sid}                      title, startedAt, endedAt, summary, headcoun
 sessions/{sid}/photo/main           v, image (JPEG data URL < 1 MB), boxes[{id,x,y,w,h}], aspect
 sessions/{sid}/claims/{v_box}       uid, v          (created once = one student per face)
 sessions/{sid}/requests/{email}     v, box, status pending|ok|no, reason, faceId   ("no box on me")
-sessions/{sid}/quizzes/{qid}        title, questions[{q, options, seconds}], state{phase, index, startedAt, correct, starts, top, scores, counts}
-  secret/key                        key[]           (lecturer only)
+sessions/{sid}/quizzes/{qid}        polls & quizzes: title, questions[{q, options (2-6), seconds (0 = no limit)}], state{phase, index, startedAt, correct, starts, top, scores, counts, scored}
+  secret/key                        key[]           (lecturer only; -1 = no correct answer = poll)
   answers/{uid_index}               uid, name, index, option, at (server time)
 config/schedule                     slots[{day, start, end, title}]   (lecturer only)
   codes/{token}                     createdAt              (hidden from students)
   attendance/{email}                email, uid, name, status, token, scannedAt
   comments/{cid}                    text, visibility, authorUid, authorName|null, fromLecturer, createdAt
-  polls/{pid}                       question, options[], open, createdAt
-    votes/{uid}                     option
   transcript/{index}                index, text
 config/ai                           geminiKey            (lecturer-only read; set by the admin)
 assignments/{aid}                   title, requirements, due
@@ -175,6 +177,7 @@ assignments/{aid}                   title, requirements, due
 | Push notifications on the phone | In-app notifications while open | Push needs server functions (paid plan). |
 | — | Head count from a class photo, attendance sheet, class-list import | Features of the Ex2 sheet that v1 did not cover. |
 | Head count (number of people) | Face boxes; each student taps their own face | A number cannot show WHO is missing; a face can. |
+| Polls (one question) + a separate Kahoot quiz | One feature: polls & quizzes, correct answer and time optional | The sheet asks for KISS polls; one feature keeps it simple and still interactive. |
 | Code every 30 s | Code every 5 s | Sign-in is fast now; the old reason for 30 s is gone. |
 | AI key pasted by the lecturer (Groq) | Gemini with a built-in, private key (Firestore, lecturer-only) | The lecturer should get a working system without knowing what an API key is. |
 
@@ -184,7 +187,7 @@ assignments/{aid}                   title, requirements, due
 |---|---|
 | Automatic attendance + evaluation (class photo) + online/offline spreadsheet | FR-ATT-1..16, FR-GEN-4 |
 | Comments and suggestions, real time / offline | FR-COM-1..6, FR-GEN-2 |
-| On-the-spot KISS polls | FR-POLL-1..3, FR-QZ-1..5 (Kahoot-style quiz) |
+| On-the-spot KISS polls | FR-POLL-1..3 (*Ask now*), extended by FR-QZ-1..5 (correct answers, time, Kahoot-style) |
 | ML summary of the class video | FR-SUM-1..3 |
 | Deep LLM review of homework with comparison to other students | FR-HW-1..4 |
 | Works in this class, real demo; simple smartphone web app | NFR-5, NFR-8; [demo script](10_DEMO_SCRIPT.md) |
