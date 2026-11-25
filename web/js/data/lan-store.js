@@ -18,7 +18,7 @@ import { FakeStore } from './fake-store.js';
 const POLL_MS = 1000;                       // how often to ask the server for news
 const TOKEN_KEY = 'smartclass-lan-token';
 const QUEUE_KEY = 'smartclass-lan-queue';
-const OFFLINE_OK = new Set(['markMe', 'addComment', 'answerQuiz', 'submit']);
+const OFFLINE_OK = new Set(['markMe', 'addComment', 'react', 'answerQuiz', 'submit']);
 
 /** A Store backed by the local server. */
 export class LanStore extends FakeStore
@@ -205,6 +205,12 @@ export class LanStore extends FakeStore
     async addComment(sid, c)
     {
         await this.act({ type: 'addComment', sid: sid, text: c.text, visibility: c.visibility, anonymous: c.anonymous });
+    }
+
+    /** @override */
+    async react(sid, cid, emojis)
+    {
+        await this.act({ type: 'react', sid: sid, cid: cid, emojis: emojis });
     }
 
     /** @override */

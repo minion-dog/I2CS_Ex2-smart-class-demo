@@ -89,6 +89,7 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-COM-4 | Comments can be written on past lectures too. | S |
 | FR-COM-5 | The lecturer can write comments. | S |
 | FR-COM-6 | Offline comments are saved on the phone and sent later. | M |
+| FR-COM-7 | **Emoji reactions** on public comments (👍 "me too", ❤️, 😂, 😮, 🤔): a student may pick several on a comment, each once, and tap again to take it back. Everyone, the lecturer too, sees how many of each, never who. Private comments have no reactions. | C |
 
 ### 3.4 Polls & quizzes (one feature)
 Decision (ours, 25 Nov 2026): the sheet asks for *on-the-spot (KISS) polls*; the lecturer also talked
@@ -187,7 +188,7 @@ assignments/{aid}                   title, requirements, due
 | Ex2 feature | Requirements |
 |---|---|
 | Automatic attendance + evaluation (class photo) + online/offline spreadsheet | FR-ATT-1..17, FR-GEN-4 |
-| Comments and suggestions, real time / offline | FR-COM-1..6, FR-GEN-2 |
+| Comments and suggestions, real time / offline | FR-COM-1..7, FR-GEN-2 |
 | On-the-spot KISS polls | FR-POLL-1..3 (*Ask now*), extended by FR-QZ-1..5 (correct answers, time, Kahoot-style) |
 | ML summary of the class video | FR-SUM-1..3 |
 | Deep LLM review of homework with comparison to other students | FR-HW-1..4 |

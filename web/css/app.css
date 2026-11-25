@@ -343,3 +343,11 @@ body.quiz-on { overflow: hidden; }
 .qz-result { font-size: 2.4rem; font-weight: 900; border-radius: 12px; padding: 18px 28px; }
 .qz-result.right { background: #26890c; }
 .qz-result.wrong { background: #e21b3c; }
+
+/* emoji reactions under public comments (counts only, never names) */
+.reactions { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .35rem; }
+.reactions .react { background: transparent; border: 1px solid var(--line, rgba(127,127,127,.35)); border-radius: 999px;
+    padding: .1rem .5rem; font-size: .85rem; line-height: 1.4; min-height: 0; width: auto; color: inherit; opacity: .55; }
+.reactions .react.used { opacity: 1; }
+.reactions .react.mine { opacity: 1; border-color: #2b7bff; background: rgba(43,123,255,.15); }
+.reactions .react:hover { opacity: 1; }

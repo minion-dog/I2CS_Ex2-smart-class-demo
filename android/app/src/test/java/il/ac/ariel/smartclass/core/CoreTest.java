@@ -510,4 +510,22 @@ public class CoreTest
         assertEquals(0, c[0], 1e-9);
         assertEquals(1, c[2], 1e-9);
     }
+
+    /** Checks emoji reactions: clean, toggle, count (TC-RX-J1). */
+    @Test
+    public void reactionsCleanToggleCount()
+    {
+        assertEquals(Reactions.of("like", "wow"), Reactions.clean(Reactions.of("wow", "like", "like", "bomb")));
+        assertEquals(Reactions.of("like", "think"), Reactions.toggle(Reactions.of("like"), "think"));
+        assertEquals(Reactions.of("think"), Reactions.toggle(Reactions.of("like", "think"), "like"));
+        java.util.List<java.util.List<String>> recs = new java.util.ArrayList<java.util.List<String>>();
+        recs.add(Reactions.of("like", "haha"));
+        recs.add(Reactions.of("like"));
+        recs.add(Reactions.of("like", "like", "nope"));
+        java.util.Map<String, Integer> c = Reactions.count(recs);
+        assertEquals(Integer.valueOf(3), c.get("like"));
+        assertEquals(Integer.valueOf(1), c.get("haha"));
+        assertNull(c.get("wow"));
+        assertEquals("c1_u9", Reactions.id("c1", "u9"));
+    }
 }

@@ -25,6 +25,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +38,7 @@ import il.ac.ariel.smartclass.ai.Ai;
 import il.ac.ariel.smartclass.ai.LectureRecorder;
 import il.ac.ariel.smartclass.core.Prompts;
 import il.ac.ariel.smartclass.core.Quiz;
+import il.ac.ariel.smartclass.core.Reactions;
 import il.ac.ariel.smartclass.data.Repo;
 
 /**
@@ -68,6 +70,12 @@ public class LectureActivity extends BaseActivity
 
     /** Live containers. */
     private LinearLayout commentBox;
+
+    /** The latest comments and emoji reactions (both redraw the list). */
+    private List<DocumentSnapshot> comments = new ArrayList<DocumentSnapshot>();
+
+    /** Reaction records {cid, uid, emojis}. */
+    private List<DocumentSnapshot> reactions = new ArrayList<DocumentSnapshot>();
     private LinearLayout pollBox;
     private TextView summaryView;
     private TextView transcriptView;
@@ -171,7 +179,17 @@ public class LectureActivity extends BaseActivity
             @Override
             public void onChange(List<DocumentSnapshot> list)
             {
-                showComments(list);
+                comments = list;
+                showComments();
+            }
+        }));
+        keep(Repo.get().listenReactions(sid, new Repo.Listener<List<DocumentSnapshot>>()
+        {
+            @Override
+            public void onChange(List<DocumentSnapshot> list)
+            {
+                reactions = list;
+                showComments();
             }
         }));
     }
@@ -273,14 +291,11 @@ public class LectureActivity extends BaseActivity
     //              LIVE RENDERING
     // ==========================================
 
-    /**
-     * Draws the comments.
-     * @param (List&lt;DocumentSnapshot&gt;) list Comments, oldest first.
-     */
-    private void showComments(List<DocumentSnapshot> list)
+    /** Draws the comments (oldest first); public ones get emoji buttons with counts. */
+    private void showComments()
     {
         commentBox.removeAllViews();
-        for (DocumentSnapshot c : list)
+        for (DocumentSnapshot c : comments)
         {
             String who = c.getString("authorName");
             if (who == null)
@@ -301,6 +316,52 @@ public class LectureActivity extends BaseActivity
                 meta = meta + " · ⏳";
             }
             Ui.text(commentBox, meta + "\n" + Repo.str(c, "text"));
+            if ("public".equals(c.getString("visibility")) && !c.getMetadata().hasPendingWrites())
+            {
+                reactionRow(c.getId());
+            }
+        }
+    }
+
+    /**
+     * The emoji buttons under a public comment: each with its count; mine marked with a dot.
+     * @param (String) cid Comment id.
+     */
+    @SuppressWarnings("unchecked")
+    private void reactionRow(final String cid)
+    {
+        List<List<String>> all = new ArrayList<List<String>>();
+        List<String> found = new ArrayList<String>();
+        String me = Repo.get().user().getUid();
+        for (DocumentSnapshot r : reactions)
+        {
+            if (cid.equals(r.getString("cid")))
+            {
+                List<String> e = (List<String>) r.get("emojis");
+                all.add(e);
+                if (me.equals(r.getString("uid")) && e != null)
+                {
+                    found = e;
+                }
+            }
+        }
+        final List<String> mine = Reactions.clean(found);
+        Map<String, Integer> counts = Reactions.count(all);
+        LinearLayout row = Ui.row(this);
+        commentBox.addView(row);
+        for (int i = 0; i < Reactions.KEYS.length; i++)
+        {
+            final String key = Reactions.KEYS[i];
+            Integer n = counts.get(key);
+            String label = Reactions.EMOJIS[i] + (n == null ? "" : " " + n) + (mine.contains(key) ? " •" : "");
+            Ui.button(row, label, new View.OnClickListener()
+            {
+                @Override
+                public void onClick(View v)
+                {
+                    Repo.get().react(sid, cid, Reactions.toggle(mine, key));
+                }
+            });
         }
     }
 

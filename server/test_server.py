@@ -157,6 +157,23 @@ class RulesTest(unittest.TestCase):
         view = srv.view_for(self.s, self.yossi)["sub"][self.sid]
         self.assertEqual(view["requests"], {})                           # others' requests are hidden
 
+    def test_tc_srv_17_reactions(self):
+        """TC-SRV-17: emoji reactions only on public comments, each emoji once per person, others see counts."""
+        srv.apply_action(self.s, self.yossi, {"type": "addComment", "sid": self.sid, "text": "secret", "visibility": "private"})
+        srv.apply_action(self.s, self.yossi, {"type": "addComment", "sid": self.sid, "text": "why?", "visibility": "public"})
+        priv, pub = [c["id"] for c in self.s["sub"][self.sid]["comments"]]
+        react = lambda who, cid, e: srv.apply_action(self.s, who, {"type": "react", "sid": self.sid, "cid": cid, "emojis": e})
+        with self.assertRaises(srv.Denied):
+            react(self.dana, priv, ["like"])                              # private: no reactions
+        react(self.dana, pub, ["like", "like", "bomb", "think"])          # cleaned: each once, known only
+        react(self.yossi, pub, ["like"])
+        react(LECTURER, pub, ["wow"])
+        view = srv.view_for(self.s, self.dana)["sub"][self.sid]["reactions"]
+        self.assertEqual(sorted(view), sorted([f"{pub}_{self.dana['uid']}", f"{pub}_{self.yossi['uid']}", f"{pub}_{LECTURER['uid']}"]))
+        self.assertEqual(view[f"{pub}_{self.dana['uid']}"]["emojis"], ["like", "think"])
+        react(self.dana, pub, [])                                          # take my reaction back
+        self.assertNotIn(f"{pub}_{self.dana['uid']}", self.s["sub"][self.sid]["reactions"])
+
     def test_tc_srv_16_quiz(self):
         """TC-SRV-16: quiz key hidden from students; answers only while the question is open, once, in time."""
         qid = srv.apply_action(self.s, LECTURER, {"type": "createQuiz", "sid": self.sid, "quiz": {"title": "Q", "questions": [

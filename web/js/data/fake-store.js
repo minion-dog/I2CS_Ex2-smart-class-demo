@@ -12,6 +12,7 @@
 import { newSessionId, isCurrentCode } from '../core/payload.js';
 import { FACES, claimId, withIds } from '../core/faces.js';
 import { QUIZ, splitKey, newQuizState } from '../core/quiz.js';
+import { reactionId, cleanEmojis } from '../core/reactions.js';
 
 const KEY = 'smartclass-demo-v1';
 const STATUS_PRESENT = 'present';       // scanned the flicker QR
@@ -500,6 +501,45 @@ export class FakeStore
     watchComments(sid, cb)
     {
         return this.watch(() => this.visibleComments(sid), cb);
+    }
+
+    /**
+     * Sets my emojis on a public comment (an empty list removes my reaction).
+     * @param {string} sid - session
+     * @param {string} cid - comment id
+     * @param {string[]} emojis - emoji keys (core/reactions.js)
+     */
+    async react(sid, cid, emojis)
+    {
+        const sub = this.state.sub[sid];
+        const c = sub.comments.find((x) => x.id === cid);
+        if (!c || c.visibility !== 'public')
+        {
+            throw new Error('public comments only');
+        }
+        sub.reactions = sub.reactions || {};
+        const id = reactionId(cid, this.user.uid);
+        const clean = cleanEmojis(emojis);
+        if (clean.length === 0)
+        {
+            delete sub.reactions[id];
+        }
+        else
+        {
+            sub.reactions[id] = { cid: cid, uid: this.user.uid, emojis: clean };
+        }
+        this.commit();
+    }
+
+    /**
+     * Watches the emoji reactions of a lecture (only on public comments, so everyone may see them).
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives {cid, uid, emojis} records
+     * @returns {function():void} unsubscribe
+     */
+    watchReactions(sid, cb)
+    {
+        return this.watch(() => Object.values((this.state.sub[sid] && this.state.sub[sid].reactions) || {}), cb);
     }
 
     // -------------------------------------------------- live quiz (Kahoot style)

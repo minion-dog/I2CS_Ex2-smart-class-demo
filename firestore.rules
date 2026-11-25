@@ -226,6 +226,21 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // Emoji reactions on PUBLIC comments: one document per comment and user ({cid}_{uid}),
+      // so each emoji counts once per person; everyone sees the counts (pages show no names).
+      match /reactions/{r} {
+        allow read: if isLecturer() || isStudent();
+        allow create, update: if (isStudent() || isLecturer())
+          && onlyKeys(['cid', 'uid', 'emojis'])
+          && request.resource.data.uid == request.auth.uid
+          && r == request.resource.data.cid + '_' + request.auth.uid
+          && get(/databases/$(db)/documents/sessions/$(s)/comments/$(request.resource.data.cid)).data.visibility == 'public'
+          && request.resource.data.emojis is list
+          && request.resource.data.emojis.size() <= 5
+          && request.resource.data.emojis.hasOnly(['like', 'love', 'haha', 'wow', 'think']);
+        allow delete: if isLecturer() || resource.data.uid == request.auth.uid;
+      }
+
       // Transcript pieces and the summary are written by the lecturer only.
       match /transcript/{piece} {
         allow read: if isLecturer() || isStudent();

@@ -50,6 +50,7 @@ PORT = 8443
 PORT_TRIES = 20                                 # 8443, 8444, ... if the port is taken
 
 MAX_COMMENT = 2000
+REACTION_KEYS = ("like", "love", "haha", "wow", "think")   # emoji reactions on comments (same as web/js/core/reactions.js)
 MAX_FILES = 20
 MAX_BODY = 2 * 1024 * 1024      # 2 MB per request (text files; the class photo is about 0.5 MB)
 ROTATE_MS = 5000                # a new QR code every 5 s (the same as CODE.ROTATE_MS in payload.js)
@@ -353,6 +354,21 @@ def apply_action(state: dict[str, Any], user: dict[str, Any], a: dict[str, Any])
         })
         return None
 
+    if kind == "react":
+        # emoji reactions on a PUBLIC comment: one record per comment and user, only counts are shown
+        require(lecturer or student, "sign in first")
+        sub = state["sub"][a["sid"]]
+        c = next((x for x in sub["comments"] if x["id"] == a["cid"]), None)
+        require(c is not None and c["visibility"] == "public", "public comments only")
+        emojis = [k for k in REACTION_KEYS if k in set(a.get("emojis") or [])]
+        rid = f'{a["cid"]}_{user["uid"]}'
+        reactions = sub.setdefault("reactions", {})
+        if emojis:
+            reactions[rid] = {"cid": a["cid"], "uid": user["uid"], "emojis": emojis}
+        else:
+            reactions.pop(rid, None)
+        return None
+
     # ----- transcript
     if kind == "addTranscript":
         require(lecturer, "lecturer only")
@@ -425,6 +441,7 @@ def view_for(state: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "attendance": {k: r for k, r in sub["attendance"].items() if k == me},
             "comments": [c for c in sub["comments"] if c["visibility"] == "public" or c["authorUid"] == uid],
             "transcript": sub["transcript"],
+            "reactions": sub.get("reactions", {}),          # only on public comments; counts are shown, not names
             "photo": sub.get("photo"),
             "claims": {k: {"v": c["v"]} for k, c in sub.get("claims", {}).items()},   # which boxes, not who
             "requests": {k: r for k, r in sub.get("requests", {}).items() if k == me},

@@ -74,7 +74,7 @@ flowchart LR
 **Story:** As a student, I want to ask a question without speaking up, anonymously if I choose.
 - **Main flow:** 1) *Lecture* tab → type. 2) Choose public/private and anonymous/with name. 3) *Send*. 4) The lecturer sees it live; public comments are seen by all.
 - **Alternatives:** offline → waits and is sent later; a past lecture → the comment is added to that lecture.
-- (FR-COM-1..6)
+- (FR-COM-1..7; others react with emojis: 👍 "me too" shows the lecturer which questions many students share)
 
 ## UC-7 Ask a quick poll (KISS)
 **Story:** As a lecturer, I want to ask the class a question and see the answers immediately.

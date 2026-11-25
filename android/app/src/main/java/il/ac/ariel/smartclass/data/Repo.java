@@ -36,6 +36,7 @@ import java.util.Set;
 import il.ac.ariel.smartclass.core.AttendanceSheet;
 import il.ac.ariel.smartclass.core.Faces;
 import il.ac.ariel.smartclass.core.Payload;
+import il.ac.ariel.smartclass.core.Reactions;
 import il.ac.ariel.smartclass.core.SessionInfo;
 import il.ac.ariel.smartclass.core.Student;
 
@@ -761,6 +762,41 @@ public final class Repo
         m.put("fromLecturer", isLecturer());
         m.put("createdAt", System.currentTimeMillis());
         db.collection("sessions").document(sid).collection("comments").add(m);
+    }
+
+    /**
+     * Sets my emojis on a public comment (an empty list removes my reaction). One document
+     * per comment and user, so each emoji counts once per person (works offline).
+     * @param (String) sid Session.
+     * @param (String) cid Comment id.
+     * @param (List&lt;String&gt;) emojis Emoji keys (core/Reactions).
+     */
+    public void react(String sid, String cid, List<String> emojis)
+    {
+        DocumentReference ref = db.collection("sessions").document(sid).collection("reactions")
+            .document(Reactions.id(cid, user().getUid()));
+        List<String> clean = Reactions.clean(emojis);
+        if (clean.isEmpty())
+        {
+            ref.delete();
+            return;
+        }
+        Map<String, Object> m = new HashMap<String, Object>();
+        m.put("cid", cid);
+        m.put("uid", user().getUid());
+        m.put("emojis", clean);
+        ref.set(m);
+    }
+
+    /**
+     * Watches the emoji reactions of a lecture (only public comments have them).
+     * @param (String) sid Session.
+     * @param (Listener&lt;List&lt;DocumentSnapshot&gt;&gt;) l Receives {cid, uid, emojis} records.
+     * @return (ListenerRegistration) Stop handle.
+     */
+    public ListenerRegistration listenReactions(String sid, Listener<List<DocumentSnapshot>> l)
+    {
+        return listen(db.collection("sessions").document(sid).collection("reactions"), l);
     }
 
     /**

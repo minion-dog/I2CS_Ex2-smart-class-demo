@@ -11,6 +11,7 @@
 import { newSessionId } from '../core/payload.js';
 import { claimId, withIds } from '../core/faces.js';
 import { splitKey, toMs, newQuizState } from '../core/quiz.js';
+import { reactionId, cleanEmojis } from '../core/reactions.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
@@ -625,6 +626,34 @@ export class FirebaseStore
             u1();
             u2();
         };
+    }
+
+    /**
+     * Sets my emojis on a public comment (an empty list removes my reaction).
+     * One document per comment and user, so each emoji counts once per person.
+     * @param {string} sid - session
+     * @param {string} cid - comment id
+     * @param {string[]} emojis - emoji keys (core/reactions.js)
+     */
+    async react(sid, cid, emojis)
+    {
+        await this.ready;
+        const f = this.fs;
+        const ref = f.doc(this.db, 'sessions', sid, 'reactions', reactionId(cid, this.user.uid));
+        const clean = cleanEmojis(emojis);
+        const write = clean.length === 0 ? f.deleteDoc(ref) : f.setDoc(ref, { cid: cid, uid: this.user.uid, emojis: clean });
+        write.catch((e) => console.warn('reaction rejected:', e.code || e.message));
+    }
+
+    /**
+     * Watches the emoji reactions of a lecture (only public comments have them).
+     * @param {string} sid - session
+     * @param {function(object[]):void} cb - receives {cid, uid, emojis} records
+     * @returns {function():void} unsubscribe
+     */
+    watchReactions(sid, cb)
+    {
+        return this.live((f) => f.collection(this.db, 'sessions', sid, 'reactions'), cb);
     }
 
     // -------------------------------------------------- live quiz (Kahoot style)

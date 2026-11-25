@@ -39,7 +39,7 @@ LLM-ready tool** that a lecturer and a class of students can use on their phones
 |---|---|---|---|
 | ⭐ Automatic attendance (flicker QR, physical only) + the attendance **spreadsheet** (live + XLSX) | show code, live list, sheet | scan | `web/js/core/noisyqr.js`, `payload.js`, `sheet.js`, `xlsx.js` · Android `core/` |
 | Class photo: faces found (MediaPipe + Gemini), the lecturer fixes the boxes, each student taps their own face and confirms | take photo, fix boxes, see who is who | tap my face | `web/js/core/faces.js`, `web/js/ai/facefind.js`, `web/js/ui/faceview.js` · Android `FacePickActivity` |
-| Comments in real time / offline | ✓ | ✓ | `web/js/ui/comments.js` |
+| Comments in real time / offline, with emoji reactions (👍 "me too", counts only) | ✓ | ✓ | `web/js/ui/comments.js`, `core/reactions.js` |
 | 📊 Polls & quizzes, one feature: a KISS poll (*Ask now*), or add correct answers and a time for a Kahoot-style quiz; AI can write the questions | ask, live bars, close | coloured buttons, once | `web/js/core/quiz.js`, `ui/quiz-host.js`, `ui/quiz-play.js` · Android `QuizPlayActivity` |
 | Lectures open by the timetable + "lecture started" | weekly times | notified | `web/js/core/schedule.js` |
 | Everything as one organised ZIP | ✓ | — | `web/js/core/archive.js`, `ui/export.js` |
@@ -118,9 +118,9 @@ Details: [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
 | Suite | Command | Result |
 |---|---|---|
-| Web logic + camera simulation + photo attacks + faces + polls & quizzes + timetable + ZIP + scanning guide + AI Worker | `npm test` | 61 / 61 |
-| Android pure-Java core | `cd android && ./gradlew test` | 20 / 20 |
-| Rules of the local server | `cd server && python -m unittest test_server` | 15 / 15 |
+| Web logic + camera simulation + photo attacks + faces + polls & quizzes + timetable + ZIP + scanning guide + emoji reactions + AI Worker | `npm test` | 64 / 64 |
+| Android pure-Java core | `cd android && ./gradlew test` | 21 / 21 |
+| Rules of the local server | `cd server && python -m unittest test_server` | 16 / 16 |
 | Browser, fake camera, both roles | Playwright | see [testing strategy](docs/08_TESTING_STRATEGY.md) |
 
 ## Repository map
