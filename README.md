@@ -6,6 +6,14 @@
 
 > The live site runs in **demo mode** for now: no accounts, *Load a sample class*, then enter as lecturer or student. Data stays in each browser, so the lecturer and the students are tabs of the same browser (or the local server for real phones). The Firebase version is ready in the code (`web/js/firebase-config.js` + `firestore.rules`); setup steps in [docs/SETUP_HE.md](docs/SETUP_HE.md).
 
+### Scan to open the site
+
+<img src="docs/qr/smartclass-site-qr.png" alt="QR code to the SmartClass site" width="220">
+
+Scan with any phone camera to open SmartClass (also as [PNG](docs/qr/smartclass-site-qr.png) /
+[SVG](docs/qr/smartclass-site-qr.svg) for printing or the slides). It points to the site address, so
+it stays the same when the site switches from demo mode to the real Firebase version.
+
 ## The problem
 
 Today's tools for teaching in class are scattered and easy to cheat: attendance by a QR code is
