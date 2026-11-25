@@ -12,6 +12,7 @@
 // picture (at the camera's full resolution) and starts the map again there.
 
 import { ChangeMap, NOISE } from '../core/noisyqr.js';
+import { boxOnScreen, hintFor, smooth } from '../core/guide.js';
 
 const SIDE = 400;                  // analysed square, in pixels
 const DECODE_EVERY = 3;            // try to read every 3rd frame (saves battery)
@@ -20,7 +21,8 @@ const ZOOM_FILL = 1.35;            // after zooming, the square is 1.35 x the co
 const MIN_CROP = 200;              // never zoom closer than 200 camera pixels
 const GIVE_UP_MS = 4000;
 const DIGITAL_MAX = 4;             // picture zoom (phones whose browser gives no camera zoom)
-const HARDWARE_MAX = 10;           // the camera's own zoom, at most 10x           // zoomed but nothing read for 4 s: look at the whole picture again
+const HARDWARE_MAX = 10;           // the camera's own zoom, at most 10x
+const DONE_FLASH_MS = 350;         // the box turns green this long before the result shows
 
 /** Reads our flicker QR codes from the camera. */
 export class AveragingScanner
@@ -30,12 +32,17 @@ export class AveragingScanner
      * @param {HTMLVideoElement} video - preview element
      * @param {function(string):void} onText - called once with the decoded text
      * @param {HTMLCanvasElement} [view] - optional: shows what the scanner sees (the change map)
+     * @param {function({rect:object|null, hint:string}):void} [onGuide] - optional: where the code
+     *        is on the preview and what to tell the student (a "Google Lens"-style box)
      */
-    constructor(video, onText, view)
+    constructor(video, onText, view, onGuide)
     {
         this.video = video;
         this.onText = onText;
         this.view = view || null;
+        this.onGuide = onGuide || (() => {});
+        this.rounds = 0;           // decode tries in a row that found the code
+        this.drawn = null;         // the box as drawn (smoothed)
         this.canvas = document.createElement('canvas');
         this.canvas.width = SIDE;
         this.canvas.height = SIDE;
@@ -170,6 +177,7 @@ export class AveragingScanner
         {
             if (this.map.hasSignal())
             {
+                this.guide();
                 this.tryDecode();
                 if (this.running)
                 {
@@ -179,6 +187,9 @@ export class AveragingScanner
             else
             {
                 this.show(null);
+                this.rounds = 0;
+                this.drawn = null;
+                this.onGuide({ rect: null, hint: 'search' });
             }
             if (this.zoomedAt > 0 && performance.now() - this.zoomedAt > GIVE_UP_MS)
             {
@@ -227,6 +238,24 @@ export class AveragingScanner
         };
         this.zoomedAt = performance.now();
         this.map.reset();
+    }
+
+    /** Tells the page where the code is on the preview and what to tell the student. */
+    guide()
+    {
+        const box = this.map.activeBox();
+        if (box === null)
+        {
+            this.rounds = 0;
+            this.drawn = null;
+            this.onGuide({ rect: null, hint: 'search' });
+            return;
+        }
+        this.rounds++;
+        const v = this.video;
+        const c = this.crop;
+        this.drawn = smooth(this.drawn, boxOnScreen(box, SIDE, c, v.videoWidth, v.videoHeight, this.digitalZoom));
+        this.onGuide({ rect: this.drawn, hint: hintFor(box, box.size * c.s / SIDE, this.rounds) });
     }
 
     /** Goes back to the whole picture (the phone moved, or zooming did not help). */
@@ -282,7 +311,8 @@ export class AveragingScanner
         if (result && result.data)
         {
             this.stop();
-            this.onText(result.data);
+            this.onGuide({ rect: this.drawn, hint: 'done' });            // the box turns green
+            setTimeout(() => this.onText(result.data), DONE_FLASH_MS);
         }
     }
 }

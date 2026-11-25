@@ -103,4 +103,9 @@
     <string name="quiz_late">הזמן נגמר</string>
     <string name="quiz_thanks">תודה! התשובות נשמרו</string>
     <string name="quiz_mine">שלי</string>
+    <string name="guide_search">כוונו לקוד המהבהב שעל מסך המרצה</string>
+    <string name="guide_closer">מצאתי! התקרבו או הגדילו (+)</string>
+    <string name="guide_found">מצאתי! החזיקו יציב</string>
+    <string name="guide_steady">קורא… עוד רגע</string>
+    <string name="guide_done">✓ נקרא</string>
 </resources>

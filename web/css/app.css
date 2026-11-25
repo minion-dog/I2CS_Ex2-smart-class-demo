@@ -194,8 +194,24 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .scanner .zoom-buttons { position: absolute; inset-block-start: 10px; inset-inline-end: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2; }
 .scanner .zoom-buttons button { width: 52px; height: 52px; border-radius: 50%; font-size: 1.8rem; line-height: 1; padding: 0; background: rgba(0,0,0,.6); color: #fff; border: 2px solid rgba(255,255,255,.8); }
 .scanner .zoom-buttons span { color: #fff; background: rgba(0,0,0,.6); border-radius: 8px; padding: 2px 8px; font-variant-numeric: tabular-nums; }
-.scanner .frame { position: absolute; inset: 15%; border: 3px solid rgba(255,255,255,.85); border-radius: 12px; }
-.scanner .sees { position: absolute; inset-block-end: 8px; inset-inline-start: 8px; margin: 0; background: rgba(0,0,0,.55); padding: 4px; border-radius: 8px; color: #fff; font-size: .7rem; text-align: center; }
+.scanner .frame { position: absolute; inset: 15%; border: 3px dashed rgba(255,255,255,.55); border-radius: 12px; }
+/* "Google Lens"-style box: lights up around the code when the camera finds it */
+.finder { position: absolute; pointer-events: none; transition: left .15s, top .15s, width .15s, height .15s; border-radius: 10px; }
+.finder i { position: absolute; width: 24%; height: 24%; border: 0 solid #ffd400; filter: drop-shadow(0 0 4px rgba(0,0,0,.7)); }
+.finder i:nth-child(1) { left: 0; top: 0; border-left-width: 5px; border-top-width: 5px; border-top-left-radius: 10px; }
+.finder i:nth-child(2) { right: 0; top: 0; border-right-width: 5px; border-top-width: 5px; border-top-right-radius: 10px; }
+.finder i:nth-child(3) { left: 0; bottom: 0; border-left-width: 5px; border-bottom-width: 5px; border-bottom-left-radius: 10px; }
+.finder i:nth-child(4) { right: 0; bottom: 0; border-right-width: 5px; border-bottom-width: 5px; border-bottom-right-radius: 10px; }
+.finder.closer i { border-color: #ff9800; }
+.finder.steady i { border-color: #4cd964; animation: finder-pulse .8s ease-in-out infinite; }
+.finder.done { background: rgba(76,217,100,.35); }
+.finder.done i { border-color: #4cd964; }
+@keyframes finder-pulse { 50% { opacity: .45; } }
+.scan-guide { position: absolute; inset-inline: 0; inset-block-start: 10px; margin: 0 auto; width: fit-content; max-width: 62%; padding: 6px 12px;
+    border-radius: 999px; background: rgba(0,0,0,.65); color: #fff; font-weight: 700; font-size: .95rem; text-align: center; z-index: 1; }
+.scan-guide.closer { background: rgba(160,90,0,.85); }
+.scan-guide.found, .scan-guide.steady, .scan-guide.done { background: rgba(20,120,40,.85); }
+.scanner .sees { position: absolute; inset-block-end: 8px; inset-inline-end: 8px; margin: 0; background: rgba(0,0,0,.55); padding: 4px; border-radius: 8px; color: #fff; font-size: .7rem; text-align: center; }
 .scanner .sees canvas { display: block; width: 96px; height: 96px; background: #888; border-radius: 4px; }
 .center { text-align: center; }
 .scan-result { text-align: center; font-size: 1.2rem; font-weight: 700; margin: 12px 0; min-height: 1.6em; }

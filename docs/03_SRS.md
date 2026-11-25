@@ -67,6 +67,7 @@ Priority: **M** = must (in the demo), **S** = should, **C** = could.
 | FR-ATT-13 | After scanning, the student sees the photo, taps their own face, sees it enlarged ("is this you?") and confirms. One student per face; a taken face is grey. | M |
 | FR-ATT-14 | "I can't find myself" tells the lecturer at once (a list on the lecturer's screen); the student may still choose later. | M |
 | FR-ATT-16 | **No box on me** (face hidden, or cut off at the photo's edge): the student taps where he sits; the lecturer's page sends that part of the photo to **Gemini**, which says whether a person is there. Yes → the box is added and given to the student; no (or no AI) → the lecturer approves or rejects with one tap. | S |
+| FR-ATT-17 | **Scanning guide** (like Google Lens): as soon as the camera sees the code flicker, a box lights up around it with a hint: "point at the flickering code" → "found it, move closer" (orange, code too small) → "found it, hold still" (yellow) → "reading…" (green) → "✓ read". Helps students who do not know what to point at. | S |
 | FR-ATT-15 | The lecturer sees confirmed / waiting / not-in-photo counters and names on the faces, can free a face chosen by mistake, and is warned when there are more scans than faces. A new photo asks everyone again. | S |
 
 ### 3.2 Sign-in and class list
@@ -185,7 +186,7 @@ assignments/{aid}                   title, requirements, due
 
 | Ex2 feature | Requirements |
 |---|---|
-| Automatic attendance + evaluation (class photo) + online/offline spreadsheet | FR-ATT-1..16, FR-GEN-4 |
+| Automatic attendance + evaluation (class photo) + online/offline spreadsheet | FR-ATT-1..17, FR-GEN-4 |
 | Comments and suggestions, real time / offline | FR-COM-1..6, FR-GEN-2 |
 | On-the-spot KISS polls | FR-POLL-1..3 (*Ask now*), extended by FR-QZ-1..5 (correct answers, time, Kahoot-style) |
 | ML summary of the class video | FR-SUM-1..3 |

@@ -101,4 +101,9 @@
     <string name="quiz_late">Time is up</string>
     <string name="quiz_thanks">Thanks! The answers are saved</string>
     <string name="quiz_mine">mine</string>
+    <string name="guide_search">Point at the flickering code on the lecturer\'s screen</string>
+    <string name="guide_closer">Found it! Move closer or zoom in (+)</string>
+    <string name="guide_found">Found it! Hold still</string>
+    <string name="guide_steady">Reading… one moment</string>
+    <string name="guide_done">✓ Read</string>
 </resources>

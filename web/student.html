@@ -29,7 +29,9 @@
             <p class="hint" data-i18n="scanHint"></p>
             <div class="scanner" id="scanner" hidden>
                 <video id="video" muted playsinline></video>
-                <div class="frame"></div>
+                <div class="frame" id="frame"></div>
+                <div class="finder" id="finder" hidden><i></i><i></i><i></i><i></i></div>
+                <div class="scan-guide" id="scan-guide" role="status" aria-live="polite"></div>
                 <div class="zoom-buttons">
                     <button type="button" id="zoom-in" aria-label="zoom in">+</button>
                     <span id="zoom-now" dir="ltr">1×</span>

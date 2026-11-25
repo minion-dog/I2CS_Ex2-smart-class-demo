@@ -489,4 +489,24 @@ public class CoreTest
         assertTrue(Quiz.isLive("question"));
         assertFalse(Quiz.isLive("draft"));
     }
+
+    /** Checks the scanning guide: hints and the box on a turned, "fill center" preview (TC-GD-J1). */
+    @Test
+    public void guideHintsAndPlacement()
+    {
+        assertEquals("search", Guide.hint(false, 0, 0));
+        assertEquals("closer", Guide.hint(true, 50, 5));
+        assertEquals("found", Guide.hint(true, 300, 1));
+        assertEquals("steady", Guide.hint(true, 300, 2));
+        // a 640x480 image, phone held upright (turned 90): shown as 480x640 on a 480x640 view
+        double[] r = Guide.toView(new double[] {0, 0, 100, 50}, 640, 480, 90, 480, 640);
+        assertEquals((480 - 50) / 480.0, r[0], 1e-9);
+        assertEquals(0, r[1], 1e-9);
+        assertEquals(50 / 480.0, r[2], 1e-9);
+        assertEquals(100 / 640.0, r[3], 1e-9);
+        // not turned, a square view crops the sides ("fill center")
+        double[] c = Guide.toView(new double[] {80, 0, 560, 480}, 640, 480, 0, 480, 480);
+        assertEquals(0, c[0], 1e-9);
+        assertEquals(1, c[2], 1e-9);
+    }
 }

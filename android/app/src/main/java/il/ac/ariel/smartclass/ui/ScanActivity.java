@@ -4,13 +4,16 @@ import android.content.Intent;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -37,6 +40,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import il.ac.ariel.smartclass.R;
+import il.ac.ariel.smartclass.core.Guide;
 import il.ac.ariel.smartclass.core.Payload;
 import il.ac.ariel.smartclass.data.Repo;
 
@@ -56,6 +60,15 @@ public class ScanActivity extends BaseActivity
 
     /** One tap of + or - changes the zoom by this much. */
     private static final float ZOOM_STEP = 0.5f;
+
+    /** The green "read" flash before the result (same as DONE_FLASH_MS on the web). */
+    private static final long DONE_FLASH_MS = 350;
+
+    /** Lit-up box over the preview. */
+    private FinderView finder;
+
+    /** Guide hint over the preview. */
+    private TextView guideText;
 
     /** Camera preview. */
     private PreviewView preview;
@@ -91,8 +104,24 @@ public class ScanActivity extends BaseActivity
         Ui.title(col, getString(R.string.scan));
         Ui.text(col, getString(R.string.scan_hint));
         preview = new PreviewView(this);
+        preview.setScaleType(PreviewView.ScaleType.FILL_CENTER);
         int side = getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 32);
-        col.addView(preview, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, side));
+        FrameLayout stack = new FrameLayout(this);                 // preview + lit-up box + hint
+        stack.addView(preview, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        finder = new FinderView(this);
+        stack.addView(finder, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        guideText = new TextView(this);
+        guideText.setTextColor(Color.WHITE);
+        guideText.setBackgroundColor(0xAA000000);
+        guideText.setGravity(Gravity.CENTER);
+        int gp = Ui.dp(this, 6);
+        guideText.setPadding(gp * 2, gp, gp * 2, gp);
+        FrameLayout.LayoutParams glp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        glp.topMargin = Ui.dp(this, 8);
+        stack.addView(guideText, glp);
+        showGuide(null, "search");
+        col.addView(stack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, side));
         LinearLayout zoomRow = Ui.row(this);
         col.addView(zoomRow);
         Ui.button(zoomRow, "−", new View.OnClickListener()
@@ -172,7 +201,29 @@ public class ScanActivity extends BaseActivity
                                 @Override
                                 public void run()
                                 {
-                                    onScanned(text);
+                                    showGuide(null, "done");          // flash green, then handle
+                                    preview.postDelayed(new Runnable()
+                                    {
+                                        @Override
+                                        public void run()
+                                        {
+                                            onScanned(text);
+                                        }
+                                    }, DONE_FLASH_MS);
+                                }
+                            });
+                        }
+                    }, new QrAnalyzer.OnGuide()
+                    {
+                        @Override
+                        public void onGuide(final double[] box, final int w, final int h, final int rotation, final String hint)
+                        {
+                            runOnUiThread(new Runnable()
+                            {
+                                @Override
+                                public void run()
+                                {
+                                    showGuide(box == null ? null : Guide.toView(box, w, h, rotation, preview.getWidth(), preview.getHeight()), hint);
                                 }
                             });
                         }
@@ -325,5 +376,35 @@ public class ScanActivity extends BaseActivity
         {
             v.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE));
         }
+    }
+
+    /**
+     * Shows the scanning guide: the box around the code and what to do.
+     * @param (double[]) box {x, y, w, h} as fractions of the preview, or null.
+     * @param (String) hint "search" | "closer" | "found" | "steady" | "done".
+     */
+    private void showGuide(@Nullable double[] box, String hint)
+    {
+        finder.show(box, hint);
+        int id;
+        switch (hint)
+        {
+            case "closer":
+                id = R.string.guide_closer;
+                break;
+            case "found":
+                id = R.string.guide_found;
+                break;
+            case "steady":
+                id = R.string.guide_steady;
+                break;
+            case "done":
+                id = R.string.guide_done;
+                break;
+            default:
+                id = R.string.guide_search;
+                break;
+        }
+        guideText.setText(getString(id));
     }
 }

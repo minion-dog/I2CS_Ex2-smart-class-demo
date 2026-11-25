@@ -81,7 +81,8 @@ $('scan-start').onclick = async () =>
 {
     setResult(t('scanning'), '');
     $('scanner').hidden = false;
-    scanner = new AveragingScanner($('video'), onScanned, $('sees'));
+    scanner = new AveragingScanner($('video'), onScanned, $('sees'), showGuide);
+    showGuide({ rect: null, hint: 'search' });
     $('scan-stop').hidden = false;
     $('scan-where').hidden = true;
     zoom = 1;
@@ -96,6 +97,30 @@ $('scan-start').onclick = async () =>
         setResult(t('cameraDenied'), 'error');
     }
 };
+
+/**
+ * The "Google Lens"-style help: a box that lights up around the code and a hint.
+ * @param {{rect:{x:number,y:number,w:number,h:number}|null, hint:string}} g - from the scanner
+ */
+function showGuide(g)
+{
+    const finder = $('finder');
+    $('scan-guide').textContent = t('guide_' + g.hint);
+    $('scan-guide').className = 'scan-guide ' + g.hint;
+    $('frame').hidden = g.rect !== null;
+    if (g.rect === null)
+    {
+        finder.hidden = true;
+        return;
+    }
+    const pad = 0.04;                                   // a little room around the code
+    finder.hidden = false;
+    finder.className = 'finder ' + g.hint;
+    finder.style.left = ((g.rect.x - pad) * 100) + '%';
+    finder.style.top = ((g.rect.y - pad) * 100) + '%';
+    finder.style.width = ((g.rect.w + 2 * pad) * 100) + '%';
+    finder.style.height = ((g.rect.h + 2 * pad) * 100) + '%';
+}
 
 // Zoom for students at the back: the + / - buttons, or pinch with two fingers.
 let zoom = 1;

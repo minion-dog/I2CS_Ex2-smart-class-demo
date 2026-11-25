@@ -1,6 +1,7 @@
 package il.ac.ariel.smartclass.ui;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
 
@@ -17,6 +18,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 import il.ac.ariel.smartclass.core.ChangeMap;
+import il.ac.ariel.smartclass.core.Guide;
 import il.ac.ariel.smartclass.core.FlickerSchedule;
 
 /**
@@ -66,6 +68,22 @@ public final class QrAnalyzer implements ImageAnalysis.Analyzer
         void onText(String text);
     }
 
+    /**
+     * Receives the scanning guide (on the analysis thread): where the code is and a hint.
+     */
+    public interface OnGuide
+    {
+        /**
+         * Called on each try.
+         * @param (double[]) box {x0, y0, x1, y1} in image pixels, or null (nothing flickers).
+         * @param (int) w Image width.
+         * @param (int) h Image height.
+         * @param (int) rotation Image rotation in degrees.
+         * @param (String) hint See {@link Guide#hint}.
+         */
+        void onGuide(@Nullable double[] box, int w, int h, int rotation, String hint);
+    }
+
     /** The change map of the last frames. */
     private final ChangeMap map = new ChangeMap(SIDE * SIDE, FlickerSchedule.FRAMES);
 
@@ -77,6 +95,13 @@ public final class QrAnalyzer implements ImageAnalysis.Analyzer
 
     /** Callback. */
     private final OnText onText;
+
+    /** Guide callback, or null. */
+    @Nullable
+    private final OnGuide onGuide;
+
+    /** Tries in a row that found the code. */
+    private int rounds;
 
     /** Frames seen. */
     private int frames;
@@ -96,7 +121,18 @@ public final class QrAnalyzer implements ImageAnalysis.Analyzer
      */
     public QrAnalyzer(OnText onText)
     {
+        this(onText, null);
+    }
+
+    /**
+     * Creates the analyzer with the scanning guide.
+     * @param (OnText) onText Called once with the decoded text.
+     * @param (OnGuide) onGuide Called on each try with the found box and a hint (or null).
+     */
+    public QrAnalyzer(OnText onText, @Nullable OnGuide onGuide)
+    {
         this.onText = onText;
+        this.onGuide = onGuide;
         hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
     }
 
@@ -124,8 +160,15 @@ public final class QrAnalyzer implements ImageAnalysis.Analyzer
             }
             map.push(square(image, crop));
             frames++;
-            if (map.count() >= FlickerSchedule.FRAMES && frames % DECODE_EVERY == 0 && map.hasSignal())
+            boolean ready = map.count() >= FlickerSchedule.FRAMES && frames % DECODE_EVERY == 0;
+            if (ready && !map.hasSignal())
             {
+                rounds = 0;
+                guide(null, image);
+            }
+            if (ready && map.hasSignal())
+            {
+                guide(map.activeBox(), image);
                 tryDecode();
                 if (!done)
                 {
@@ -148,6 +191,30 @@ public final class QrAnalyzer implements ImageAnalysis.Analyzer
     // ==========================================
     //             LOW-LEVEL HELPERS
     // ==========================================
+
+    /**
+     * Tells the screen where the code is (in image pixels) and what to say.
+     * @param (int[]) box activeBox in analysed pixels, or null.
+     * @param (ImageProxy) image The frame.
+     */
+    private void guide(@Nullable int[] box, ImageProxy image)
+    {
+        if (onGuide == null)
+        {
+            return;
+        }
+        int rotation = image.getImageInfo().getRotationDegrees();
+        if (box == null)
+        {
+            onGuide.onGuide(null, image.getWidth(), image.getHeight(), rotation, Guide.hint(false, 0, 0));
+            return;
+        }
+        rounds++;
+        double per = crop[2] / (double) SIDE;
+        double[] px = {crop[0] + box[0] * per, crop[1] + box[1] * per, crop[0] + box[2] * per, crop[1] + box[3] * per};
+        double size = Math.max(px[2] - px[0], px[3] - px[1]);
+        onGuide.onGuide(px, image.getWidth(), image.getHeight(), rotation, Guide.hint(true, size, rounds));
+    }
 
     /**
      * When the code is small in the picture, zooms in on it: the next frames are taken from
