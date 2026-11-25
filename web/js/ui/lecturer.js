@@ -193,6 +193,8 @@ $('end-session').onclick = async () =>
     stopQr();
     $('end-session').hidden = true;
     $('fullscreen').hidden = true;
+    $('qr-wrap').closest('.qr-card').hidden = true;
+    setHero(current.title, when(current.startedAt));
 };
 
 $('close-view').onclick = () =>
@@ -200,6 +202,15 @@ $('close-view').onclick = () =>
     dismissedId = current ? current.id : null;
     closeLive();
 };
+
+/** "Now in the lecture" shortcuts: jump to the quiz, the class photo, or the sheet to export. */
+$('act-quiz').onclick = () =>
+{
+    $('quiz-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('quiz-now').focus({ preventScroll: true });
+};
+$('act-photo').onclick = () => $('photo-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+$('act-export').onclick = () => document.querySelector('[data-tab="sheet"]').click();
 
 $('fullscreen').onclick = () =>
 {
@@ -228,9 +239,10 @@ function openLive(s)
     $('live-title').textContent = s.title + ' · ' + when(s.startedAt);
     const isOpen = s.endedAt === null;
     setHero(s.title, when(s.startedAt) + (isOpen ? ' · ' + t('heroLive') : ''));
+    $('hero-actions').hidden = false;
     $('end-session').hidden = !isOpen;
     $('fullscreen').hidden = !isOpen;
-    $('qr-wrap').hidden = !isOpen;
+    $('qr-wrap').closest('.qr-card').hidden = !isOpen;
     if (isOpen)
     {
         startQr();
@@ -263,6 +275,7 @@ function closeLive()
     current = null;
     $('live').hidden = true;
     $('no-session').hidden = false;
+    $('hero-actions').hidden = true;
     setHero(null);
     photo = null;
     draft = null;
@@ -320,27 +333,58 @@ function stopQr()
 function renderAttendance(list)
 {
     attendanceNow = list;
+    updatePhotoStats();
+}
+
+/** Soft avatar colours, picked by the name so a student keeps one colour. */
+const AVATAR_TINTS = ['#fde2d6', '#ddf0ea', '#e6e3fb', '#fff0c7', '#dcebfb', '#f7dce6'];
+
+/**
+ * Draws the "who is here" table (newest first) and the four numbers.
+ * A student who scanned but has not chosen a face on the current photo is
+ * shown as "waiting for the photo".
+ */
+function drawAttendanceRows()
+{
     const counts = { present: 0, manual: 0 };
-    const items = [];
-    const sorted = list.slice().sort((a, b) => (b.scannedAt || 0) - (a.scannedAt || 0));
+    const rows = [];
+    const sorted = attendanceNow.slice().sort((a, b) => (b.scannedAt || 0) - (a.scannedAt || 0));
     for (const r of sorted)
     {
         counts[r.status] = (counts[r.status] || 0) + 1;
-        const label = { present: t('inClass'), zoom: t('onZoom'), manual: t('manual') }[r.status];
-        items.push(el('li', {}, [
-            el('span', { class: 'badge ' + r.status, text: label }),
-            el('span', { class: 'grow', text: displayName(r.email) }),
-            el('span', { class: 'muted', text: when(r.scannedAt) }),
-            el('button', {
-                class: 'secondary small', text: t('remove'),
+        const name = displayName(r.email);
+        const onPhoto = photo !== null && r.photoV === photo.v && r.face && r.face !== FACES.NOT_FOUND;
+        let kind = r.status;
+        let label = { present: t('inClass'), zoom: t('onZoom'), manual: t('manual') }[r.status];
+        if (r.status === STATUS.PRESENT && photo !== null && !onPhoto)
+        {
+            kind = 'pending';
+            label = t('waitingPhoto');
+        }
+        let hash = 0;
+        for (const ch of name)
+        {
+            hash = (hash * 31 + ch.charCodeAt(0)) % 997;
+        }
+        rows.push(el('tr', {}, [
+            el('td', {}, [el('span', { class: 'who-cell' }, [
+                el('span', { class: 'av', text: name.trim().charAt(0) || '?', style: 'background:' + AVATAR_TINTS[hash % AVATAR_TINTS.length] }),
+                el('span', { text: name })
+            ])]),
+            el('td', { class: 'mono muted', text: r.scannedAt ? when(r.scannedAt).split(', ').pop() : '—' }),
+            el('td', { class: onPhoto ? 'ok-text' : 'muted', text: onPhoto ? '✓' : '—' }),
+            el('td', {}, [el('span', { class: 'badge ' + kind, text: label })]),
+            el('td', {}, [el('button', {
+                class: 'secondary small icon', text: '✕', title: t('remove'), 'aria-label': t('remove'),
                 onclick: () => store.setAttendance(current.id, r.email, null)
-            })
+            })])
         ]));
     }
-    fill($('attendance-list'), ...items);
-    $('n-present').textContent = counts.present;
+    fill($('attendance-list'), ...rows);
+    $('att-empty').hidden = rows.length > 0;
+    const present = attendanceNow.length;
+    $('n-present').textContent = present + (roster.length > 0 ? '/' + roster.length : '');
     $('n-manual').textContent = counts.manual;
-    updatePhotoStats();
 }
 
 $('manual-add').onclick = async () =>
@@ -572,14 +616,18 @@ function showPhoto(p)
 /** Counters, names on the boxes and the "not in the photo" list. */
 function updatePhotoStats()
 {
-    $('n-present').textContent = attendanceNow.filter((r) => r.status === STATUS.PRESENT).length;
+    drawAttendanceRows();
     if (photo === null)
     {
         $('n-head').textContent = '–';
+        $('k-confirmed').textContent = '–';
+        $('k-waiting').textContent = '–';
         return;
     }
     const st = photoStats(photo.boxes, attendanceNow, photo.v);
     $('n-head').textContent = st.faces;
+    $('k-confirmed').textContent = st.confirmed;
+    $('k-waiting').textContent = st.waiting;
     $('f-faces').textContent = st.faces;
     $('f-confirmed').textContent = st.confirmed;
     $('f-waiting').textContent = st.waiting;

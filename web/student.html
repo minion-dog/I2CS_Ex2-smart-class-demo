@@ -24,7 +24,11 @@
         <button data-tab="assignments" role="tab"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 13l3 3 5-6"/></svg><span data-i18n="tabAssignments"></span></button>
     </nav>
     <main>
-        <header class="hero" id="hero" aria-live="polite"><p class="hero-hi" id="hero-hi"></p><h1 class="hero-title" id="hero-title"></h1><p class="hero-sub" id="hero-sub"></p></header>
+        <header class="hero" id="hero"><div class="hero-text" aria-live="polite"><p class="hero-hi" id="hero-hi"></p><h1 class="hero-title" id="hero-title"></h1><p class="hero-sub" id="hero-sub"></p></div></header>
+        <div class="ticket" id="me-ticket">
+            <div class="ring" id="me-ring" style="--p:0"><span id="me-count">–</span></div>
+            <div class="grow"><b id="me-title"></b><small id="me-sub"></small></div>
+        </div>
         <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
 
         <!-- ============================ SCAN ============================ -->
@@ -84,6 +88,11 @@
 
         <!-- ============================ LECTURE ============================ -->
         <section id="tab-lecture" hidden>
+            <div class="tiles">
+                <button class="tile t-blue" id="tile-questions" type="button"><small data-i18n="tileQuestions"></small><b id="tile-q-n">0</b></button>
+                <button class="tile t-violet" id="tile-quiz" type="button"><small data-i18n="tileQuiz"></small><b id="tile-quiz-v">—</b></button>
+                <button class="tile t-sun" id="tile-tasks" type="button"><small data-i18n="tileTasks"></small><b id="tile-tasks-n">0</b></button>
+            </div>
             <div class="card">
                 <label for="session-pick" data-i18n="chooseSession"></label>
                 <select id="session-pick"></select>

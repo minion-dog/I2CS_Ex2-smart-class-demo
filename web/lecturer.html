@@ -25,7 +25,14 @@
         <button data-tab="assignments" role="tab"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 13l3 3 5-6"/></svg><span data-i18n="tabAssignments"></span></button>
     </nav>
     <main>
-        <header class="hero" id="hero" aria-live="polite"><p class="hero-hi" id="hero-hi"></p><h1 class="hero-title" id="hero-title"></h1><p class="hero-sub" id="hero-sub"></p></header>
+        <header class="hero" id="hero">
+            <div class="hero-text" aria-live="polite"><p class="hero-hi" id="hero-hi"></p><h1 class="hero-title" id="hero-title"></h1><p class="hero-sub" id="hero-sub"></p></div>
+            <div class="hero-actions" id="hero-actions" hidden>
+                <button class="hero-btn ghost" id="end-session" data-i18n="endSession"></button>
+                <button class="hero-btn solid" id="fullscreen"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg><span data-i18n="qrProject"></span></button>
+                <button class="hero-btn ghost icon" id="close-view" aria-label="✕">✕</button>
+            </div>
+        </header>
         <div id="demo-banner" class="banner" hidden data-i18n="demoBanner"></div>
         <details id="lan-join" class="card" hidden>
             <summary data-i18n="lanJoinTitle"></summary>
@@ -60,35 +67,47 @@
             </div>
 
             <div id="live" hidden>
-                <div class="grid live">
-                    <div class="card">
-                        <div class="row">
-                            <h2 class="grow" id="live-title"></h2>
-                            <button class="secondary small" id="fullscreen" data-i18n="fullscreen"></button>
-                            <button class="danger small" id="end-session" data-i18n="endSession"></button>
-                            <button class="secondary small" id="close-view">✕</button>
-                        </div>
-                        <div class="qr-wrap" id="qr-wrap">
-                            <canvas id="qr" aria-label="QR"></canvas>
-                            <div class="timer" id="qr-timer"></div>
-                        </div>
-                        <div class="stats" style="margin-top:12px">
-                            <div class="stat present"><b id="n-present">0</b><span data-i18n="inClass"></span></div>
-                            <div class="stat manual"><b id="n-manual">0</b><span data-i18n="manual"></span></div>
-                            <div class="stat"><b id="n-head">–</b><span data-i18n="peopleInPhoto"></span></div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <h2 data-i18n="tabSheet"></h2>
-                        <div class="row">
-                            <input id="manual-search" type="search" class="grow" list="roster-options" data-i18n-placeholder="searchStudent">
+                <span id="live-title" hidden></span><span id="n-head" hidden></span>
+                <div class="kpis">
+                    <div class="stat k-violet"><span data-i18n="kpiPresent"></span><b id="n-present">0</b></div>
+                    <div class="stat k-green"><span data-i18n="kpiConfirmed"></span><b id="k-confirmed">–</b></div>
+                    <div class="stat k-sun"><span data-i18n="kpiWaiting"></span><b id="k-waiting">–</b></div>
+                    <div class="stat k-rose"><span data-i18n="kpiManual"></span><b id="n-manual">0</b></div>
+                </div>
+                <div class="live-main">
+                    <div class="card att-card">
+                        <div class="row att-head">
+                            <h2 class="grow" data-i18n="whoHere"></h2>
+                            <input id="manual-search" type="search" list="roster-options" data-i18n-placeholder="searchStudent">
                             <datalist id="roster-options"></datalist>
                             <button id="manual-add" class="small" data-i18n="markByHand"></button>
                         </div>
-                        <ul class="list feed" id="attendance-list"></ul>
+                        <div class="table-wrap">
+                            <table class="att">
+                                <thead><tr><th data-i18n="colName"></th><th data-i18n="colTime"></th><th data-i18n="colPhoto"></th><th data-i18n="colStatus"></th><th></th></tr></thead>
+                                <tbody id="attendance-list"></tbody>
+                            </table>
+                        </div>
+                        <p class="att-empty" id="att-empty" data-i18n="nobodyYet"></p>
                     </div>
-
+                    <div class="live-side">
+                        <div class="card qr-card t-blue">
+                            <div class="row"><h2 class="grow" data-i18n="entryCode"></h2></div>
+                            <div class="qr-wrap" id="qr-wrap">
+                                <canvas id="qr" aria-label="QR"></canvas>
+                                <div class="timer" id="qr-timer"></div>
+                            </div>
+                            <p class="hint center" data-i18n="qrSmallHint"></p>
+                        </div>
+                        <div class="card now-card t-violet">
+                            <h2 data-i18n="nowInLecture"></h2>
+                            <button class="act" id="act-quiz" type="button"><span class="act-ico c-violet"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 3 14 9-14 9V3z"/></svg></span><span class="act-text"><b data-i18n="actQuiz"></b><small data-i18n="actQuizSub"></small></span></button>
+                            <button class="act" id="act-photo" type="button"><span class="act-ico c-teal"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></span><span class="act-text"><b data-i18n="actPhoto"></b><small data-i18n="actPhotoSub"></small></span></button>
+                            <button class="act" id="act-export" type="button"><span class="act-ico c-rose"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></span><span class="act-text"><b data-i18n="actExport"></b><small data-i18n="actExportSub"></small></span></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid two live-more">
                     <div class="card">
                         <h2 data-i18n="comments"></h2>
                         <div class="feed" id="comment-feed"></div>

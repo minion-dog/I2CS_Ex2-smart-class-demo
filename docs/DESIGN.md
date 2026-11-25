@@ -27,6 +27,19 @@ and the green course band of another. No brand's colours, fonts, logos or layout
    targets at least 44px, the load animation off when the device asks for reduced motion, no
    decorative emojis in titles or buttons.
 
+## Screens (the fusion mockup, `mid-4`)
+
+- **Lecturer, open lecture:** the course band holds the lecture's buttons (end lecture, "QR to
+  projector", close). Under it four soft number boxes (present out of the class list, on the photo,
+  waiting for the photo, marked by hand), then a "who is here" table (avatar, name, scan time, on
+  the photo, status tag, remove) beside a small entry-code card (blue) and a "now in the lecture"
+  card (violet) with shortcuts to the quiz, the class photo and the sheet/export. Comments, quiz,
+  recording and the class photo follow below. The QR is small here and goes full screen only with
+  "QR to projector".
+- **Student:** the band (greeting, the open lecture), a ticket half on the band with today's status
+  and a ring of lectures attended, then on the lecture tab three small boxes (questions, quiz,
+  assignments) before the comments and the quiz.
+
 ## Files
 
 - `web/css/app.css`: every component, written only against tokens.

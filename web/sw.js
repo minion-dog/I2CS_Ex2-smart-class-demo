@@ -1,6 +1,6 @@
 // Service worker: keeps the site's own files on the phone, so the student
 // page opens even with no internet (the data itself is cached by Firestore).
-const CACHE = 'smartclass-v24';
+const CACHE = 'smartclass-v25';
 const FILES = [
     'index.html', 'student.html', 'lecturer.html', 'css/app.css', 'css/themes.css', 'js/theme.js', 'vendor/fonts/rubik-hebrew-400.woff2', 'vendor/fonts/rubik-hebrew-600.woff2', 'vendor/fonts/rubik-hebrew-800.woff2', 'vendor/fonts/rubik-latin-400.woff2', 'vendor/fonts/rubik-latin-600.woff2', 'vendor/fonts/rubik-latin-800.woff2', 'vendor/fonts/secular-one-hebrew-400.woff2', 'vendor/fonts/secular-one-latin-400.woff2', 'vendor/fonts/heebo-hebrew-300.woff2', 'vendor/fonts/heebo-hebrew-400.woff2', 'vendor/fonts/heebo-hebrew-500.woff2', 'vendor/fonts/heebo-hebrew-700.woff2', 'vendor/fonts/heebo-latin-300.woff2', 'vendor/fonts/heebo-latin-400.woff2', 'vendor/fonts/heebo-latin-500.woff2', 'vendor/fonts/heebo-latin-700.woff2',  'vendor/fonts/plex-sans-hebrew-hebrew-400.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-500.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-600.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-700.woff2', 'vendor/fonts/plex-sans-hebrew-latin-400.woff2', 'vendor/fonts/plex-sans-hebrew-latin-500.woff2', 'vendor/fonts/plex-sans-hebrew-latin-600.woff2', 'vendor/fonts/plex-sans-hebrew-latin-700.woff2', 'vendor/fonts/plex-mono-latin-500.woff2', 'manifest.webmanifest', 'icon.svg',
     'vendor/jsQR.js', 'vendor/qrcode.js',

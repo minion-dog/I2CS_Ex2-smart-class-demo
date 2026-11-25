@@ -603,6 +603,7 @@ function watchMyAttendance()
             items.push(el('li', {}, [el('span', { class: 'grow', text: s.title }), el('span', { class: 'muted', text: when(s.startedAt) }), badge]));
         }
         fill($('my-attendance'), ...items);
+        drawTicket(recent, rows);
     };
     for (const s of recent)
     {
@@ -800,4 +801,67 @@ async function submit(a, repo, filesInput)
     {
         toast(t('error') + ': ' + e.message, 'error');
     }
+}
+
+/**
+ * The card under the course band: today's status and a ring of how many of
+ * the recent lectures I attended (an open lecture I have not scanned yet is
+ * not counted as missed).
+ * @param {object[]} recent - recent sessions, newest first
+ * @param {Map<string, object>} rows - my attendance record per session id
+ */
+function drawTicket(recent, rows)
+{
+    const counted = recent.filter((s) => s.endedAt !== null || rows.get(s.id));
+    const came = counted.filter((s) => rows.get(s.id)).length;
+    $('me-count').textContent = counted.length > 0 ? came + '/' + counted.length : '–';
+    $('me-ring').style.setProperty('--p', counted.length > 0 ? String(Math.round(came * 100 / counted.length)) : '0');
+    const open = recent.find((s) => s.endedAt === null);
+    const mine = open ? rows.get(open.id) : null;
+    const ticket = $('me-ticket');
+    let state = 'none';
+    if (open && mine)
+    {
+        state = mine.pending ? 'pending' : 'in';
+    }
+    else if (open)
+    {
+        state = 'out';
+    }
+    ticket.dataset.state = state;
+    $('me-title').textContent = t({ in: 'ticketIn', pending: 'ticketPending', out: 'ticketOut', none: 'ticketNone' }[state]);
+    $('me-sub').textContent = mine && mine.scannedAt ? t('ticketAt') + ' ' + when(mine.scannedAt)
+        : (counted.length > 0 ? t('ticketRing').replace('{a}', came).replace('{b}', counted.length) : '');
+}
+
+// the three small boxes on the lecture tab: questions, quiz, assignments
+{
+    const countKids = (id, out) =>
+    {
+        const box = $(id);
+        const update = () =>
+        {
+            $(out).textContent = box.children.length;
+        };
+        new MutationObserver(update).observe(box, { childList: true });
+        update();
+    };
+    countKids('comment-feed', 'tile-q-n');
+    countKids('assignment-list', 'tile-tasks-n');
+    const quizBtn = $('quiz-reopen');
+    const quizState = () =>
+    {
+        $('tile-quiz-v').textContent = quizBtn.hidden ? '—' : t('quizOpenNow');
+    };
+    new MutationObserver(quizState).observe(quizBtn, { attributes: true, attributeFilter: ['hidden'] });
+    quizState();
+    $('tile-questions').onclick = () => $('comment-text').focus();
+    $('tile-quiz').onclick = () =>
+    {
+        if (!quizBtn.hidden)
+        {
+            quizBtn.click();
+        }
+    };
+    $('tile-tasks').onclick = () => document.querySelector('[data-tab="assignments"]').click();
 }
