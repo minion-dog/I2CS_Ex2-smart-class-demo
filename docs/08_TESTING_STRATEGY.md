@@ -92,5 +92,8 @@
 - **Face finding on the lecturer's real class photos** (p1, p11, p31; kept private, not in the repo):
   run through our own `facefind.js` in Chromium with the real MediaPipe model. Results: 30, 42 and 39
   correct boxes with almost no false ones; faces looking down are missed (Gemini + the lecturer's tap).
+- **Live on the published site (25 Nov 2026, the team's PC):** the real MediaPipe model from the CDN
+  found 43 / 43 faces of `web/test/assets/class-sample.jpg` in 2.7 s; Gemini (`gemini-3.5-flash`) found
+  43 / 43 in 12 s and `parseGeminiBoxes` read its answer.
 - **Lecturer photo editor (Playwright):** tap adds, tap on a box removes, undo, save, re-edit (both
   the demo photo and a real class photo).
