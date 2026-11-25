@@ -98,8 +98,10 @@ export function when(ms)
     {
         return '';
     }
-    return new Date(ms).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'he-IL',
-        { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    // wrapped in a left-to-right isolate (U+2066..U+2069), so "25.11, 16:24" keeps its order
+    // inside Hebrew text instead of turning into ",25.11 16:24"
+    return '\u2066' + new Date(ms).toLocaleString(document.documentElement.lang === 'en' ? 'en-GB' : 'he-IL',
+        { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '\u2069';
 }
 
 /**

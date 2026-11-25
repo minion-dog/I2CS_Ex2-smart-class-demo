@@ -1,8 +1,8 @@
 // Service worker: keeps the site's own files on the phone, so the student
 // page opens even with no internet (the data itself is cached by Firestore).
-const CACHE = 'smartclass-v21';
+const CACHE = 'smartclass-v22';
 const FILES = [
-    'index.html', 'student.html', 'lecturer.html', 'css/app.css', 'manifest.webmanifest', 'icon.svg',
+    'index.html', 'student.html', 'lecturer.html', 'css/app.css', 'vendor/fonts/plex-sans-hebrew-hebrew-400.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-500.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-600.woff2', 'vendor/fonts/plex-sans-hebrew-hebrew-700.woff2', 'vendor/fonts/plex-sans-hebrew-latin-400.woff2', 'vendor/fonts/plex-sans-hebrew-latin-500.woff2', 'vendor/fonts/plex-sans-hebrew-latin-600.woff2', 'vendor/fonts/plex-sans-hebrew-latin-700.woff2', 'vendor/fonts/plex-mono-latin-500.woff2', 'manifest.webmanifest', 'icon.svg',
     'vendor/jsQR.js', 'vendor/qrcode.js',
     'js/firebase-config.js', 'js/data/store.js', 'js/data/fake-store.js', 'js/data/firebase-store.js', 'js/data/lan-store.js', 'js/data/sample-class.js',
     'js/core/noisyqr.js', 'js/core/faces.js', 'js/core/guide.js', 'js/core/reactions.js', 'demo/class-sample.jpg', 'demo/class-sample.json', 'js/core/scan-engine.js', 'js/ui/scan-worker.js', 'js/core/quiz.js', 'js/core/schedule.js', 'js/core/archive.js', 'js/core/payload.js', 'js/core/sheet.js', 'js/core/classlist.js', 'js/core/xlsx.js',

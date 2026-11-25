@@ -82,6 +82,7 @@ is needed.
 | 12 | Conclusion | [docs/09_CONCLUSION.md](docs/09_CONCLUSION.md) |
 | — | AI usage log | [docs/AI_USAGE.md](docs/AI_USAGE.md) |
 | — | Setup guide (Hebrew) | [docs/SETUP_HE.md](docs/SETUP_HE.md) |
+| — | Design system ("paper & chalk") | [docs/DESIGN.md](docs/DESIGN.md) |
 
 ## How it works
 

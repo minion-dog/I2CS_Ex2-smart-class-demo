@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark mode: the same "paper & chalk" system as the website (docs/DESIGN.md). -->
+<resources>
+    <style name="Theme.SmartClass" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">#F06A40</item>
+        <item name="colorPrimaryVariant">#A8411F</item>
+        <item name="colorOnPrimary">#1A0D07</item>
+        <item name="colorSecondary">#6CC3AE</item>
+        <item name="colorOnSecondary">#0F1A17</item>
+        <item name="android:colorBackground">#17181B</item>
+    </style>
+</resources>

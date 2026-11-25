@@ -42,8 +42,8 @@ public final class QuizPlayActivity extends BaseActivity
     /** Intent extra: the quiz id. */
     public static final String EXTRA_QID = "qid";
 
-    /** Background (Kahoot purple). */
-    private static final int BG = 0xFF46178F;
+    /** Background: chalkboard green (same as the website's projector stage). */
+    private static final int BG = 0xFF1F3B31;
 
     /** Timer refresh. */
     private static final long TICK_MS = 250;
