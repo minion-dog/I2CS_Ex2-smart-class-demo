@@ -75,6 +75,7 @@ public class LecturerHomeActivity extends BaseActivity
     {
         super.onCreate(saved);
         LinearLayout col = Ui.screen(this);
+        Ui.hero(col, getString(R.string.hero_lecturer), Repo.get().myEmail());
         Ui.text(col, Repo.get().myName() + " · " + Repo.get().myEmail());
         titleField = Ui.field(col, getString(R.string.session_title));
         titleField.setText(getString(R.string.lectures) + " " + DateFormat.getDateInstance(DateFormat.SHORT).format(new Date()));

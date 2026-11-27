@@ -94,7 +94,7 @@ public class LiveSessionActivity extends BaseActivity
         sid = getIntent().getStringExtra(LectureActivity.EXTRA_SESSION);
         title = getIntent().getStringExtra(LectureActivity.EXTRA_TITLE);
         LinearLayout col = Ui.screen(this);
-        Ui.title(col, title);
+        Ui.hero(col, title, "");
         qr = new QrNoiseView(this);
         col.addView(qr);
         counters = Ui.title(col, "");

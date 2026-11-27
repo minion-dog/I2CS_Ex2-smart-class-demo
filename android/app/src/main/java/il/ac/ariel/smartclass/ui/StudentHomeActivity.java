@@ -71,7 +71,7 @@ public class StudentHomeActivity extends BaseActivity
     {
         super.onCreate(saved);
         LinearLayout col = Ui.screen(this);
-        Ui.text(col, Repo.get().myName() + " · " + Repo.get().myEmail());
+        Ui.hero(col, getString(R.string.hero_student), Repo.get().myEmail());
         Ui.button(col, getString(R.string.scan), new View.OnClickListener()
         {
             @Override

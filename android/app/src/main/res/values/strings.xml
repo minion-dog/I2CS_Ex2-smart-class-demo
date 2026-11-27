@@ -111,4 +111,10 @@
     <string name="pick_change">טעית? אפשר ללחוץ על פנים אחרות כדי להחליף.</string>
     <string name="change_warn">הבחירה הקודמת שלך (הירוקה המלאה) תימחק.</string>
     <string name="changed">הבחירה הוחלפה. הבחירה הקודמת נמחקה.</string>
+    <string name="greet_morning">בוקר טוב</string>
+    <string name="greet_noon">צהריים טובים</string>
+    <string name="greet_evening">ערב טוב</string>
+    <string name="greet_night">לילה טוב</string>
+    <string name="hero_student">השיעורים שלי</string>
+    <string name="hero_lecturer">לוח המרצה</string>
 </resources>

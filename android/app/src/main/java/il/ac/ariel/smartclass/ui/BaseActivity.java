@@ -1,6 +1,7 @@
 package il.ac.ariel.smartclass.ui;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -56,6 +57,20 @@ public abstract class BaseActivity extends AppCompatActivity
         for (ListenerRegistration r : rs)
         {
             listeners.add(r);
+        }
+    }
+
+    /**
+     * Makes the top bar flat so it joins the course band under it.
+     * @param (Bundle) saved Saved state.
+     */
+    @Override
+    protected void onPostCreate(Bundle saved)
+    {
+        super.onPostCreate(saved);
+        if (getSupportActionBar() != null)
+        {
+            getSupportActionBar().setElevation(0);
         }
     }
 

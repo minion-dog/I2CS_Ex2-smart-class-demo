@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- "Soft colours" design, same as the website (docs/DESIGN.md): teal course band on top,
+     violet for actions, white canvas. Buttons and cards are coloured in Ui.java. -->
 <resources>
     <style name="Theme.SmartClass" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <item name="colorPrimary">#D9502A</item>
-        <item name="colorPrimaryVariant">#9C3517</item>
+        <item name="colorPrimary">#0F7B6C</item>
+        <item name="colorPrimaryVariant">#0B5F53</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorSecondary">#2F6F62</item>
+        <item name="colorSecondary">#5B4BDB</item>
         <item name="colorOnSecondary">#FFFFFF</item>
-        <item name="android:colorBackground">#F1EFE7</item>
+        <item name="android:colorBackground">#FFFFFF</item>
+        <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>

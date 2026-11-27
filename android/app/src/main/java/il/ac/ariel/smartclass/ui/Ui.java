@@ -2,6 +2,8 @@ package il.ac.ariel.smartclass.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Configuration;
+import android.graphics.drawable.GradientDrawable;
 import android.graphics.Typeface;
 import android.text.InputType;
 import android.util.TypedValue;
@@ -16,7 +18,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.text.DateFormat;
+import java.util.Calendar;
 import java.util.Date;
+
+import il.ac.ariel.smartclass.R;
 
 /**
  * Builds simple screens in code (columns of text, fields and buttons).
@@ -39,6 +44,21 @@ public final class Ui
 
     /** Minimum touch size, in dp (accessibility). */
     private static final int TAP_DP = 48;
+
+    /** Colours of the "soft colours" design (docs/DESIGN.md): the course band and the action colour. */
+    public static final int COURSE = 0xFF0F7B6C;
+    public static final int COURSE_NIGHT = 0xFF145E54;
+    public static final int BRAND = 0xFF5B4BDB;
+    public static final int BRAND_NIGHT = 0xFF9D92FF;
+
+    /** Soft tints per kind of content, light and dark: violet, green, blue, sun, rose. */
+    public static final int TINT_VIOLET = 0;
+    public static final int TINT_GREEN = 1;
+    public static final int TINT_BLUE = 2;
+    public static final int TINT_SUN = 3;
+    public static final int TINT_ROSE = 4;
+    private static final int[] TINTS_DAY = { 0xFFEEEBFF, 0xFFE3F6EA, 0xFFE6F2FD, 0xFFFFF2D9, 0xFFFDE8EE };
+    private static final int[] TINTS_NIGHT = { 0xFF26243A, 0xFF1C2A24, 0xFF1C2633, 0xFF2E2A1E, 0xFF2E2129 };
 
     /** Not instantiable. */
     private Ui()
@@ -131,9 +151,15 @@ public final class Ui
      */
     public static Button button(LinearLayout parent, String text, View.OnClickListener onClick)
     {
-        Button b = new Button(parent.getContext());
+        Context c = parent.getContext();
+        Button b = new Button(c);
         b.setText(text);
         b.setAllCaps(false);
+        b.setTextColor(night(c) ? 0xFF15122E : 0xFFFFFFFF);
+        b.setTypeface(Typeface.DEFAULT_BOLD);
+        b.setStateListAnimator(null);
+        b.setBackground(rounded(night(c) ? BRAND_NIGHT : BRAND, dp(c, 14)));
+        b.setPadding(dp(c, 16), 0, dp(c, 16), 0);
         b.setMinHeight(dp(parent.getContext(), TAP_DP));
         b.setOnClickListener(onClick);
         LinearLayout.LayoutParams lp = matchWidth();
@@ -197,6 +223,113 @@ public final class Ui
     }
 
     /**
+     * Adds the coloured course band at the top of a screen (as on the website): a greeting
+     * by the time of day, a big title and one detail line. It runs edge to edge with
+     * rounded bottom corners.
+     * @param (LinearLayout) parent The screen column from {@link #screen(Activity)}.
+     * @param (String) title The big line (lecture or page title).
+     * @param (String) sub The detail line ("" for none).
+     * @return (LinearLayout) The band.
+     */
+    public static LinearLayout hero(LinearLayout parent, String title, String sub)
+    {
+        Context c = parent.getContext();
+        LinearLayout band = column(c);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(night(c) ? COURSE_NIGHT : COURSE);
+        float r = dp(c, 28);
+        bg.setCornerRadii(new float[] { 0, 0, 0, 0, r, r, r, r });
+        band.setBackground(bg);
+        int pad = dp(c, 20);
+        band.setPadding(pad, dp(c, 18), pad, dp(c, 24));
+        TextView hi = new TextView(c);
+        hi.setText(greeting(c));
+        hi.setTextColor(0xD9FFFFFF);
+        hi.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        band.addView(hi, matchWidth());
+        TextView big = new TextView(c);
+        big.setText(title);
+        big.setTextColor(0xFFFFFFFF);
+        big.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+        big.setTypeface(Typeface.DEFAULT_BOLD);
+        band.addView(big, matchWidth());
+        if (sub != null && !sub.isEmpty())
+        {
+            TextView small = new TextView(c);
+            small.setText(sub);
+            small.setTextColor(0xD9FFFFFF);
+            small.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            band.addView(small, matchWidth());
+        }
+        int edge = dp(c, PAD_DP);
+        LinearLayout.LayoutParams lp = matchWidth();
+        lp.setMargins(-edge, -edge, -edge, dp(c, GAP_DP * 2));
+        parent.addView(band, lp);
+        return band;
+    }
+
+    /**
+     * Adds a rounded card in one of the soft tints; views are then added into it.
+     * @param (LinearLayout) parent Where to add.
+     * @param (int) tint One of the TINT_ constants.
+     * @return (LinearLayout) The card.
+     */
+    public static LinearLayout card(LinearLayout parent, int tint)
+    {
+        Context c = parent.getContext();
+        LinearLayout card = column(c);
+        card.setBackground(rounded((night(c) ? TINTS_NIGHT : TINTS_DAY)[tint], dp(c, 22)));
+        int pad = dp(c, PAD_DP);
+        card.setPadding(pad, dp(c, GAP_DP), pad, pad);
+        LinearLayout.LayoutParams lp = matchWidth();
+        lp.topMargin = dp(c, GAP_DP);
+        lp.bottomMargin = dp(c, GAP_DP);
+        parent.addView(card, lp);
+        return card;
+    }
+
+    /**
+     * The greeting by the time of day, with the signed-in first name.
+     * @param (Context) c Context.
+     * @return (String) For example "Good evening, Maor".
+     */
+    public static String greeting(Context c)
+    {
+        int h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int id = R.string.greet_night;
+        if (h >= 5 && h < 12)
+        {
+            id = R.string.greet_morning;
+        }
+        else if (h >= 12 && h < 17)
+        {
+            id = R.string.greet_noon;
+        }
+        else if (h >= 17 && h < 22)
+        {
+            id = R.string.greet_evening;
+        }
+        String name = il.ac.ariel.smartclass.data.Repo.get().myName();
+        String first = name == null ? "" : name.trim().split(" ")[0];
+        if (first.contains("@"))
+        {
+            first = first.substring(0, first.indexOf('@'));
+        }
+        return c.getString(id) + (first.isEmpty() ? "" : ", " + first);
+    }
+
+    /**
+     * Tells whether the app is in dark mode.
+     * @param (Context) c Context.
+     * @return (boolean) True in dark mode.
+     */
+    public static boolean night(Context c)
+    {
+        int mode = c.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return mode == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /**
      * Shows a short message.
      * @param (Context) c Context.
      * @param (String) text Message.
@@ -234,6 +367,20 @@ public final class Ui
     // ==========================================
     //             LOW-LEVEL HELPERS
     // ==========================================
+
+    /**
+     * A filled shape with rounded corners.
+     * @param (int) color Fill colour.
+     * @param (int) radius Corner radius in pixels.
+     * @return (GradientDrawable) The shape.
+     */
+    private static GradientDrawable rounded(int color, int radius)
+    {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(color);
+        g.setCornerRadius(radius);
+        return g;
+    }
 
     /**
      * Layout params: full width, natural height.

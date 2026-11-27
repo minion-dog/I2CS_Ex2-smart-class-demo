@@ -109,4 +109,10 @@
     <string name="pick_change">Wrong face? Tap another face to change.</string>
     <string name="change_warn">Your previous choice (the filled green one) will be removed.</string>
     <string name="changed">Choice changed. Your previous choice was removed.</string>
+    <string name="greet_morning">Good morning</string>
+    <string name="greet_noon">Good afternoon</string>
+    <string name="greet_evening">Good evening</string>
+    <string name="greet_night">Good night</string>
+    <string name="hero_student">My lectures</string>
+    <string name="hero_lecturer">Lecturer board</string>
 </resources>

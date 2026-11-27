@@ -82,7 +82,7 @@ public class AssignmentsActivity extends BaseActivity
     {
         super.onCreate(saved);
         LinearLayout col = Ui.screen(this);
-        Ui.title(col, getString(R.string.assignments));
+        Ui.hero(col, getString(R.string.assignments), "");
         if (Repo.get().isLecturer())
         {
             buildCreateForm(col);

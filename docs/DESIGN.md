@@ -76,7 +76,11 @@ and the green course band of another. No brand's colours, fonts, logos or layout
 
 ## Android
 
-`res/values/themes.xml` and `res/values-night/themes.xml` set the app's light and dark colours.
+The app uses the same system: `res/values(-night)/themes.xml` make the top bar teal (it joins
+the course band) and white / deep blue-grey backgrounds. `Ui.java` draws the parts:
+`Ui.hero(...)` is the course band with the greeting (top of the student home, lecturer home,
+lecture, live lecture and assignments screens), `Ui.button(...)` is the rounded violet action
+button, and `Ui.card(parent, Ui.TINT_...)` is a rounded card in one of the soft tints.
 
 ## Checked
 

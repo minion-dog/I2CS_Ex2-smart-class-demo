@@ -108,7 +108,7 @@ public class LectureActivity extends BaseActivity
         sid = getIntent().getStringExtra(EXTRA_SESSION);
         title = getIntent().getStringExtra(EXTRA_TITLE);
         LinearLayout col = Ui.screen(this);
-        Ui.title(col, title);
+        Ui.hero(col, title, getString(R.string.lectures));
         buildComments(col);
         buildPolls(col);
         buildSummary(col);
