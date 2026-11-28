@@ -35,6 +35,28 @@ store.onAuth((user) =>
     {
         return;
     }
+    if (user.canStudent)
+    {
+        // the same account is lecturer and on the class list: ask which side to open
+        const pick = document.getElementById('role-pick');
+        pick.hidden = false;
+        document.getElementById('real-login').hidden = true;
+        const go = (as) =>
+        {
+            try
+            {
+                localStorage.setItem('smartclass-enter-as', as);
+            }
+            catch (e)
+            {
+                // private mode: the choice is not kept, the page still opens
+            }
+            location.replace((as === 'student' ? 'student.html' : 'lecturer.html') + suffix);
+        };
+        document.getElementById('as-lecturer').onclick = () => go('lecturer');
+        document.getElementById('as-student').onclick = () => go('student');
+        return;
+    }
     if (user.role === 'lecturer')
     {
         location.replace('lecturer.html' + suffix);

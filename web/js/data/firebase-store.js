@@ -16,6 +16,22 @@ import { reactionId, cleanEmojis } from '../core/reactions.js';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
 /** A Store backed by Firebase. */
+/**
+ * The role this device chose for an account that is both lecturer and on the class list.
+ * @returns {string} 'student', 'lecturer' or ''
+ */
+export function enterAs()
+{
+    try
+    {
+        return localStorage.getItem('smartclass-enter-as') || '';
+    }
+    catch (e)
+    {
+        return '';
+    }
+}
+
 export class FirebaseStore
 {
     /**
@@ -196,6 +212,16 @@ export class FirebaseStore
             if (staff.exists())
             {
                 base.role = 'lecturer';
+                // a lecturer whose email is also on the class list may enter as a student
+                // (to test both sides with one account); the choice is kept per device
+                const listed = await f.getDoc(f.doc(this.db, 'roster', email));
+                base.canStudent = listed.exists();
+                if (base.canStudent && enterAs() === 'student')
+                {
+                    base.role = 'student';
+                    await f.setDoc(f.doc(this.db, 'users', u.uid),
+                        { email: email, name: base.name, lastSeen: f.serverTimestamp() }, { merge: true });
+                }
                 return base;
             }
         }
